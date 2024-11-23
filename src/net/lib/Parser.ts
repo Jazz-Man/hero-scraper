@@ -1,0 +1,1031 @@
+import type ProtocolReply from "./ProtocolReply.ts";
+import RouterDescriptor from "./RouterDescriptor.ts";
+import { ProtocolError } from "./ProtocolError.ts";
+
+interface AddrMap {
+  ADDRESS: string;
+  NEWADDRESS: string;
+  EXPIRY: string;
+  [key: string]: any;
+}
+
+export default class Parser {
+  private descriptorReplyLines: Record<string, string> = {
+    router: "_parseRouter",
+    platform: "_parsePlatform",
+    published: "_parsePublished",
+    fingerprint: "_parseFingerprint",
+    hibernating: "_parseHibernating",
+    uptime: "_parseUptime",
+    "overload-general": "_parseOverloadGeneral",
+    "onion-key": "_parseOnionKey",
+    "ntor-onion-key": "_parseNtorOnionKey",
+    "signing-key": "_parseSigningKey",
+    accept: "_parseAccept",
+    reject: "_parseReject",
+    "ipv6-policy": "_parseIPv6Policy",
+    "router-signature": "_parseRouterSignature",
+    contact: "_parseContact",
+    family: "_parseFamily",
+    "caches-extra-info": "_parseCachesExtraInfo",
+    "extra-info-digest": "_parseExtraInfoDigest",
+    "hidden-service-dir": "_parseHiddenServiceDir",
+    bandwidth: "_parseBandwidth",
+    protocols: "_parseProtocols",
+    "allow-single-hop-exits": "_parseAllowSingleHopExits",
+    "or-address": "_parseORAddress",
+    "master-key-ed25519": "_parseMasterKeyEd25519",
+    "router-sig-ed25519": "_parseRouterSigEd25519",
+    "identity-ed25519": "_parseIdentityEd25519",
+    "onion-key-crosscert": "_parseOnionKeyCrosscert",
+    "ntor-onion-key-crosscert": "_parseNtorOnionKeyCrosscert",
+    "tunnelled-dir-server": "_parseTunnelledDirServer",
+    proto: "_parseProtoVersions",
+    a: "_parseALine",
+    p: "_parseAccept",
+    p6: "_parseIPv6Policy",
+    id: "_parseIdLine",
+  };
+
+  /**
+   * Parse a router descriptor or microdescriptor.
+   *
+   * @param reply - The reply to parse
+   * @returns Array of RouterDescriptor objects
+   */
+  public parseDirectoryStatus(reply: ProtocolReply): RouterDescriptor[] {
+    const descriptors: RouterDescriptor[] = [];
+    let descriptor = new RouterDescriptor();
+    let mds = false;
+
+    if (
+      reply.get(0)?.startsWith("onion-key") ||
+      reply.get(1)?.startsWith("onion-key")
+    ) {
+      mds = true; // parsing full microdescriptor list
+    }
+
+    while (reply.valid()) {
+      const line = reply.current();
+
+      if (/^200 OK/i.test(line)) {
+        continue; // Skip HTTP "200 OK" responses
+      }
+      //
+      if (line.trim() === "") {
+        continue; // Skip empty lines
+      }
+
+      let isOptional = false;
+      let currentLine = line;
+
+      if (currentLine.startsWith("opt ")) {
+        isOptional = true;
+        currentLine = currentLine.slice(4);
+      }
+
+      const [keyword,...rest] = currentLine.split(/\s+/);
+
+      const value = rest.join(" ");
+
+      if (keyword === "router" || (keyword === "onion-key" && mds)) {
+        if (descriptor.fingerprint) {
+          descriptors.push(descriptor);
+        }
+        descriptor = new RouterDescriptor();
+      }
+
+      if (this.descriptorReplyLines[keyword]) {
+        const callback = this.descriptorReplyLines[keyword];
+        const parsedValue = (this as any)[callback](value, reply);
+        descriptor.setArray(parsedValue);
+      } else if (!isOptional) {
+        console.warn(`No callback found for keyword ${keyword}`);
+      }
+
+      reply.next();
+    }
+
+    if (descriptor.fingerprint) {
+      descriptors.push(descriptor);
+    } else if (Object.keys(descriptor).length > 0) {
+      descriptors.push(descriptor);
+    }
+
+    return descriptors;
+  }
+
+  /**
+   * Parse a circuit status (CIRC) response.
+   *
+   * @param line A circuit status line (with or without /^CIRC/)
+   *
+   * @throws ProtocolError If status line or value is malformed
+   */
+  public parseCircuitStatusLine(line: string): CircuitStatus {
+    const c = new CircuitStatus();
+
+    // Remove the 'CIRC' prefix if present
+    if (line.startsWith("CIRC")) {
+      line = line.replace(/^\s*CIRC\s*/, "");
+    }
+
+    const parts = line.split(" ", 3);
+
+    if (parts.length < 3) {
+      throw new ProtocolError(
+        `Error parsing circuit status, expected at least 3 parts but got ${parts.length}`,
+      );
+    }
+
+    c.id = parts[0];
+    c.status = parts[1];
+    line = parts[2];
+
+    if (
+      !["LAUNCHED", "BUILT", "EXTENDED", "FAILED", "CLOSED"].includes(c.status)
+    ) {
+      throw new ProtocolError(`Unknown circuit status '${c.status}'`);
+    }
+
+    // Handle the '$' prefix for the path
+    if (line.startsWith("$")) {
+      let temp: string[];
+      // @ts-ignore
+      [temp, line] = line.split(" ", 2);
+
+      // @ts-ignore
+      temp = temp.split(",");
+
+      c.path = temp.map((hop) => {
+        const fpnick = hop.split("~");
+        return [fpnick[0], fpnick[1]];
+      });
+    }
+
+    // Parse additional key-value pairs
+    const regex = /^(\S+)=([\S\s]+)/;
+    let matches: RegExpExecArray | null;
+    let maxIterations = 9;
+
+    while (line.trim() !== "" && maxIterations > 0) {
+      matches = regex.exec(line);
+      if (!matches) break;
+
+      const [fullMatch, key, val] = matches;
+      line = line.substring(fullMatch.length);
+
+      switch (key) {
+        case "BUILD_FLAGS":
+          c.buildFlags = val.split(",");
+          break;
+
+        case "PURPOSE":
+          c.purpose = val;
+          break;
+
+        case "HS_STATE":
+          c.hsState = val;
+          break;
+
+        case "REND_QUERY":
+          c.rendQuery = val;
+          break;
+
+        case "TIME_CREATED":
+          c.created = val;
+          break;
+
+        case "REASON":
+          c.reason = val;
+          break;
+
+        case "REMOTE_REASON":
+          c.remoteReason = val;
+          break;
+
+        case "SOCKS_USERNAME":
+          c.socksUsername = val;
+          break;
+
+        case "SOCKS_PASSWORD":
+          c.socksPassword = val;
+          break;
+
+        default:
+          // Unhandled case - can log or ignore
+          break;
+      }
+
+      maxIterations--;
+    }
+
+    return c;
+  }
+
+  public _parseNtorOnionKeyCrosscert(
+    line: string,
+    reply: ProtocolReply,
+  ): {
+    ntor_onion_key_crosscert_signbit: string;
+    ntor_onion_key_crosscert: string;
+  } {
+    const signbit = line;
+    const cert = this.parseBlockData(
+      reply,
+      "-----BEGIN ED25519 CERT-----",
+      "-----END ED25519 CERT-----",
+    );
+
+    return {
+      ntor_onion_key_crosscert_signbit: signbit,
+      ntor_onion_key_crosscert: cert,
+    };
+  }
+
+  public _parseTunnelledDirServer(line: string): {
+    tunnelled_dir_server: boolean;
+  } {
+    return { tunnelled_dir_server: true };
+  }
+
+  public _parseIdLine(line: string): { ed25519_key?: string } {
+    const ret: { ed25519_key?: string } = {};
+
+    const [keytype, value] = line.split(" ", 2);
+
+    if (keytype === "rsa1024") {
+      // base64 encoded fingerprint - implementations should ignore
+      // bin2hex(base64_decode($value)) == fingerprint
+    } else if (keytype === "ed25519") {
+      ret["ed25519_key"] = value;
+    } // unknown key type - ignore
+
+    return ret;
+  }
+
+  public parseProtocolInfo(reply: string[]): {
+    methods: string[];
+    cookiefile: string | null;
+    version: string;
+  } {
+    /*
+         250-PROTOCOLINFO 1
+         250-AUTH METHODS=COOKIE,SAFECOOKIE,HASHEDPASSWORD COOKIEFILE="/var/run/tor/control.authcookie"
+         250-VERSION Tor="0.2.4.24"
+         250 OK
+         */
+    let methods: string | null = null;
+    let cookiefile: string | null = null;
+    let version: string | null = null;
+
+    const info = reply[0];
+    const auth = reply[1];
+    version = reply[2];
+
+    const pInfo = info.trim().split(" ", 2);
+
+    if (pInfo.length !== 2 || pInfo[0] !== "PROTOCOLINFO") {
+      throw new Error(`Unexpected PROTOCOLINFO response; got "${info}"`);
+    }
+
+    if (!/^\d$/.test(pInfo[1])) {
+      throw new Error(
+        `Invalid PROTOCOLINFO version. Expected 1*DIGIT; got "${pInfo[1]}"`,
+      );
+    }
+
+    const authInfo = auth.trim().split(" ", 2);
+
+    if (authInfo.length !== 2 || authInfo[0] !== "AUTH") {
+      throw new Error(`Expected AUTH line; got "${auth}"`);
+    }
+
+    const values = this._parseDelimitedData(authInfo[1]);
+
+    if (!values["METHODS"] || values["METHODS"] === "") {
+      throw new Error(
+        "PROTOCOLINFO reply did not contain any authentication methods",
+      );
+    }
+
+    methods = values["METHODS"];
+
+    if (values["COOKIEFILE"]) {
+      cookiefile = values["COOKIEFILE"];
+    }
+
+    const versionInfo = version.trim().split(" ", 2);
+
+    if (versionInfo.length !== 2 || versionInfo[0] !== "VERSION") {
+      throw new Error(`Expected VERSION line; got "${version}"`);
+    }
+
+    const parsedVersion = this._parseDelimitedData(versionInfo[1]);
+
+    if (!parsedVersion["Tor"]) {
+      throw new Error(
+        "PROTOCOLINFO VERSION line did not match expected format",
+      );
+    }
+
+    version = parsedVersion["Tor"];
+
+    return {
+      methods: methods.split(","),
+      cookiefile,
+      version,
+    };
+  }
+
+  private _parseRouter(line: string): {
+    nickname: string;
+    ip_address: string;
+    or_port: string;
+    dir_port: string;
+  } {
+
+    const values = line.split(" ");
+
+
+    if (values.length < 5) {
+
+      throw new Error(
+        `Error parsing router line. Expected 5 values, got ${values.length}`,
+      );
+    }
+
+    return {
+      nickname: values[0],
+      ip_address: values[1],
+      or_port: values[2],
+      dir_port: values[4],
+    };
+  }
+
+  private _parsePlatform(line: string): { platform: string } {
+    return { platform: line };
+  }
+
+  private _parsePublished(line: string): { published: string } {
+    const values = line.split(" ");
+
+    if (values.length !== 2) {
+      throw new Error(
+        `Error parsing published line. Expected 2 values, got ${values.length}`,
+      );
+    }
+
+    const date = values[0]; // You may wish to validate the date format
+    const time = values[1]; // You may wish to validate the time format
+
+    // TODO: validate date and time format if needed
+
+    return {
+      published: line,
+    };
+  }
+
+  private _parseFingerprint(line: string): { fingerprint: string } {
+    return {
+      fingerprint: line.replace(/\s+/g, ""),
+    };
+  }
+
+  private _parseHibernating(line: string): { hibernating: string } {
+    return {
+      hibernating: line,
+    };
+  }
+
+  private _parseUptime(line: string): { uptime: string } {
+    if (!/^\d+$/.test(line)) {
+      throw new Error("Invalid uptime, expected numeric value");
+    }
+
+    return {
+      uptime: line,
+    };
+  }
+
+  private _parseOverloadGeneral(line: string): { overload_general: boolean } {
+    return {
+      overload_general: true,
+    };
+  }
+
+  private _parseOnionKey(
+    line: string,
+    reply: ProtocolReply,
+  ): { onion_key: string } {
+    const key = this.parseRsaKey(reply);
+    return {
+      onion_key: key,
+    };
+  }
+
+  private _parseNtorOnionKey(line: string): { ntor_onion_key: string } {
+
+    const len = line.length % 4;
+    if (len > 0) {
+      line = line.padEnd(line.length + (4 - len), "=");
+    }
+
+    if (!this.isBase64(line)) {
+      throw new Error(
+        "ntor-onion-key did not contain valid base64 encoded data",
+      );
+    }
+
+    return {
+      ntor_onion_key: line,
+    };
+  }
+
+  // Helper method to check if a string is valid base64
+  private isBase64(str: string): boolean {
+    try {
+      const decoded = Buffer.from(str, "base64").toString("utf-8");
+    } catch {
+      return false;
+    }
+
+    return true;
+  }
+
+  private _parseSigningKey(
+    line: string,
+    reply: ProtocolReply,
+  ): { signing_key: string } {
+    const key = this.parseRsaKey(reply);
+    return {
+      signing_key: key,
+    };
+  }
+
+  // Helper method to decode base64
+  private base64Decode(encoded: string): string | null {
+    try {
+      return Buffer.from(encoded, "base64").toString("utf-8");
+    } catch {
+      return null;
+    }
+  }
+
+  private parseRsaKey(reply: ProtocolReply): string {
+    return this.parseBlockData(
+      reply,
+      "-----BEGIN RSA PUBLIC KEY-----",
+      "-----END RSA PUBLIC KEY-----",
+    );
+  }
+
+  private _parseAccept(line: string): { exit_policy4: { accept: string } } {
+    return {
+      exit_policy4: { accept: line },
+    };
+  }
+
+  private _parseReject(line: string): { exit_policy4: { reject: string } } {
+    return {
+      exit_policy4: { reject: line },
+    };
+  }
+
+  private _parseIPv6Policy(line: string): {
+    exit_policy6: { [key: string]: string[] };
+  } {
+
+    const [policy, portlist] = line.split(" ");
+    const ports = portlist.split(",");
+
+    const p: { [key: string]: string[] } = { [policy]: ports };
+
+    if (p["reject"]) {
+      p["accept"] = ["*:*"];
+    } else {
+      p["reject"] = ["*:*"];
+    }
+
+    return {
+      exit_policy6: p,
+    };
+  }
+
+  private _parseRouterSignature(
+    line: string,
+    reply: ProtocolReply,
+  ): { router_signature: string } {
+    const key = this.parseBlockData(
+      reply,
+      "-----BEGIN SIGNATURE-----",
+      "-----END SIGNATURE-----",
+    );
+    return {
+      router_signature: key,
+    };
+  }
+
+  private _parseContact(line: string): { contact: string } {
+    return { contact: line };
+  }
+
+  private _parseFamily(line: string): { family: string[] } {
+    return {
+      family: line.split(" "),
+    };
+  }
+
+  private _parseCachesExtraInfo(line: string): { caches_extra_info: boolean } {
+    // presence of this field indicates the server caches extra info
+    return { caches_extra_info: true };
+  }
+
+  private _parseExtraInfoDigest(line: string): { extra_info_digest: string } {
+    return { extra_info_digest: line };
+  }
+
+  private _parseHiddenServiceDir(line: string): { hidden_service_dir: string } {
+
+    if (!line || line.trim() === "") {
+      line = "2";
+    }
+    return {
+      hidden_service_dir: line,
+    };
+  }
+
+  private _parseBandwidth(line: string): {
+    bandwidth_average: string;
+    bandwidth_burst: string;
+    bandwidth_observed: string;
+  } {
+    const values = line.split(" ");
+    if (values.length < 3) {
+      throw new Error(
+        `Error parsing bandwidth line. Expected 3 values, got ${values.length}`,
+      );
+    }
+
+    return {
+      bandwidth_average: values[0],
+      bandwidth_burst: values[1],
+      bandwidth_observed: values[2],
+    };
+  }
+
+  private _parseProtocols(line: string): { protocols: string } {
+
+    return {
+      protocols: line,
+    };
+  }
+
+  private _parseProtoVersions(line: string): {
+    proto: Record<string, number[]>;
+  } {
+
+    const protos: Record<string, number[]> = {};
+    const entries = line.split(" ");
+
+    // Обробка рядка, схожого на:
+    // proto Cons=1-2 Desc=1-2 DirCache=1 HSDir=1 HSIntro=3 HSRend=1-2 Link=1-4 LinkAuth=1 Microdesc=1-2 Relay=1-2
+    // але також може містити значення на зразок "Something=3,5-6"
+
+    entries.forEach((entry) => {
+      const [keyword, values] = entry.split("=");
+      protos[keyword] = [];
+
+      const valueList = values.split(",");
+
+      valueList.forEach((value) => {
+        if (value.includes("-")) {
+          const range = value.split("-").map(Number);
+          const [start, end] = range;
+
+          if (start < end) {
+            // Додаємо діапазон значень
+            protos[keyword].push(
+              ...Array.from({ length: end - start + 1 }, (_, i) => start + i),
+            );
+          }
+        } else {
+          protos[keyword].push(Number(value));
+        }
+      });
+    });
+
+    return { proto: protos };
+  }
+
+  private _parseAllowSingleHopExits(line: string): {
+    allow_single_hop_exits: boolean;
+  } {
+
+    // Наявність цієї лінії вказує на те, що маршрутизатор дозволяє однохопові виходи
+    return { allow_single_hop_exits: true };
+  }
+
+  private _parseORAddress(line: string): { or_address: string } {
+    return { or_address: line };
+  }
+
+  private _parseMasterKeyEd25519(line: string): { ed25519_key: string } {
+    return { ed25519_key: line };
+  }
+
+  private _parseRouterSigEd25519(line: string): { ed25519_sig: string } {
+    return {
+      ed25519_sig: line,
+    };
+  }
+
+  private _parseIdentityEd25519(
+    line: string,
+    reply: ProtocolReply,
+  ): { ed25519_identity: string } {
+
+    const cert = this.parseBlockData(
+      reply,
+      "-----BEGIN ED25519 CERT-----",
+      "-----END ED25519 CERT-----",
+    );
+    return {
+      ed25519_identity: cert,
+    };
+  }
+
+  private _parseOnionKeyCrosscert(
+    line: string,
+    reply: ProtocolReply,
+  ): { onion_key_crosscert: string } {
+    const cert = this.parseBlockData(
+      reply,
+      "-----BEGIN CROSSCERT-----",
+      "-----END CROSSCERT-----",
+    );
+    return {
+      onion_key_crosscert: cert,
+    };
+  }
+
+  private parseBlockData(
+    reply: ProtocolReply,
+    startDelimiter: string,
+    endDelimiter: string,
+  ): string {
+    // Move to the next item in the iterator
+    reply.next();
+
+    let line = reply.current();
+
+    // Check if the line starts with the startDelimiter
+    if (line !== startDelimiter) {
+      throw new Error(
+        `Expected line beginning with "${startDelimiter}", got ${line}`,
+      );
+    }
+
+    let data = line;
+
+    // Continue reading until we find the endDelimiter
+    while (reply.valid()) {
+      reply.next();
+
+      if (!reply.valid()) {
+        throw new Error(
+          `Reached end of reply without matching end delimiter "${endDelimiter}"`,
+        );
+      }
+
+      line = reply.current();
+      data += `\n${line}`;
+
+      if (line === endDelimiter) {
+        break;
+      }
+    }
+
+    return data;
+  }
+
+  private static parseRLine(line: string): Record<string, string> {
+    const values = line.split(" ");
+
+    return {
+      nickname: values[1],
+      fingerprint: this.base64ToHexString(values[2]).substring(0, 40),
+      digest: this.base64ToHexString(values[3]).substring(0, 40),
+      published: `${values[4]} ${values[5]}`,
+      ip_address: values[6],
+      or_port: values[7],
+      dir_port: values[8],
+    };
+  }
+
+  public static base64ToHexString(base64: string): string {
+    // Ensure base64 string is properly padded
+    const padLength = base64.length % 4;
+    if (padLength > 0) {
+      base64 = base64.padEnd(base64.length + (4 - padLength), "=");
+    }
+
+    // Decode the base64 string to a binary string
+    const binary = Buffer.from(base64, "base64");
+
+    // Convert the binary string to a hexadecimal representation and make it uppercase
+    return binary.toString("hex").toUpperCase();
+  }
+
+  private _parseALine(line: string): { or_port: string; ipv6_address: string } {
+    // Check if the line contains a space and process accordingly
+    if (line.includes(" ")) {
+      const values = line.split(" ", 2);
+      line = values[1];
+    }
+
+    let ip: string;
+    let port: string;
+
+    // Match IPv6 address with port or split by colon for standard cases
+    const match = line.match(/\[([^\]]+)\]+:(\d+)/);
+    if (match) {
+      ip = match[1];
+      port = match[2];
+    } else {
+      [ip, port] = line.split(":", 2);
+    }
+
+    // Return the parsed data as an object
+    return {
+      // or_port: null,
+      or_port: port,
+      // ipv6_address: null,
+      ipv6_address: ip,
+    };
+  }
+
+  private _parseSLine(line: string): { flags: string[] } {
+    // Split the input line into parts based on spaces
+    const values = line.split(" ");
+
+    // Remove the first item from the array (e.g., the prefix 's')
+    values.shift();
+
+    // Return the remaining parts as an array of flags
+    return {
+      flags: values,
+    };
+  }
+
+  private _parsePLine(line: string): Record<string, Record<string, string>> {
+    const values = line.split(" ");
+
+    if (values.length < 3) {
+      throw new Error(`Invalid P-line format: ${line}`);
+    }
+
+    return {
+      exit_policy4: {
+        [values[1]]: values[2],
+      },
+    };
+  }
+
+  private _parseWLine(line: string): {
+    bandwidth: string;
+    bandwidth_measured: string | null;
+    bandwidth_unmeasured: string | null;
+  } {
+    const bandwidth = this._parseDelimitedData(line, "w");
+
+    if (!bandwidth["Bandwidth"]) {
+      throw new Error("Bandwidth value not present in 'w' line");
+    }
+
+    return {
+      bandwidth: bandwidth["Bandwidth"],
+      bandwidth_measured: bandwidth["Measured"] || null,
+      bandwidth_unmeasured: bandwidth["Unmeasured"] || null,
+    };
+  }
+
+  /**
+   * Parse an ADDRMAP line.
+   *
+   * @param line The line to parse
+   * @throws ProtocolError If the line is malformed
+   */
+  public parseAddrMap(line: string): AddrMap {
+    if (!line.startsWith("ADDRMAP")) {
+      throw new Error("Data passed to parseAddrMap must begin with ADDRMAP");
+    }
+
+    const regex = /^ADDRMAP ([^\s]+) ([^\s]+) (?:(NEVER|"[^"]+"))( .*)?$/;
+    const match = line.match(regex);
+
+    if (!match) {
+      throw new ProtocolError(`Invalid ADDRMAP line '${line}'`);
+    }
+
+    const map: AddrMap = {
+      ADDRESS: match[1],
+      NEWADDRESS: match[2],
+      EXPIRY: match[3].replace(/"/g, ""), // Remove quotes from expiry
+    };
+
+    // Parse any additional keyword arguments (assuming `parseKeywordArguments` is a method)
+    if (match[4]) {
+      const additionalArgs = this.parseKeywordArguments(match[4]);
+      return { ...map, ...additionalArgs };
+    }
+
+    return map;
+  }
+
+  public parseKeywordArguments(input: string): { [key: string]: string } {
+    const eventData: { [key: string]: string } = {};
+    let offset = 0;
+
+    while (offset < input.length) {
+      if (input[offset] === " ") {
+        ++offset;
+        continue;
+      }
+
+      let value: string | null = null;
+      const temp = input.slice(offset);
+      const keyword = this.parseAlpha(temp);
+
+      offset += keyword.length;
+
+      if (input[offset] !== "=") {
+        throw new Error(
+          `Expected "=" at offset ${offset}, got ${input[offset]}`,
+        );
+      }
+
+      ++offset;
+
+      const tempValue = input.slice(offset);
+
+      if (tempValue === "") {
+        // empty value, end of line
+        value = "";
+      } else if (input[offset] === " ") {
+        // empty value, more keywords remain
+        value = "";
+        ++offset;
+      } else if (input[offset] === '"') {
+        value = this.parseQuotedString(tempValue);
+        offset += value.length + 3;
+      } else {
+        value = this.parseNonSpDquote(tempValue);
+        offset += value.length + 1;
+      }
+
+      eventData[keyword] = value;
+    }
+
+    return eventData;
+  }
+
+  public parseAlpha(input: string): string {
+    const match = input.match(/([a-zA-Z_]{1,})/);
+
+    if (match) {
+      return match[1];
+    }
+
+    throw new Error("Illegal keyword format");
+  }
+
+  public parseQuotedString(input: string): string {
+    const len = input.length;
+    let val = "";
+    let terminated = false;
+
+    for (let i = 1; i < len; ++i) {
+      const c = input[i];
+
+      if (c === '"') {
+        if (val.length > 1 && val[val.length - 1] !== "\\") {
+          terminated = true;
+          break;
+        }
+      }
+
+      if (/[\x01-\x08\x0b\x0c\x0e-\x7f]/.test(c)) {
+        val += c;
+      }
+    }
+
+    if (!terminated) {
+      throw new Error("Unterminated quote string encountered");
+    }
+
+    return val;
+  }
+
+  public parseNonSpDquote(input: string): string {
+    const regex =
+      /^([\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]+)(?:\s|$)/;
+    const match = input.match(regex);
+
+    if (match) {
+      return match[1];
+    }
+
+    throw new Error(`Illegal keyword argument string encountered: ${input}`);
+  }
+
+  public parseDelimitedData(
+    data: string,
+    prefix: string | null = null,
+    delimiter: string = "=",
+    boundary: string = " ",
+  ): { [key: string]: string } {
+    return this._parseDelimitedData(data, prefix, delimiter, boundary);
+  }
+
+  private _parseDelimitedData(
+    data: string,
+    prefix: string | null = null,
+    delimiter: string = "=",
+    boundary: string = " ",
+  ): Record<string, string> {
+    const result: Record<string, string> = {};
+
+    // Remove the prefix if provided and matches
+    if (prefix && typeof prefix === "string") {
+      const prefixRegex = new RegExp(`^${this._escapeRegExp(prefix)} `);
+      data = data.replace(prefixRegex, "");
+    }
+
+    let item = "";
+    let value = "";
+    let state: "i" | "d" | "dr" | "n" = "i";
+    let quoted = false;
+
+    const length = data.length;
+
+    for (let p = 0; p < length; ++p) {
+      const c = data[p];
+      const eof = p + 1 >= length;
+
+      switch (state) {
+        case "i": // Parsing item name
+          if (c === delimiter) {
+            state = "d";
+          } else {
+            item += c;
+          }
+          break;
+
+        case "d": // Parsing delimiter
+          if (c === '"') {
+            quoted = true;
+            state = "dr";
+          } else {
+            value += c;
+            quoted = false;
+            state = "dr";
+          }
+          break;
+
+        case "dr": // Parsing value
+          if ((!quoted && c === boundary) || (quoted && c === '"')) {
+            state = "n";
+          } else {
+            value += c;
+          }
+          break;
+
+        case "n": // New key-value pair
+          result[item] = value;
+          item = "";
+          value = "";
+          state = "i";
+          quoted = false;
+          break;
+      }
+
+      // Handle EOF
+      if (eof) {
+        if (state === "dr" && quoted) {
+          throw new Error(
+            "EOF encountered while parsing quoted value in delimited data",
+          );
+        }
+        result[item] = value;
+      }
+    }
+
+    return result;
+  }
+
+  // Helper function to escape special characters in regex
+  private _escapeRegExp(string: string): string {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+}
