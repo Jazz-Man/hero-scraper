@@ -1,6 +1,7 @@
 import type ProtocolReply from "./ProtocolReply.ts";
 import RouterDescriptor from "./RouterDescriptor.ts";
 import { ProtocolError } from "./ProtocolError.ts";
+import CircuitStatus from "./CircuitStatus.ts";
 
 interface AddrMap {
   ADDRESS: string;
@@ -8,6 +9,12 @@ interface AddrMap {
   EXPIRY: string;
   [key: string]: any;
 }
+
+export type TProtocolInfo = {
+  methods: string[];
+  cookiefile: string | null;
+  version: string;
+};
 
 export default class Parser {
   private descriptorReplyLines: Record<string, string> = {
@@ -84,9 +91,7 @@ export default class Parser {
         currentLine = currentLine.slice(4);
       }
 
-      const [keyword,...rest] = currentLine.split(/\s+/);
-
-      const value = rest.join(" ");
+      const { keyword, value } = this.splitToKeywordValues(currentLine);
 
       if (keyword === "router" || (keyword === "onion-key" && mds)) {
         if (descriptor.fingerprint) {
@@ -123,104 +128,145 @@ export default class Parser {
    * @throws ProtocolError If status line or value is malformed
    */
   public parseCircuitStatusLine(line: string): CircuitStatus {
-    const c = new CircuitStatus();
-
-    // Remove the 'CIRC' prefix if present
-    if (line.startsWith("CIRC")) {
+    // Remove "CIRC " prefix if present
+    if (/^\s*CIRC /.test(line)) {
       line = line.replace(/^\s*CIRC\s*/, "");
     }
 
-    const parts = line.split(" ", 3);
+    const parts = line.split(" ");
 
     if (parts.length < 3) {
-      throw new ProtocolError(
-        `Error parsing circuit status, expected at least 3 parts but got ${parts.length}`,
-      );
+      throw new Error(`Malformed circuit status line: "${line}"`);
     }
 
-    c.id = parts[0];
-    c.status = parts[1];
-    line = parts[2];
+    const [id, status, path, ...rest] = parts;
 
-    if (
-      !["LAUNCHED", "BUILT", "EXTENDED", "FAILED", "CLOSED"].includes(c.status)
-    ) {
-      throw new ProtocolError(`Unknown circuit status '${c.status}'`);
+    // Validate status
+    const validStatuses = ["LAUNCHED", "BUILT", "EXTENDED", "FAILED", "CLOSED"];
+    if (!validStatuses.includes(status)) {
+      throw new Error(`Unknown circuit status: "${status}"`);
     }
 
-    // Handle the '$' prefix for the path
-    if (line.startsWith("$")) {
-      let temp: string[];
-      // @ts-ignore
-      [temp, line] = line.split(" ", 2);
+    const details = rest.join(" ");
 
-      // @ts-ignore
-      temp = temp.split(",");
+    const circuit = new CircuitStatus();
 
-      c.path = temp.map((hop) => {
-        const fpnick = hop.split("~");
-        return [fpnick[0], fpnick[1]];
-      });
-    }
+    circuit.id = parseInt(id, 10);
+    circuit.status = status;
 
-    // Parse additional key-value pairs
-    const regex = /^(\S+)=([\S\s]+)/;
-    let matches: RegExpExecArray | null;
-    let maxIterations = 9;
+    circuit.path = path?.split(",").map((hop) => {
+      const [fingerprint, nickname] = hop.split("~");
+      return [fingerprint, nickname] as [string, string];
+    });
 
-    while (line.trim() !== "" && maxIterations > 0) {
-      matches = regex.exec(line);
-      if (!matches) break;
+    // Parse key-value pairs in the remaining line
+    const keyValueRegex = /(\w+)=([^ ]+)/g;
+    let match: RegExpExecArray | null;
 
-      const [fullMatch, key, val] = matches;
-      line = line.substring(fullMatch.length);
+    while ((match = keyValueRegex.exec(details)) !== null) {
+      const [_, key, value] = match;
 
       switch (key) {
         case "BUILD_FLAGS":
-          c.buildFlags = val.split(",");
+          circuit.buildFlags = value.split(",");
           break;
-
         case "PURPOSE":
-          c.purpose = val;
+          circuit.purpose = value;
           break;
-
         case "HS_STATE":
-          c.hsState = val;
+          circuit.hsState = value;
           break;
-
         case "REND_QUERY":
-          c.rendQuery = val;
+          circuit.rendQuery = value;
           break;
-
         case "TIME_CREATED":
-          c.created = val;
+          circuit.created = value;
           break;
-
         case "REASON":
-          c.reason = val;
+          circuit.reason = value;
           break;
-
         case "REMOTE_REASON":
-          c.remoteReason = val;
+          circuit.remoteReason = value;
           break;
-
         case "SOCKS_USERNAME":
-          c.socksUsername = val;
+          circuit.socksUsername = value;
+          break;
+        case "SOCKS_PASSWORD":
+          circuit.socksPassword = value;
+          break;
+        default:
+          console.warn(`Unknown key encountered: ${key}`);
+      }
+    }
+
+    return circuit;
+  }
+
+  public parseRouterStatus(reply: ProtocolReply): { [fingerprint: string]: RouterDescriptor } {
+    const descriptors: { [fingerprint: string]: RouterDescriptor } = {};
+    let descriptor: RouterDescriptor | null = null;
+
+    for (const line of reply.getReplyLines()) {
+      if (line === '.' || line === '250 OK') {
+        continue; // Пропустити непотрібні рядки
+      }
+
+      const lineType = line[0];
+
+      switch (lineType) {
+        case 'r':
+          if (descriptor !== null) {
+            descriptors[descriptor.fingerprint] = descriptor;
+          }
+          descriptor = new RouterDescriptor();
+          descriptor.setArray(this._parseRLine(line));
           break;
 
-        case "SOCKS_PASSWORD":
-          c.socksPassword = val;
+        case 'a':
+          if (descriptor !== null) {
+            descriptor.setArray(this._parseALine(line));
+          }
+          break;
+
+        case 's':
+          if (descriptor !== null) {
+            descriptor.setArray(this._parseSLine(line));
+          }
+          break;
+
+        case 'v':
+          if (descriptor !== null) {
+            descriptor.setArray(this._parsePlatform(line));
+          }
+          break;
+
+        case 'w':
+          if (descriptor !== null) {
+            descriptor.setArray(this._parseWLine(line));
+          }
+          break;
+
+        case 'p':
+          if (descriptor !== null) {
+
+            const pLine = this._parsePLine(line);
+            console.log({lineType,line, pLine})
+            descriptor.setArray(pLine);
+          }
           break;
 
         default:
-          // Unhandled case - can log or ignore
-          break;
+          // Додаткові дії для незнайомих рядків (наприклад, журналювання)
+          console.warn(`UNKNOWN ROUTER STATUS LINE ${lineType}: `, line);
       }
-
-      maxIterations--;
     }
 
-    return c;
+    // Додати останній дескриптор
+    if (descriptor !== null) {
+      descriptors[descriptor.fingerprint] = descriptor;
+    }
+
+    return descriptors;
   }
 
   public _parseNtorOnionKeyCrosscert(
@@ -264,92 +310,15 @@ export default class Parser {
     return ret;
   }
 
-  public parseProtocolInfo(reply: string[]): {
-    methods: string[];
-    cookiefile: string | null;
-    version: string;
-  } {
-    /*
-         250-PROTOCOLINFO 1
-         250-AUTH METHODS=COOKIE,SAFECOOKIE,HASHEDPASSWORD COOKIEFILE="/var/run/tor/control.authcookie"
-         250-VERSION Tor="0.2.4.24"
-         250 OK
-         */
-    let methods: string | null = null;
-    let cookiefile: string | null = null;
-    let version: string | null = null;
-
-    const info = reply[0];
-    const auth = reply[1];
-    version = reply[2];
-
-    const pInfo = info.trim().split(" ", 2);
-
-    if (pInfo.length !== 2 || pInfo[0] !== "PROTOCOLINFO") {
-      throw new Error(`Unexpected PROTOCOLINFO response; got "${info}"`);
-    }
-
-    if (!/^\d$/.test(pInfo[1])) {
-      throw new Error(
-        `Invalid PROTOCOLINFO version. Expected 1*DIGIT; got "${pInfo[1]}"`,
-      );
-    }
-
-    const authInfo = auth.trim().split(" ", 2);
-
-    if (authInfo.length !== 2 || authInfo[0] !== "AUTH") {
-      throw new Error(`Expected AUTH line; got "${auth}"`);
-    }
-
-    const values = this._parseDelimitedData(authInfo[1]);
-
-    if (!values["METHODS"] || values["METHODS"] === "") {
-      throw new Error(
-        "PROTOCOLINFO reply did not contain any authentication methods",
-      );
-    }
-
-    methods = values["METHODS"];
-
-    if (values["COOKIEFILE"]) {
-      cookiefile = values["COOKIEFILE"];
-    }
-
-    const versionInfo = version.trim().split(" ", 2);
-
-    if (versionInfo.length !== 2 || versionInfo[0] !== "VERSION") {
-      throw new Error(`Expected VERSION line; got "${version}"`);
-    }
-
-    const parsedVersion = this._parseDelimitedData(versionInfo[1]);
-
-    if (!parsedVersion["Tor"]) {
-      throw new Error(
-        "PROTOCOLINFO VERSION line did not match expected format",
-      );
-    }
-
-    version = parsedVersion["Tor"];
-
-    return {
-      methods: methods.split(","),
-      cookiefile,
-      version,
-    };
-  }
-
   private _parseRouter(line: string): {
     nickname: string;
     ip_address: string;
     or_port: string;
     dir_port: string;
   } {
-
     const values = line.split(" ");
 
-
     if (values.length < 5) {
-
       throw new Error(
         `Error parsing router line. Expected 5 values, got ${values.length}`,
       );
@@ -425,7 +394,6 @@ export default class Parser {
   }
 
   private _parseNtorOnionKey(line: string): { ntor_onion_key: string } {
-
     const len = line.length % 4;
     if (len > 0) {
       line = line.padEnd(line.length + (4 - len), "=");
@@ -495,7 +463,6 @@ export default class Parser {
   private _parseIPv6Policy(line: string): {
     exit_policy6: { [key: string]: string[] };
   } {
-
     const [policy, portlist] = line.split(" ");
     const ports = portlist.split(",");
 
@@ -546,7 +513,6 @@ export default class Parser {
   }
 
   private _parseHiddenServiceDir(line: string): { hidden_service_dir: string } {
-
     if (!line || line.trim() === "") {
       line = "2";
     }
@@ -575,7 +541,6 @@ export default class Parser {
   }
 
   private _parseProtocols(line: string): { protocols: string } {
-
     return {
       protocols: line,
     };
@@ -584,7 +549,6 @@ export default class Parser {
   private _parseProtoVersions(line: string): {
     proto: Record<string, number[]>;
   } {
-
     const protos: Record<string, number[]> = {};
     const entries = line.split(" ");
 
@@ -621,7 +585,6 @@ export default class Parser {
   private _parseAllowSingleHopExits(line: string): {
     allow_single_hop_exits: boolean;
   } {
-
     // Наявність цієї лінії вказує на те, що маршрутизатор дозволяє однохопові виходи
     return { allow_single_hop_exits: true };
   }
@@ -644,7 +607,6 @@ export default class Parser {
     line: string,
     reply: ProtocolReply,
   ): { ed25519_identity: string } {
-
     const cert = this.parseBlockData(
       reply,
       "-----BEGIN ED25519 CERT-----",
@@ -709,6 +671,75 @@ export default class Parser {
     return data;
   }
 
+  /**
+   * Parses the PROTOCOLINFO response from Tor control port.
+   * @param reply The ProtocolReply instance containing the response.
+   * @returns An object with methods, cookiefile, and version information.
+   * @throws Error if the response is malformed or missing required fields.
+   */
+  public parseProtocolInfo(reply: ProtocolReply): TProtocolInfo {
+    // Get individual lines from the reply
+    const info = reply.get(0);
+    const auth = reply.get(1);
+    const versionLine = reply.get(2);
+
+    if (!info || !auth || !versionLine) {
+      throw new Error("Incomplete PROTOCOLINFO response");
+    }
+
+    const { keyword: pInfoKeyword, value: pInfoValue } =
+      this.splitToKeywordValues(info);
+
+    if (!pInfoKeyword.endsWith("PROTOCOLINFO")) {
+      throw new Error(`Unexpected PROTOCOLINFO response; got "${info}"`);
+    }
+    if (!/^\d+$/.test(pInfoValue)) {
+      throw new Error(
+        `Invalid PROTOCOLINFO version. Expected 1*DIGIT; got "${pInfoValue}"`,
+      );
+    }
+
+    const { keyword: authKeyword, value: authValue } =
+      this.splitToKeywordValues(auth);
+
+    if (!authKeyword.endsWith("AUTH")) {
+      throw new Error(`Expected AUTH line; got "${auth}"`);
+    }
+
+    const authValues = this._parseDelimitedData(authValue);
+
+    if (!authValues["METHODS"] || authValues["METHODS"].length === 0) {
+      throw new Error(
+        "PROTOCOLINFO reply did not contain any authentication methods",
+      );
+    }
+
+    const methods = authValues["METHODS"];
+    const cookiefile = authValues["COOKIEFILE"] || null;
+
+    const { keyword: versionKeyword, value: versionValue } =
+      this.splitToKeywordValues(versionLine);
+
+    if (!versionKeyword.endsWith("VERSION")) {
+      throw new Error(`Expected VERSION line; got "${versionLine}"`);
+    }
+
+    const versionValues = this._parseDelimitedData(versionValue);
+
+    if (!versionValues["Tor"]) {
+      throw new Error(
+        "PROTOCOLINFO VERSION line did not match expected format",
+      );
+    }
+    const version = versionValues["Tor"];
+
+    return {
+      methods: methods.split(","),
+      cookiefile,
+      version,
+    };
+  }
+
   private static parseRLine(line: string): Record<string, string> {
     const values = line.split(" ");
 
@@ -735,6 +766,20 @@ export default class Parser {
 
     // Convert the binary string to a hexadecimal representation and make it uppercase
     return binary.toString("hex").toUpperCase();
+  }
+
+  private _parseRLine(line: string): { [key: string]: string } {
+    const values = line.split(' ');
+
+    return {
+      nickname: values[1],
+      fingerprint: Parser.base64ToHexString(values[2]).slice(0, 40),
+      digest: Parser.base64ToHexString(values[3]).slice(0, 40),
+      published: `${values[4]} ${values[5]}`,
+      ip_address: values[6],
+      or_port: values[7],
+      dir_port: values[8],
+    };
   }
 
   private _parseALine(line: string): { or_port: string; ipv6_address: string } {
@@ -1022,6 +1067,15 @@ export default class Parser {
     }
 
     return result;
+  }
+
+  private splitToKeywordValues(
+    line: string,
+  ): Record<"keyword" | "value", string> {
+    const [keyword, ...rest] = line.split(/\s+/);
+    const value = rest.join(" ");
+
+    return { keyword, value };
   }
 
   // Helper function to escape special characters in regex
