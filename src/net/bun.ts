@@ -1,67 +1,55 @@
-import {connect, type TCPSocket} from "bun";
-import type {ITCPClient} from "./interface.ts";
+import { connect, type TCPSocket } from "bun";
+import type { ITCPClient } from "./interface.ts";
 import BaseTCPClient from "./base.ts";
-
 
 type TReturnPromise = void | Promise<void>;
 
-interface BunTCPClientOptions {
-  onOpen?: (socket: TCPSocket) => TReturnPromise;
-  onError?: (socket: TCPSocket, error: Error) => TReturnPromise;
-  onClose?: (socket: TCPSocket) => TReturnPromise;
-  onTimeout?: (socket: TCPSocket) => TReturnPromise;
-}
-
 export class BunTCPClient extends BaseTCPClient implements ITCPClient {
-  private connection: TCPSocket | null = null;
-  private options: BunTCPClientOptions;
-
-  constructor(options: BunTCPClientOptions = {}) {
-    super();
-    this.options = options;
-  }
+  private resolve: ((data: Buffer) => void) | null = null;
 
   async connect(host: string, port: number): Promise<void> {
-    this.connection = await connect({
+    this.socket = await connect({
       hostname: host,
       port,
       socket: {
-        open: (socket: TCPSocket): TReturnPromise => {
-          if (this.options.onOpen) this.options.onOpen(socket);
-        },
+        binaryType: "buffer",
         data: (socket: TCPSocket, data: Buffer) => this.handleData(data),
-        close: (socket): TReturnPromise => {
-          if (this.options.onClose) this.options.onClose(socket);
-        },
         error: (socket: TCPSocket, error: Error): TReturnPromise => {
-          if (this.options.onError) this.options.onError(socket, error);
+          throw error;
         },
         connectError: (socket: TCPSocket, error): TReturnPromise => {
-          throw new Error("Connection failed: " + error);
-        },
-        timeout(socket: TCPSocket): TReturnPromise {
-          if (this.options.onTimeout) this.options.onTimeout(socket);
+          throw error;
         },
       },
     });
 
-    if (!this.connection) {
+    if (!this.socket) {
       throw new Error("Failed to connect");
     }
   }
 
-  async send(data: string): Promise<void> {
-    if (this.connection) {
-      this.connection.flush();
-      this.connection.write(data);
+  async send(command: string): Promise<Buffer> {
+    if (!this.socket) {
+      throw new Error("No active connection");
     }
+
+    this.buffer = Buffer.alloc(0);
+
+    return new Promise((resolve, reject) => {
+      this.resolve = resolve;
+
+      this.socket!.write(`${command.trim()}\r\n`);
+    });
   }
 
+  protected handleData(data: Buffer): void {
+    this.buffer = Buffer.concat([this.buffer, data]);
 
-  async close(): Promise<void> {
-    if (this.connection) {
-      this.connection.end();
-      this.connection = null;
+    // Перевіряємо, чи отримано повну відповідь
+    if (this.isCompleteResponse(this.buffer)) {
+      const resolve = this.resolve;
+      this.resolve = null;
+      if (resolve) resolve(this.buffer);
     }
   }
 }

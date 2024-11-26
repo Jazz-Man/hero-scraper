@@ -1,36 +1,38 @@
-import { BunTCPClient } from "./bun.ts";
-import { TorClient } from "./client.ts";
-import { NodeTCPClient } from "./node.ts";
-import type { TCPSocket } from "bun";
-import { Socket } from "net";
-import { Readable } from "stream";
-import readline from "node:readline";
-import ProtocolReply from "./lib/ProtocolReply.ts";
+import {TorClient} from "./client.ts";
+import {BunTCPClient} from "./bun.ts";
 import Parser from "./lib/Parser.ts";
 
-(async () => {
-  const tcpClient = new BunTCPClient({});
+const tcpClient = new BunTCPClient();
+
+
+try {
+
   const torClient = new TorClient(tcpClient);
+
+  await torClient.connect("127.0.0.1", 9051);
+   await torClient.authenticate("jazzman.sv1");
 
   const parser = new Parser();
 
-  try {
-    await torClient.connect("127.0.0.1", 9051);
-    await torClient.authenticate("jazzman.sv1");
+  // const cmd = "desc/all-recent";
+  const cmd = TorClient.GETINFO_DESCRIPTOR_ID('81C55D403A82BF6E7C3FBDBD41D102B7088900D9');
+  // const cmd = TorClient.GETINFO_ADDRESS;
 
-    const cmd = "desc/all-recent";
-    // const cmd = "desc/name/InMemoryOfJohnKerr";
+  // const response = await torClient.getInfoAddress();
+  // const response = await torClient.getInfo(cmd);
+  // const response = await torClient.getInfo('desc/id/81C55D403A82BF6E7C3FBDBD41D102B7088900D9');
+  // const response = await torClient.getProtocolInfo();
+  const response = await torClient.getInfo(TorClient.GETINFO_NETSTATUS_ALL);
+  // const response = await torClient.getInfoDescriptor('81C55D403A82BF6E7C3FBDBD41D102B7088900D9');
+  //
 
-    const response = await torClient.sendCommand(`GETINFO ${cmd}`);
+  const res = parser.parseRouterStatus(response)
+  console.log(res);
 
-    const reply = await torClient.handleResponse(response, cmd);
+  torClient.close();
+} catch (error) {
+  console.error("Error:", error);
+} finally {
+  tcpClient.close();
+}
 
-    const res = parser.parseDirectoryStatus(reply);
-
-    console.log(res);
-  } catch (error) {
-    console.error("Error:", error);
-  } finally {
-    await torClient.close();
-  }
-})();

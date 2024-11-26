@@ -4,7 +4,8 @@ import readline from "node:readline";
 import ProtocolReply from "./lib/ProtocolReply.ts";
 import { ProtocolError } from "./lib/ProtocolError.ts";
 import type RouterDescriptor from "./lib/RouterDescriptor.ts";
-import Parser from "./lib/Parser.ts";
+import Parser, {type TProtocolInfo} from "./lib/Parser.ts";
+import CircuitStatus from "./lib/CircuitStatus.ts";
 
 interface torResponse {
   code: number;
@@ -13,6 +14,7 @@ interface torResponse {
   message?: string;
   data: string;
 }
+
 
 export class TorClient {
   private tcpClient: ITCPClient;
@@ -101,49 +103,65 @@ export class TorClient {
     this.parser = new Parser();
   }
 
-  async connect(host: string, port: number): Promise<void> {
+  async connect(host: string, port: number): Promise<any> {
     await this.tcpClient.connect(host, port);
   }
 
-  async authenticate(password: string): Promise<void> {
-    await this.tcpClient.send(`AUTHENTICATE "${password}"\r\n`);
-    const response = await this.tcpClient.receive();
-    // if (!response.startsWith("250")) {
-    //   throw new Error(`Authentication failed: ${response}`);
-    // }
-  }
+  async authenticate(password?: string): Promise<string> {
+    return new Promise(async (resolve, reject) => {
 
-  async sendCommand(command: string): Promise<Buffer> {
-    return new Promise<Buffer>(async (resolve, reject) => {
-      await this.tcpClient.send(`${command}\r\n`);
+      const buf = await this.sendCommand(`AUTHENTICATE "${password}"`);
 
-      const data = await this.tcpClient.receive();
+      const response = buf.toString();
 
-      resolve(data);
+      if (!response.startsWith("250")) {
+        reject(`Authentication failed: ${response}`);
+      }
+
+      resolve(response);
     });
   }
 
-  async close(): Promise<void> {
-    await this.tcpClient.close();
-  }
-
-  async getInfo(command: string): Promise<ProtocolReply> {
+  async getProtocolInfo(): Promise<TProtocolInfo> {
     return new Promise(async (resolve, reject) => {
-      const response = await this.sendCommand(`GETINFO ${command}`);
+      const response = await this.sendCommand("PROTOCOLINFO 1");
+
+      const reply = await this.handleResponse(response, "PROTOCOLINFO");
 
       try {
-        const reply = await this.handleResponse(response, command);
-
-        resolve(reply);
-      } catch (error) {
-        reject(error);
+        const info = this.parser.parseProtocolInfo(reply);
+        resolve(info);
+      } catch (e) {
+        reject(e);
       }
     });
   }
 
-  private async getInfoInternalOneLine(command: string): Promise<string> {
+  async sendCommand(command: string): Promise<Buffer> {
+    return await this.tcpClient.send(command);
+  }
+
+  close(): void {
+    this.tcpClient.close();
+  }
+
+  async getInfo(command: string): Promise<ProtocolReply> {
+    const response = await this.sendCommand(`GETINFO ${command}\r\n`);
+
+    const reply = await this.handleResponse(response, command);
+
     return new Promise(async (resolve, reject) => {
-      const reply = await this.getInfo(command);
+      if (!reply.isPositiveReply()) {
+        reject(reply.get(0));
+      }
+      resolve(reply);
+    });
+  }
+
+  private async getInfoInternalOneLine(command: string): Promise<string> {
+    const reply = await this.getInfo(command);
+
+    return new Promise(async (resolve, reject) => {
       if (!reply.isPositiveReply()) {
         reject(reply.get(0));
       }
@@ -196,7 +214,6 @@ export class TorClient {
   }
 
   async getInfoTrafficWritten(): Promise<string> {
-
     return this.getInfoInternalOneLine(TorClient.GETINFO_TRAFFICWRITTEN);
   }
 
@@ -225,7 +242,6 @@ export class TorClient {
     });
   }
 
-
   async getInfoStatusVersionRecommended(): Promise<string[]> {
     return new Promise(async (resolve, reject) => {
       const cmd = TorClient.GETINFO_VERSION_RECOMMENDED;
@@ -250,40 +266,36 @@ export class TorClient {
    * @throws ProtocolError If no descriptor was found or another protocol error occurred
    */
   async getInfoDescriptor(
-      descriptorNameOrID: string | null = null
-  ):
-      Promise<RouterDescriptor | RouterDescriptor[]>
+    descriptorNameOrID: string | null = null,
+  ): Promise<RouterDescriptor | RouterDescriptor[]> {
+    return new Promise(async (resolve, reject) => {
+      let cmd: string;
 
-  {
+      if (descriptorNameOrID === null) {
+        cmd = TorClient.GETINFO_DESCRIPTOR_ALL;
+      } else if (this.isFingerprint(descriptorNameOrID)) {
+        cmd = TorClient.GETINFO_DESCRIPTOR_ID(descriptorNameOrID);
+      } else if (this.isNickname(descriptorNameOrID)) {
+        cmd = TorClient.GETINFO_DESCRIPTOR_NAME(descriptorNameOrID);
+      } else {
+        reject(
+          `"${descriptorNameOrID}" is not a valid router fingerprint or nickname`,
+        );
+      }
 
-   return new Promise(async (resolve, reject) => {
+      const reply = await this.getInfo(cmd);
 
-     let cmd: string;
+      if (!reply.isPositiveReply()) {
+        reject(reply.get(0));
+      }
 
-     if (descriptorNameOrID === null) {
-       cmd = TorClient.GETINFO_DESCRIPTOR_ALL;
-     } else if (this.isFingerprint(descriptorNameOrID)) {
-       cmd = TorClient.GETINFO_DESCRIPTOR_ID(descriptorNameOrID.startsWith('$') ? descriptorNameOrID : `$${descriptorNameOrID}`);
-     } else if (this.isNickname(descriptorNameOrID)) {
-       cmd = TorClient.GETINFO_DESCRIPTOR_NAME(descriptorNameOrID);
-     } else {
-       throw new Error(`"${descriptorNameOrID}" is not a valid router fingerprint or nickname`);
-     }
+      const descriptors = this.parser.parseDirectoryStatus(reply);
 
-     const reply = await this.getInfo(cmd);
-
-     if (!reply.isPositiveReply()) {
-       reject(reply.get(0));
-     }
-
-     const descriptors = this.parser.parseDirectoryStatus(reply);
-
-     resolve(descriptors);
-
-   });
+      resolve(descriptors);
+    });
   }
 
-  async getInfoCircuitStatus(): Promise<string[]> {
+  async getInfoCircuitStatus(): Promise<CircuitStatus[]> {
     return new Promise(async (resolve, reject) => {
       const cmd = TorClient.GETINFO_CIRCUITSTATUS;
       const reply = await this.getInfo(cmd);
@@ -292,7 +304,16 @@ export class TorClient {
         reject(reply.get(0));
       }
 
-      resolve(reply.getReplyLines());
+      const circuits: CircuitStatus[] = [];
+
+      reply.getReplyLines().forEach((line) => {
+        if (line === '250 OK'){
+          return;
+        }
+        circuits.push(this.parser.parseCircuitStatusLine(line));
+      })
+
+      resolve(circuits);
     });
   }
 
@@ -335,7 +356,7 @@ export class TorClient {
     });
   }
 
-  public getLineReader(response: Buffer){
+  public getLineReader(response: Buffer): readline.Interface {
     const stream = Readable.from(response, {
       encoding: "utf-8",
     });
@@ -349,9 +370,8 @@ export class TorClient {
 
   public async handleResponse(
     response: Buffer,
-    command: string,
+    command?: string,
   ): Promise<ProtocolReply> {
-
     const lineReader = this.getLineReader(response);
 
     const reply = new ProtocolReply(command);
@@ -362,7 +382,7 @@ export class TorClient {
     let handlingEvent = false;
 
     for await (const line of lineReader) {
-      if (line.trim() === "."){
+      if (line.trim() === ".") {
         break;
       }
 
