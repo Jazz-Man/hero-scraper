@@ -89,19 +89,14 @@ export default class RouterDescriptor {
         const policy = this[key as "exit_policy4" | "exit_policy6"];
 
         if (value.accept) {
-          const accept = value.accept.includes(",")
-            ? value.accept.split(",")
-            : value.accept.split(" ");
-
-          policy.accept = [...policy.accept, ...accept];
+          const res = this.parsePolicy(value.accept);
+          policy.accept = [...policy.accept, ...res];
         }
 
         if (value.reject) {
-          const reject = value.reject.includes(",")
-            ? value.reject.split(",")
-            : value.reject.split(" ");
+          const res = this.parsePolicy(value.reject);
 
-          policy.reject = [...policy.reject, ...reject];
+          policy.reject = [...policy.reject, ...res];
         }
       } else if (key === "or_address") {
         this.or_address.push(value);
@@ -111,6 +106,14 @@ export default class RouterDescriptor {
     }
 
     return this;
+  }
+
+  private parsePolicy(policy: string | string[]): string[] {
+    return Array.isArray(policy)
+      ? policy
+      : policy.includes(",")
+        ? policy.split(",")
+        : policy.split(" ");
   }
 
   getArray(): Record<string, any> {

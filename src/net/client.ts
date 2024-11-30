@@ -4,58 +4,37 @@ import readline from "node:readline";
 import ProtocolReply from "./lib/ProtocolReply.ts";
 import { ProtocolError } from "./lib/ProtocolError.ts";
 import type RouterDescriptor from "./lib/RouterDescriptor.ts";
-import Parser, {type TProtocolInfo} from "./lib/Parser.ts";
+import Parser, {
+  type TProtocolInfo,
+  type TRouterStatus,
+} from "./lib/Parser.ts";
 import CircuitStatus from "./lib/CircuitStatus.ts";
 
-interface torResponse {
-  code: number;
-  command?: string;
-  status?: string;
-  message?: string;
-  data: string;
-}
-
-
 export class TorClient {
-  private tcpClient: ITCPClient;
-
   // GETINFO Constants
   public static readonly GETINFO_VERSION = "version";
   public static readonly GETINFO_VERSION_CURRENT = "status/version/current";
   public static readonly GETINFO_VERSION_RECOMMENDED =
     "status/version/recommended";
+  public static readonly GETINFO_INFO_NAMES = "info/names";
+  public static readonly GETINFO_CONFIG_DEFAULTS = "config/defaults";
   public static readonly GETINFO_CFGFILE = "config-file";
   public static readonly GETINFO_DESCRIPTOR_ALL = "desc/all-recent";
-  public static readonly GETINFO_DESCRIPTOR_ID = (id: string): string =>
-    `desc/id/${id}`;
-  public static readonly GETINFO_DESCRIPTOR_NAME = (name: string): string =>
-    `desc/name/${name}`;
   public static readonly GETINFO_UDECRIPTOR_ALL = "md/all";
-  public static readonly GETINFO_UDESCRIPTOR_ID = (id: string): string =>
-    `md/id/${id}`;
-  public static readonly GETINFO_UDESCRIPTOR_NAME = (name: string): string =>
-    `md/name/${name}`;
   public static readonly GETINFO_DORMANT = "dormant";
   public static readonly GETINFO_NETSTATUS_ALL = "ns/all";
-  public static readonly GETINFO_NETSTATUS_ID = (id: string): string =>
-    `ns/id/${id}`;
-  public static readonly GETINFO_NETSTATUS_NAME = (name: string): string =>
-    `ns/name/${name}`;
   public static readonly GETINFO_DIRSTATUS_ALL = "dir/server/all";
   public static readonly GETINFO_ADDRESS = "address";
   public static readonly GETINFO_FINGERPRINT = "fingerprint";
   public static readonly GETINFO_TRAFFICREAD = "traffic/read";
   public static readonly GETINFO_TRAFFICWRITTEN = "traffic/written";
   public static readonly GETINFO_ENTRY_GUARDS = "entry-guards";
-  public static readonly GETINFO_IP2COUNTRY = (ip: string): string =>
-    `ip-to-country/${ip}`;
   public static readonly GETINFO_CONFIGNAMES = "config/names";
   public static readonly GETINFO_CONFIGTEXT = "config-text";
   public static readonly GETINFO_CIRCUITSTATUS = "circuit-status";
   public static readonly GETINFO_CURTIME_LOCAL = "current-time/local";
   public static readonly GETINFO_CURTIME_UTC = "current-time/utc";
   public static readonly GETINFO_UPTIME = "uptime";
-
   public static readonly GETINFO_STATUS_ORPORT = "net/listeners/or";
   public static readonly GETINFO_STATUS_DIRPORT = "net/listeners/dir";
   public static readonly GETINFO_STATUS_SOCKSPORT = "net/listeners/socks";
@@ -66,7 +45,6 @@ export class TorClient {
   public static readonly GETINFO_STATUS_EXTORPORT = "net/listeners/extor";
   public static readonly GETINFO_STATUS_HTTPTUNPORT =
     "net/listeners/httptunnel";
-
   // SIGNAL Constants
   public static readonly SIGNAL_RELOAD = "RELOAD";
   public static readonly SIGNAL_SHUTDOWN = "SHUTDOWN";
@@ -78,24 +56,22 @@ export class TorClient {
   public static readonly SIGNAL_HEARTBEAT = "HEARTBEAT";
   public static readonly SIGNAL_ACTIVE = "ACTIVE";
   public static readonly SIGNAL_DORMANT = "DORMANT";
-
   // Hidden Service Key Types
   public static readonly ONION_KEYTYPE_NEW = "NEW";
   public static readonly ONION_KEYTYPE_RSA1024 = "RSA1024";
   public static readonly ONION_KEYTYPE_CURVE25519 = "ED25519-V3";
   public static readonly ONION_KEYBLOB_BEST = "BEST";
-
   // Hidden Service Flags
   public static readonly ONION_FLAG_DISCARDPK = 0x01;
   public static readonly ONION_FLAG_DETACH = 0x02;
   public static readonly ONION_FLAG_BASICAUTH = 0x04;
   public static readonly ONION_FLAG_NONANON = 0x08;
-
   // Authentication Constants
   public static readonly AUTH_SAFECOOKIE_SERVER_TO_CONTROLLER =
     "Tor safe cookie authentication server-to-controller hash";
   public static readonly AUTH_SAFECOOKIE_CONTROLLER_TO_SERVER =
     "Tor safe cookie authentication controller-to-server hash";
+  private tcpClient: ITCPClient;
   private parser: Parser;
 
   constructor(tcpClient: ITCPClient) {
@@ -103,13 +79,33 @@ export class TorClient {
     this.parser = new Parser();
   }
 
+  public static readonly GETINFO_DESCRIPTOR_ID = (id: string): string =>
+    `desc/id/${id}`;
+
+  public static readonly GETINFO_DESCRIPTOR_NAME = (name: string): string =>
+    `desc/name/${name}`;
+
+  public static readonly GETINFO_UDESCRIPTOR_ID = (id: string): string =>
+    `md/id/${id}`;
+
+  public static readonly GETINFO_UDESCRIPTOR_NAME = (name: string): string =>
+    `md/name/${name}`;
+
+  public static readonly GETINFO_NETSTATUS_ID = (id: string): string =>
+    `ns/id/${id}`;
+
+  public static readonly GETINFO_NETSTATUS_NAME = (name: string): string =>
+    `ns/name/${name}`;
+
+  public static readonly GETINFO_IP2COUNTRY = (ip: string): string =>
+    `ip-to-country/${ip}`;
+
   async connect(host: string, port: number): Promise<any> {
     await this.tcpClient.connect(host, port);
   }
 
   async authenticate(password?: string): Promise<string> {
     return new Promise(async (resolve, reject) => {
-
       const buf = await this.sendCommand(`AUTHENTICATE "${password}"`);
 
       const response = buf.toString();
@@ -146,7 +142,7 @@ export class TorClient {
   }
 
   async getInfo(command: string): Promise<ProtocolReply> {
-    const response = await this.sendCommand(`GETINFO ${command}\r\n`);
+    const response = await this.sendCommand(`GETINFO ${command}`);
 
     const reply = await this.handleResponse(response, command);
 
@@ -155,18 +151,6 @@ export class TorClient {
         reject(reply.get(0));
       }
       resolve(reply);
-    });
-  }
-
-  private async getInfoInternalOneLine(command: string): Promise<string> {
-    const reply = await this.getInfo(command);
-
-    return new Promise(async (resolve, reject) => {
-      if (!reply.isPositiveReply()) {
-        reject(reply.get(0));
-      }
-
-      resolve(reply.get(0));
     });
   }
 
@@ -179,6 +163,38 @@ export class TorClient {
    */
   async getInfoAddress(): Promise<string> {
     return this.getInfoInternalOneLine(TorClient.GETINFO_ADDRESS);
+  }
+
+  async getInfoNames(): Promise<Record<string, string>> {
+    const reply = await this.getInfo(TorClient.GETINFO_INFO_NAMES);
+
+    return new Promise(async (resolve, reject) => {
+      const info: Record<string, string> = {};
+
+      for (const line of reply.getReplyLines()) {
+        const [key, value] = line.split("--", 2);
+
+        info[key.trim()] = value.trim();
+      }
+
+      resolve(info);
+    });
+  }
+
+  async getConfigDefaults(): Promise<Record<string, string>> {
+    const reply = await this.getInfo(TorClient.GETINFO_CONFIG_DEFAULTS);
+
+    return new Promise(async (resolve, reject) => {
+      const info: Record<string, string> = {};
+
+      for (const line of reply.getReplyLines()) {
+        const [key, value] = line.split(/\s+/, 2);
+
+        info[key.trim()] = value.trim().split('"').filter(Boolean).join(" ");
+      }
+
+      resolve(info);
+    });
   }
 
   async getInfoIpToCountry(ip: string): Promise<string> {
@@ -218,14 +234,9 @@ export class TorClient {
   }
 
   async getInfoConfigText(): Promise<string> {
-    return new Promise(async (resolve, reject) => {
-      const cmd = TorClient.GETINFO_CONFIGTEXT;
-      const reply = await this.getInfo(cmd);
+    const reply = await this.getInfo(TorClient.GETINFO_CONFIGTEXT);
 
-      if (!reply.isPositiveReply()) {
-        reject(reply.get(0));
-      }
-
+    return new Promise((resolve, reject) => {
       let config = "";
 
       for (const line of reply.getReplyLines()) {
@@ -243,15 +254,12 @@ export class TorClient {
   }
 
   async getInfoStatusVersionRecommended(): Promise<string[]> {
-    return new Promise(async (resolve, reject) => {
-      const cmd = TorClient.GETINFO_VERSION_RECOMMENDED;
-      const reply = await this.getInfo(cmd);
+    const stringPromise = await this.getInfoInternalOneLine(
+      TorClient.GETINFO_VERSION_RECOMMENDED,
+    );
 
-      if (!reply.isPositiveReply()) {
-        reject(reply.get(0));
-      }
-
-      resolve(reply.get(0).split(","));
+    return new Promise((resolve, reject) => {
+      resolve(stringPromise.split(","));
     });
   }
 
@@ -268,50 +276,102 @@ export class TorClient {
   async getInfoDescriptor(
     descriptorNameOrID: string | null = null,
   ): Promise<RouterDescriptor | RouterDescriptor[]> {
-    return new Promise(async (resolve, reject) => {
-      let cmd: string;
+    let cmd: string;
 
-      if (descriptorNameOrID === null) {
-        cmd = TorClient.GETINFO_DESCRIPTOR_ALL;
-      } else if (this.isFingerprint(descriptorNameOrID)) {
-        cmd = TorClient.GETINFO_DESCRIPTOR_ID(descriptorNameOrID);
-      } else if (this.isNickname(descriptorNameOrID)) {
-        cmd = TorClient.GETINFO_DESCRIPTOR_NAME(descriptorNameOrID);
-      } else {
-        reject(
-          `"${descriptorNameOrID}" is not a valid router fingerprint or nickname`,
-        );
-      }
+    if (descriptorNameOrID === null) {
+      cmd = TorClient.GETINFO_DESCRIPTOR_ALL;
+    } else if (this.isFingerprint(descriptorNameOrID)) {
+      cmd = TorClient.GETINFO_DESCRIPTOR_ID(descriptorNameOrID);
+    } else if (this.isNickname(descriptorNameOrID)) {
+      cmd = TorClient.GETINFO_DESCRIPTOR_NAME(descriptorNameOrID);
+    } else {
+      throw new ProtocolError(
+        `"${descriptorNameOrID}" is not a valid descriptor fingerprint or nickname`,
+      );
+    }
 
-      const reply = await this.getInfo(cmd);
+    const reply = await this.getInfo(cmd);
 
-      if (!reply.isPositiveReply()) {
-        reject(reply.get(0));
-      }
-
+    return new Promise((resolve) => {
       const descriptors = this.parser.parseDirectoryStatus(reply);
 
       resolve(descriptors);
     });
   }
 
-  async getInfoCircuitStatus(): Promise<CircuitStatus[]> {
-    return new Promise(async (resolve, reject) => {
-      const cmd = TorClient.GETINFO_CIRCUITSTATUS;
-      const reply = await this.getInfo(cmd);
+  async getInfoDirectoryStatus<T extends string | null>(
+    descriptorNameOrID: T = null,
+  ): Promise<TRouterStatus<T>> {
+    let cmd: string;
 
-      if (!reply.isPositiveReply()) {
-        reject(reply.get(0));
+    if (descriptorNameOrID === null) {
+      cmd = TorClient.GETINFO_NETSTATUS_ALL;
+    } else if (this.isFingerprint(descriptorNameOrID)) {
+      cmd = TorClient.GETINFO_NETSTATUS_ID(descriptorNameOrID);
+    } else if (this.isNickname(descriptorNameOrID)) {
+      cmd = TorClient.GETINFO_NETSTATUS_NAME(descriptorNameOrID);
+    } else {
+      throw new ProtocolError(
+        `"${descriptorNameOrID}" is not a valid router fingerprint or nickname`,
+      );
+    }
+
+    const reply = await this.getInfo(cmd);
+
+    return new Promise((resolve) => {
+      const descriptors: TRouterStatus<T> =
+        this.parser.parseRouterStatus<T>(reply);
+
+      if (descriptorNameOrID !== null) {
+        resolve(Object.values(descriptors).at(0) as TRouterStatus<T>);
       }
 
+      resolve(descriptors as TRouterStatus<T>);
+    });
+  }
+
+  async getInfoMicroDescriptor<T extends string | null>(
+    descriptorNameOrID: T = null,
+  ): Promise<TRouterStatus<T>> {
+    let cmd: string;
+
+    if (descriptorNameOrID === null) {
+      cmd = TorClient.GETINFO_UDECRIPTOR_ALL;
+    } else if (this.isFingerprint(descriptorNameOrID)) {
+      cmd = TorClient.GETINFO_UDESCRIPTOR_ID(descriptorNameOrID);
+    } else if (this.isNickname(descriptorNameOrID)) {
+      cmd = TorClient.GETINFO_UDESCRIPTOR_NAME(descriptorNameOrID);
+    } else {
+      throw new ProtocolError(
+        `"${descriptorNameOrID}" is not a valid router fingerprint or nickname`,
+      );
+    }
+
+    const reply = await this.getInfo(cmd);
+
+    return new Promise((resolve) => {
+      const descriptors = this.parser.parseMicrodescriptorStatus<T>(reply);
+
+      if (descriptorNameOrID !== null) {
+        resolve(Object.values(descriptors).at(0) as TRouterStatus<T>);
+      }
+
+      resolve(descriptors);
+    });
+  }
+
+  async getInfoCircuitStatus(): Promise<CircuitStatus[]> {
+    const reply = await this.getInfo(TorClient.GETINFO_CIRCUITSTATUS);
+
+    return new Promise((resolve, reject) => {
       const circuits: CircuitStatus[] = [];
 
       reply.getReplyLines().forEach((line) => {
-        if (line === '250 OK'){
+        if (line === "250 OK") {
           return;
         }
         circuits.push(this.parser.parseCircuitStatusLine(line));
-      })
+      });
 
       resolve(circuits);
     });
@@ -356,7 +416,51 @@ export class TorClient {
     });
   }
 
-  public getLineReader(response: Buffer): readline.Interface {
+  async getConf(keywords: string): Promise<ProtocolReply> {
+    const response = await this.sendCommand(`GETCONF ${keywords}\r\n`);
+    const reply = await this.handleResponse(response, "GETCONF");
+
+    return new Promise(async (resolve, reject) => {
+      // if (!reply.isPositiveReply()) {
+      //   reject(reply.get(0));
+      // }
+
+      resolve(reply);
+    });
+  }
+
+  /**
+   * Check if a string is a valid fingerprint.
+   *
+   * @param string The string to check as a fingerprint
+   *
+   * @returns true if valid fingerprint
+   */
+  protected isFingerprint(string: string): boolean {
+    return /^[A-F0-9]{40}$/i.test(string);
+  }
+
+  /**
+   * Check if a string is a valid nickname. Router nicknames are 1-19
+   * alphanumeric characters.
+   *
+   * @param string The string to check as a nickname
+   *
+   * @returns true if valid nickname
+   */
+  protected isNickname(string: string): boolean {
+    return /^[A-Z0-9]{1,19}$/i.test(string);
+  }
+
+  public async getInfoInternalOneLine(command: string): Promise<string> {
+    const reply = await this.getInfo(command);
+
+    return new Promise((resolve) => {
+      resolve(reply.get(0));
+    });
+  }
+
+  private getLineReader(response: Buffer): readline.Interface {
     const stream = Readable.from(response, {
       encoding: "utf-8",
     });
@@ -368,7 +472,7 @@ export class TorClient {
     });
   }
 
-  public async handleResponse(
+  private async handleResponse(
     response: Buffer,
     command?: string,
   ): Promise<ProtocolReply> {
@@ -462,29 +566,6 @@ export class TorClient {
    */
   private isDataReplyLine(line: string): boolean {
     return /^\d{3}\+/.test(line);
-  }
-
-  /**
-   * Check if a string is a valid fingerprint.
-   *
-   * @param string The string to check as a fingerprint
-   *
-   * @returns true if valid fingerprint
-   */
-  protected isFingerprint(string: string): boolean {
-    return /^[A-F0-9]{40}$/i.test(string);
-  }
-
-  /**
-   * Check if a string is a valid nickname. Router nicknames are 1-19
-   * alphanumeric characters.
-   *
-   * @param string The string to check as a nickname
-   *
-   * @returns true if valid nickname
-   */
-  protected isNickname(string: string): boolean {
-    return /^[A-Z0-9]{1,19}$/i.test(string);
   }
 
   private asyncEventHandler(reply: ProtocolReply): void {

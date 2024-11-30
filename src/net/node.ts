@@ -3,7 +3,7 @@ import BaseTCPClient from "./base.ts";
 import type { ITCPClient } from "./interface.ts";
 
 export class NodeTCPClient extends BaseTCPClient implements ITCPClient {
-  protected declare socket: Socket;
+  declare protected socket: Socket;
 
   constructor() {
     super();
