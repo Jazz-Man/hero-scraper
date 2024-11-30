@@ -14,20 +14,13 @@ try {
 
   const parser = new Parser();
 
-  // const cmd = "desc/all-recent";
-  const cmd = TorClient.GETINFO_DESCRIPTOR_ID('81C55D403A82BF6E7C3FBDBD41D102B7088900D9');
-  // const cmd = TorClient.GETINFO_ADDRESS;
+  const response = await torClient.getInfoStatusVersionRecommended(
+      // 'config/defaults'
+  );
 
-  // const response = await torClient.getInfoAddress();
-  // const response = await torClient.getInfo(cmd);
-  // const response = await torClient.getInfo('desc/id/81C55D403A82BF6E7C3FBDBD41D102B7088900D9');
-  // const response = await torClient.getProtocolInfo();
-  const response = await torClient.getInfo(TorClient.GETINFO_NETSTATUS_ALL);
-  // const response = await torClient.getInfoDescriptor('81C55D403A82BF6E7C3FBDBD41D102B7088900D9');
+  // const res = parser.parseMicrodescriptorStatus(response);
   //
-
-  const res = parser.parseRouterStatus(response)
-  console.log(res);
+  console.log(response);
 
   torClient.close();
 } catch (error) {
