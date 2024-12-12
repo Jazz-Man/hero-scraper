@@ -28,7 +28,7 @@ export default class RouterDescriptor {
   proto: Record<string, string[]> = {};
   extra_info_digest: string;
   hidden_service_dir: boolean = false;
-  bandwidth: number;
+  bandwidth: string;
   bandwidth_measured: number;
   bandwidth_unmeasured: number;
   bandwidth_average: number;

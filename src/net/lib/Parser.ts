@@ -16,11 +16,8 @@ export type TProtocolInfo = {
   version: string;
 };
 
-type TRouterStatusFingerprint = Record<string, RouterDescriptor>;
+export type RouterDescriptorMap =Map<string, RouterDescriptor>
 
-export type TRouterStatus<T> = T extends string
-  ? RouterDescriptor
-  : TRouterStatusFingerprint;
 
 export default class Parser {
   private descriptorReplyLines: Record<string, string> = {
@@ -160,10 +157,11 @@ export default class Parser {
    * @param reply - The reply to parse
    * @returns Array of RouterDescriptor objects
    */
-  public parseMicrodescriptorStatus<T extends string | null>(
+  public parseMicrodescriptorStatus(
     reply: ProtocolReply,
-  ): TRouterStatus<T> {
-    const descriptors: TRouterStatusFingerprint = {};
+  ): RouterDescriptorMap {
+
+    const descriptors = new Map<string, RouterDescriptor>();
     let descriptor: RouterDescriptor | null = null;
 
     while (reply.valid()) {
@@ -191,7 +189,7 @@ export default class Parser {
 
         case "onion-key":
           if (descriptor !== null) {
-            descriptors[descriptor.ed25519_key] = descriptor;
+            descriptors.set(descriptor.ed25519_key, descriptor);
           }
 
           descriptor = new RouterDescriptor();
@@ -235,11 +233,10 @@ export default class Parser {
 
     // Save the last parsed descriptor
     if (descriptor && descriptor.ed25519_key) {
-      descriptors[descriptor.ed25519_key] = descriptor;
-      // descriptors[descriptor.ed25519_key] = descriptor;
+      descriptors.set(descriptor.ed25519_key, descriptor);
     }
 
-    return descriptors as TRouterStatus<T>;
+    return descriptors;
   }
 
   /**
@@ -324,10 +321,12 @@ export default class Parser {
     return circuit;
   }
 
-  public parseRouterStatus<T extends string | null>(
+  public parseRouterStatus(
     reply: ProtocolReply,
-  ): TRouterStatus<T> {
-    const descriptors: TRouterStatusFingerprint = {};
+  ): RouterDescriptorMap {
+
+    const descriptors = new Map<string, RouterDescriptor>()
+
     let descriptor: RouterDescriptor | null = null;
 
     for (const line of reply.getReplyLines()) {
@@ -340,7 +339,7 @@ export default class Parser {
       switch (lineType) {
         case "r":
           if (descriptor !== null) {
-            descriptors[descriptor.fingerprint] = descriptor;
+            descriptors.set(descriptor.fingerprint, descriptor)
           }
           descriptor = new RouterDescriptor();
           descriptor.setArray(this._parseRLine(line));
@@ -385,10 +384,10 @@ export default class Parser {
 
     // Додати останній дескриптор
     if (descriptor !== null) {
-      descriptors[descriptor.fingerprint] = descriptor;
+      descriptors.set(descriptor.fingerprint, descriptor)
     }
 
-    return descriptors as TRouterStatus<T>;
+    return descriptors;
   }
 
   public _parseNtorOnionKeyCrosscert(

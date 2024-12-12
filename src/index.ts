@@ -6,9 +6,9 @@ import getHero from "./hero.ts";
       showChrome: true,
     });
 
-    // await hero.goto("https://ifconfig.io");
-    // await hero.goto("https://api.my-ip.io/v2/ip.txt");
-    await hero.goto("https://freebitco.in");
+    // await hero.goto("https://ipinfo.io");
+    await hero.goto("https://api.my-ip.io/v2/ip.txt");
+    // await hero.goto("https://freebitco.in");
 
     await hero.waitForPaintingStable(); // waits for the page to load
 

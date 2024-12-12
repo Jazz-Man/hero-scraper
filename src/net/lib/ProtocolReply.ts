@@ -41,11 +41,13 @@ export default class ProtocolReply {
       { regex: /^650[+\-]/, type: "eventNotification" },
       { regex: /^(\\d{3})-(.*)$/, type: "dataResponse" },
       { regex: /^(25\\d)\\s*(.*)$/, type: "status" },
+      { regex: /^(25\d)\s*(.*)$/, type: "status" },
       { regex: /^([456][015]\\d)\\s*(.*)$/, type: "error" },
     ];
 
     for (const { regex, type } of patterns) {
       const match = line.match(regex);
+
       if (match) {
         switch (type) {
           case "commandData":
