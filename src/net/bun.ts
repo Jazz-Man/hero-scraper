@@ -6,6 +6,7 @@ type TReturnPromise = void | Promise<void>;
 
 export class BunTCPClient extends BaseTCPClient implements ITCPClient {
   private resolve: ((data: Buffer) => void) | null = null;
+  private reject: ((data: Buffer) => void) | null = null;
 
   async connect(host: string, port: number): Promise<void> {
     this.socket = await connect({
@@ -15,9 +16,11 @@ export class BunTCPClient extends BaseTCPClient implements ITCPClient {
         binaryType: "buffer",
         data: (socket: TCPSocket, data: Buffer) => this.handleData(data),
         error: (socket: TCPSocket, error: Error): TReturnPromise => {
+          console.error(error);
           throw error;
         },
         connectError: (socket: TCPSocket, error): TReturnPromise => {
+          console.error(error);
           throw error;
         },
       },

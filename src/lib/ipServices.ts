@@ -5,17 +5,18 @@ const ipServices = {
   "checkip.amazonaws.com": "https://checkip.amazonaws.com",
   "ipify.org": "https://api.ipify.org",
   "ident.me": "https://ident.me",
-  "ifconfig.me": "https://ifconfig.me/ip",
-  "ipinfo.io/ip": "https://ipinfo.io/ip",
-  "ipecho.net/plain": "https://ipecho.net/plain",
+  // "ifconfig.me": "https://ifconfig.me/ip",
+  "api.my-ip.io/v2/ip.json": "https://api.my-ip.io/v2/ip.json",
   "whatismyip.akamai.com": "https://whatismyip.akamai.com",
   "check.torproject.org": "https://check.torproject.org/api/ip",
-  "ipify.org (IPv6)": "https://api64.ipify.org",
+  // "ipify.org (IPv6)": "https://api64.ipify.org",
   "ipv4.text.wtfismyip.com": "https://ipv4.text.wtfismyip.com",
 } as const;
 
 
 export type ServiceName = keyof typeof ipServices;
+
+export type ServiceUrl = typeof ipServices[keyof typeof ipServices];
 
 export const getRandomService = (): ServiceName => {
   const services = Object.keys(ipServices) as ServiceName[];

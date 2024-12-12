@@ -5,8 +5,8 @@ import ProtocolReply from "./lib/ProtocolReply.ts";
 import { ProtocolError } from "./lib/ProtocolError.ts";
 import type RouterDescriptor from "./lib/RouterDescriptor.ts";
 import Parser, {
+  type RouterDescriptorMap,
   type TProtocolInfo,
-  type TRouterStatus,
 } from "./lib/Parser.ts";
 import CircuitStatus from "./lib/CircuitStatus.ts";
 
@@ -146,10 +146,24 @@ export class TorClient {
 
     const reply = await this.handleResponse(response, command);
 
-    return new Promise(async (resolve, reject) => {
+    return new Promise((resolve, reject) => {
       if (!reply.isPositiveReply()) {
         reject(reply.get(0));
       }
+      resolve(reply);
+    });
+  }
+
+  async setConf(command: string): Promise<ProtocolReply> {
+    const response = await this.sendCommand(`SETCONF ${command}`);
+
+
+    const reply = await this.handleResponse(response, "SETCONF");
+
+    return new Promise((resolve, reject) => {
+      // if (!reply.isPositiveReply()) {
+      //   reject(reply.get(0));
+      // }
       resolve(reply);
     });
   }
@@ -299,9 +313,9 @@ export class TorClient {
     });
   }
 
-  async getInfoDirectoryStatus<T extends string | null>(
-    descriptorNameOrID: T = null,
-  ): Promise<TRouterStatus<T>> {
+  async getInfoDirectoryStatus(
+    descriptorNameOrID: string | null = null,
+  ): Promise<RouterDescriptorMap> {
     let cmd: string;
 
     if (descriptorNameOrID === null) {
@@ -319,20 +333,15 @@ export class TorClient {
     const reply = await this.getInfo(cmd);
 
     return new Promise((resolve) => {
-      const descriptors: TRouterStatus<T> =
-        this.parser.parseRouterStatus<T>(reply);
+      const descriptors = this.parser.parseRouterStatus(reply);
 
-      if (descriptorNameOrID !== null) {
-        resolve(Object.values(descriptors).at(0) as TRouterStatus<T>);
-      }
-
-      resolve(descriptors as TRouterStatus<T>);
+      resolve(descriptors);
     });
   }
 
-  async getInfoMicroDescriptor<T extends string | null>(
-    descriptorNameOrID: T = null,
-  ): Promise<TRouterStatus<T>> {
+  async getInfoMicroDescriptor(
+    descriptorNameOrID: string | null = null,
+  ): Promise<RouterDescriptorMap> {
     let cmd: string;
 
     if (descriptorNameOrID === null) {
@@ -350,11 +359,7 @@ export class TorClient {
     const reply = await this.getInfo(cmd);
 
     return new Promise((resolve) => {
-      const descriptors = this.parser.parseMicrodescriptorStatus<T>(reply);
-
-      if (descriptorNameOrID !== null) {
-        resolve(Object.values(descriptors).at(0) as TRouterStatus<T>);
-      }
+      const descriptors = this.parser.parseMicrodescriptorStatus(reply);
 
       resolve(descriptors);
     });
@@ -417,7 +422,7 @@ export class TorClient {
   }
 
   async getConf(keywords: string): Promise<ProtocolReply> {
-    const response = await this.sendCommand(`GETCONF ${keywords}\r\n`);
+    const response = await this.sendCommand(`GETCONF ${keywords}`);
     const reply = await this.handleResponse(response, "GETCONF");
 
     return new Promise(async (resolve, reject) => {
