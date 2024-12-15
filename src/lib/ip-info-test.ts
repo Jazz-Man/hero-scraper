@@ -1,18 +1,31 @@
-import {getRandomUsername} from "./proxy.ts";
-import {getPublicIP, type IPInfo} from "./ip-info.ts";
+import { getRandomUsername } from "./proxy.ts";
+import { getPublicIP, type IPInfo } from "./ip-info.ts";
 
 const promises = [];
 
-for (let i = 0; i <= 500; i++) {
-    promises.push(getPublicIP(getRandomUsername()));
+for (let i = 0; i <= 10; i++) {
+  promises.push(getPublicIP(getRandomUsername()));
 }
 
 await Promise.allSettled<IPInfo>(promises)
-    .then((results) =>
-        results.forEach((result) => {
-            const ipInfo = result.status === "fulfilled" ? result.value : null;
+  .then((results) => {
+    const list: Record<string, IPInfo[]> = {};
 
-            console.log(ipInfo.ip);
-        }),
-    )
-    .catch((e) => console.error("error", e));
+    results.forEach((result) => {
+      const ipInfo = result.status === "fulfilled" ? result.value : null;
+
+      // if (ipInfo) {
+      //   list[ipInfo.ip] = list[ipInfo.ip] || [];
+      //   list[ipInfo.ip].push(ipInfo);
+      // }
+
+      // if (list[ipInfo?.ip].length === 0) {
+      //   list[ipInfo?.ip] = [];
+      // }
+      //
+      console.log(ipInfo.proxy);
+    });
+
+    // console.log(list);
+  })
+  .catch((e) => console.error("error", e));
