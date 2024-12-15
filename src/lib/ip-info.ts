@@ -7,7 +7,6 @@ import { getProxyUrl, getRandomUsername } from "./proxy.ts";
 import { proxyFetch } from "./fetch.ts";
 
 import geoip, { type Lookup } from "geoip-lite";
-import { string } from "@ulixee/schema";
 
 export type IPInfo = {
   ip: string;
