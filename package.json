@@ -24,9 +24,6 @@
     "@ulixee/schema": "2.0.0-alpha.31",
     "@ulixee/unblocked-agent-mitm-socket": "2.0.0-alpha.31",
     "@ulixee/unblocked-specification": "2.0.0-alpha.31",
-    "ansi-colors": "^4.1.3",
-    "debug": "^4.3.7",
-    "geoip-lite": "^1.4.10",
-    "luxon": "^3.5.0"
+    "geoip-lite": "^1.4.10"
   }
 }
