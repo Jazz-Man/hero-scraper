@@ -1,12 +1,13 @@
 import ipServices, {
   getRandomizedServices,
+  oneLineServices,
   type ServiceName,
   type ServiceUrl,
 } from "./ipServices.ts";
 import { getProxyUrl, getRandomUsername } from "./proxy.ts";
 import { proxyFetch } from "./fetch.ts";
 
-import geoip, { type Lookup } from "geoip-lite";
+import geoIp, { type Lookup } from "geoip-lite";
 
 export type IPInfo = {
   ip: string;
@@ -14,45 +15,41 @@ export type IPInfo = {
   serviceNameUrl?: ServiceUrl;
   proxy?: string;
   proxyUser?: string;
-  rawResponse?: string;
+  rawResponse?: string | object;
 };
 
 export type GeoIPInfo = IPInfo & Partial<Lookup>;
-
-async function getTextFromStream(readableStream) {
-  let reader = readableStream.getReader();
-  let utf8Decoder = new TextDecoder();
-  let nextChunk;
-
-  let resultStr = "";
-
-  while (!(nextChunk = await reader.read()).done) {
-    let partialData = nextChunk.value;
-    resultStr += utf8Decoder.decode(partialData);
-  }
-
-  return resultStr;
-}
 
 export async function fetchIPInfo(
   serviceName: ServiceName,
   proxyUser: string = getRandomUsername(),
 ): Promise<GeoIPInfo> {
   return new Promise<GeoIPInfo>(async (resolve, reject) => {
-    const url = ipServices[serviceName];
+    const serviceNameUrl = ipServices[serviceName];
 
     const proxy = getProxyUrl(proxyUser);
 
-    const data = await proxyFetch(url, {
+    const data = await proxyFetch(serviceNameUrl, {
       proxy,
+      referrer:
+        "https://www.bing.com/search?pc=OA1&q=public%20IP%20checking%20services%20list",
       signal: AbortSignal.timeout(30000),
+      // verbose: false,
     })
       .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP error: ${response.status}`);
+        }
+
         const contentType = response.headers.get("content-type");
 
-        return contentType?.includes("application/json")
-          ? await response.json()
-          : await response.text().then((string) => string.trim());
+        try {
+          return contentType?.includes("application/json")
+            ? await response.json()
+            : await response.text().then((string) => string.trim());
+        } catch (error) {
+          throw new Error(`Failed to parse response: ${error.message}`);
+        }
       })
       .catch((e) => {
         reject(e);
@@ -63,56 +60,64 @@ export async function fetchIPInfo(
     const base: Partial<IPInfo> = {
       rawResponse: data,
       serviceName,
-      serviceNameUrl: url,
+      serviceNameUrl,
       proxy,
       proxyUser,
     };
 
-    switch (serviceName) {
-      case "icanhazip.com":
-      case "checkip.amazonaws.com":
-      case "ident.me":
-      // case "ifconfig.me":
-      case "whatismyip.akamai.com":
-      case "ipv4.text.wtfismyip.com":
-      case "ipify.org":
-        // case "ipify.org (IPv6)":
+    if (oneLineServices.hasOwnProperty(serviceName)) {
+      ipInfo = {
+        ip: data || data?.ip,
+        ...base,
+      };
+    } else {
+      switch (serviceName) {
+        case "httpbin.org":
+          ipInfo = {
+            ip: data?.origin,
+            ...base,
+          };
+          break;
+        case "check.torproject.org":
+          ipInfo = {
+            ip: data?.IP,
+            ...base,
+          };
+          break;
 
-        ipInfo = {
-          ip: data || data?.ip,
-          ...base,
-        };
-        break;
-      case "check.torproject.org":
-        ipInfo = {
-          ip: data?.IP,
-          ...base,
-        };
-        break;
+        case "api.my-ip.io/v2/ip.json":
+          ipInfo = {
+            ip: data?.ip,
+            ...base,
+          };
+          break;
+        case "ifconfig.pro":
+          ipInfo = {
+            ip: (data as string).split(" - ").at(0),
+            ...base,
+          };
 
-      case "api.my-ip.io/v2/ip.json":
-        ipInfo = {
-          ip: data?.ip,
-          ...base,
-        };
-        break;
+          break;
 
-      case "wtfismyip.com":
-      case "myip.wtf":
-        ipInfo = {
-          ip: data?.YourFuckingIPAddress || data?.ip,
-          ...base,
-        };
-        break;
+        case "wtfismyip.com":
+        case "myip.wtf":
+          ipInfo = {
+            ip: data?.YourFuckingIPAddress,
+            ...base,
+          };
+          break;
+      }
     }
 
     if (ipInfo.ip) {
-      const geo = geoip.lookup(ipInfo.ip);
+      const geo = geoIp.lookup(ipInfo.ip);
 
       ipInfo = {
         ...ipInfo,
         ...geo,
       };
+    } else {
+      reject(`Failed to fetch IP for "${serviceName}"`);
     }
 
     if (!ipInfo) {

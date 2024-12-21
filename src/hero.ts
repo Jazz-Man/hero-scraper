@@ -1,6 +1,7 @@
-import type {IHeroCreateOptions} from "@ulixee/hero";
-import {getPublicIP} from "./lib/ip-info.ts";
+import type { IHeroCreateOptions } from "@ulixee/hero";
+import { getPublicIP } from "./lib/ip-info.ts";
 import Hero from "@ulixee/hero/lib/Hero";
+import { OpenDnsAlternate } from "@ulixee/default-browser-emulator/lib/utils/DnsOverTlsProviders";
 
 export type THeroOptions = IHeroCreateOptions;
 
@@ -17,13 +18,12 @@ const getHero = async (createOptions?: THeroOptions): Promise<Hero> => {
     connectionToCore: {
       host: `ws://localhost:1818`,
     },
-    // upstreamProxyUrl: `socks5://${ipData.proxyUser}:pass@127.0.0.1:9050`,
-    // upstreamProxyUrl: ipData.proxy,
-    // upstreamProxyIpMask: {
-    //   publicIp: ipData.ip,
-    //   proxyIp: ipData.ip,
-    // },
-    // dnsOverTlsProvider: OpenDnsAlternate,
+    upstreamProxyUrl: ipData.proxy,
+    upstreamProxyIpMask: {
+      publicIp: ipData.ip,
+      proxyIp: ipData.ip,
+    },
+    dnsOverTlsProvider: OpenDnsAlternate,
     locale: locale.toString(),
     geolocation: { latitude, longitude },
     timezoneId: ipData.timezone,
