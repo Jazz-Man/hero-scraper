@@ -6,7 +6,7 @@
     "cloud:start": "cloud start --env=${PWD}/.env"
   },
   "devDependencies": {
-    "@types/bun": "latest",
+    "@types/bun": "^1.1.13",
     "@types/geoip-lite": "^1.4.4"
   },
   "peerDependencies": {
