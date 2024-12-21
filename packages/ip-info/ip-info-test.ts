@@ -1,5 +1,5 @@
-import { getRandomUsername } from "./proxy.ts";
-import { getPublicIP, type IPInfo } from "./ip-info.ts";
+import getPublicIP, { type IPInfo } from "./index";
+import { getRandomUsername } from "./src/proxy";
 
 const promises = [];
 
@@ -18,7 +18,6 @@ await Promise.allSettled<IPInfo>(promises)
         list[ipInfo.ip] = list[ipInfo.ip] || [];
         list[ipInfo.ip].push(ipInfo);
       }
-
     });
 
     console.log(list);

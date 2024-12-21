@@ -1,7 +1,8 @@
 import type { IHeroCreateOptions } from "@ulixee/hero";
-import { getPublicIP } from "./lib/ip-info.ts";
+
 import Hero from "@ulixee/hero/lib/Hero";
 import { OpenDnsAlternate } from "@ulixee/default-browser-emulator/lib/utils/DnsOverTlsProviders";
+import getPublicIP from "@scraper/ip-info";
 
 export type THeroOptions = IHeroCreateOptions;
 

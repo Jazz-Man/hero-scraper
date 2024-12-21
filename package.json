@@ -1,29 +1,24 @@
 {
-  "name": "hero-scraper",
-  "module": "src/index.ts",
-  "type": "module",
+  "name": "scraper",
+  "private": true,
   "scripts": {
     "cloud:start": "cloud start --env=${PWD}/.env"
   },
-  "devDependencies": {
-    "@types/bun": "^1.1.13",
-    "@types/geoip-lite": "^1.4.4"
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=9.0.0",
+    "bun": ">=1.1.0"
   },
   "peerDependencies": {
     "typescript": "^5.6.3"
   },
   "dependencies": {
-    "@ulixee/awaited-dom": "^1.4.2",
+    "@scraper/ip-info": "workspace:^",
     "@ulixee/cloud": "2.0.0-alpha.31",
-    "@ulixee/commons": "2.0.0-alpha.31",
     "@ulixee/default-browser-emulator": "2.0.0-alpha.31",
-    "@ulixee/hero": "2.0.0-alpha.31",
-    "@ulixee/hero-core": "2.0.0-alpha.31",
-    "@ulixee/hero-interfaces": "2.0.0-alpha.31",
-    "@ulixee/hero-plugin-utils": "2.0.0-alpha.31",
-    "@ulixee/schema": "2.0.0-alpha.31",
-    "@ulixee/unblocked-agent-mitm-socket": "2.0.0-alpha.31",
-    "@ulixee/unblocked-specification": "2.0.0-alpha.31",
-    "geoip-lite": "^1.4.10"
+    "@ulixee/hero": "2.0.0-alpha.31"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.1.14"
   }
 }

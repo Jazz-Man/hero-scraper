@@ -12,7 +12,9 @@ import getHero from "./hero.ts";
 
     const meta = await hero.meta;
 
-    await hero.waitForMillis(10000); // waits 5 seconds
+    // await hero.waitForMillis(10000); // waits 5 seconds
+
+    await hero.close();
 
     return meta;
   } catch (e) {

@@ -1,13 +1,12 @@
-import ipServices, {
-  getRandomizedServices,
-  oneLineServices,
-  type ServiceName,
-  type ServiceUrl,
-} from "./ipServices.ts";
-import { getProxyUrl, getRandomUsername } from "./proxy.ts";
-import { proxyFetch } from "./fetch.ts";
-
 import geoIp, { type Lookup } from "geoip-lite";
+import fetch from "@scraper/fetch";
+import ipServices, {
+    getRandomizedServices,
+    oneLineServices,
+    type ServiceName,
+    type ServiceUrl,
+} from "./src/ipServices";
+import { getProxyUrl, getRandomUsername } from "./src/proxy";
 
 export type IPInfo = {
   ip: string;
@@ -29,7 +28,7 @@ export async function fetchIPInfo(
 
     const proxy = getProxyUrl(proxyUser);
 
-    const data = await proxyFetch(serviceNameUrl, {
+    const data = await fetch(serviceNameUrl, {
       proxy,
       referrer:
         "https://www.bing.com/search?pc=OA1&q=public%20IP%20checking%20services%20list",
@@ -128,7 +127,7 @@ export async function fetchIPInfo(
   });
 }
 
-export async function getPublicIP(
+export default async function getPublicIP(
   proxyUser: string | null = getRandomUsername(),
 ): Promise<GeoIPInfo> {
   const services = getRandomizedServices();
