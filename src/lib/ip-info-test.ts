@@ -14,18 +14,13 @@ await Promise.allSettled<IPInfo>(promises)
     results.forEach((result) => {
       const ipInfo = result.status === "fulfilled" ? result.value : null;
 
-      // if (ipInfo) {
-      //   list[ipInfo.ip] = list[ipInfo.ip] || [];
-      //   list[ipInfo.ip].push(ipInfo);
-      // }
+      if (ipInfo) {
+        list[ipInfo.ip] = list[ipInfo.ip] || [];
+        list[ipInfo.ip].push(ipInfo);
+      }
 
-      // if (list[ipInfo?.ip].length === 0) {
-      //   list[ipInfo?.ip] = [];
-      // }
-      //
-      console.log(ipInfo.proxy);
     });
 
-    // console.log(list);
+    console.log(list);
   })
   .catch((e) => console.error("error", e));
