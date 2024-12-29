@@ -8,25 +8,35 @@ importers:
 
   .:
     dependencies:
-      '@scraper/ip-info':
-        specifier: workspace:^
-        version: link:packages/ip-info
       '@ulixee/cloud':
         specifier: 2.0.0-alpha.31
         version: 2.0.0-alpha.31(@polkadot/util@13.2.3)
-      '@ulixee/default-browser-emulator':
+    devDependencies:
+      '@types/bun':
+        specifier: ^1.1.14
+        version: 1.1.14
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.10.2
+      typescript:
+        specifier: ^5.7.2
+        version: 5.7.2
+
+  app:
+    dependencies:
+      '@scraper/ip-info':
+        specifier: workspace:^
+        version: link:../packages/ip-info
+      '@ulixee/execute-js-plugin':
         specifier: 2.0.0-alpha.31
         version: 2.0.0-alpha.31
       '@ulixee/hero':
         specifier: 2.0.0-alpha.31
         version: 2.0.0-alpha.31
-      typescript:
-        specifier: ^5.6.3
-        version: 5.7.2
     devDependencies:
-      '@types/bun':
-        specifier: ^1.1.14
-        version: 1.1.14
+      '@types/geoip-lite':
+        specifier: ^1.4.4
+        version: 1.4.4
 
   packages/fetch: {}
 
@@ -47,10 +57,9 @@ importers:
 
   packages/tsconfig:
     dependencies:
-      '@tsconfig/recommended':
-        specifier: ^1.0.8
-        version: 1.0.8
-    devDependencies:
+      '@types/bun':
+        specifier: ^1.1.14
+        version: 1.1.14
       '@types/node':
         specifier: ^22.10.2
         version: 22.10.2
@@ -322,9 +331,6 @@ packages:
 
   '@substrate/ss58-registry@1.51.0':
     resolution: {integrity: sha512-TWDurLiPxndFgKjVavCniytBIw+t4ViOi7TYp9h/D0NMmkEc9klFTo+827eyEJ0lELpqO207Ey7uGxUa+BS1jQ==}
-
-  '@tsconfig/recommended@1.0.8':
-    resolution: {integrity: sha512-TotjFaaXveVUdsrXCdalyF6E5RyG6+7hHHQVZonQtdlk1rJZ1myDIvPUUKPhoYv+JAzThb2lQJh9+9ZfF46hsA==}
 
   '@types/bn.js@5.1.6':
     resolution: {integrity: sha512-Xh8vSwUeMKeYYrj3cX4lGQgFSF/N03r+tv4AiLl1SucqV+uTQpxRcnM8AkXKHwYP9ZPXOYXRr2KPXpVlIvqh9w==}
@@ -1478,8 +1484,6 @@ snapshots:
     optional: true
 
   '@substrate/ss58-registry@1.51.0': {}
-
-  '@tsconfig/recommended@1.0.8': {}
 
   '@types/bn.js@5.1.6':
     dependencies:

@@ -14,7 +14,7 @@
     "noEmit": true,
 
     // Best practices
-    "strict": false,
+    "strict": true,
     "checkJs": true,
     "skipLibCheck": true,
     "noFallthroughCasesInSwitch": true,
@@ -23,15 +23,20 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false,
-    "declaration": true,
-    "declarationDir": "./dist",
-    "outDir": "./dist", /* Redirect output structure to the directory. */
+    "forceConsistentCasingInFileNames": true,
 
     "newLine": "LF",
     "esModuleInterop": true,
     "inlineSourceMap": true,
-    "useUnknownInCatchVariables": false
+    "useUnknownInCatchVariables": false,
+    "experimentalDecorators": true
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules"]
+  "include": [
+    "app/**/*.ts",
+    "packages/**/**/*.ts",
+  ],
+  "exclude": ["node_modules"],
+  "typeRoots": [
+    "node_modules/@types",
+  ]
 }

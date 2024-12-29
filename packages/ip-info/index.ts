@@ -21,7 +21,7 @@ export type GeoIPInfo = IPInfo & Partial<Lookup>;
 
 export async function fetchIPInfo(
   serviceName: ServiceName,
-  proxyUser: string = getRandomUsername(),
+  proxyUser: string | undefined = getRandomUsername(),
 ): Promise<GeoIPInfo> {
   return new Promise<GeoIPInfo>(async (resolve, reject) => {
     const serviceNameUrl = ipServices[serviceName];
@@ -54,7 +54,7 @@ export async function fetchIPInfo(
         reject(e);
       });
 
-    let ipInfo: IPInfo | null = null;
+    let ipInfo: IPInfo | undefined = undefined;
 
     const base: Partial<IPInfo> = {
       rawResponse: data,
@@ -92,7 +92,7 @@ export async function fetchIPInfo(
           break;
         case "ifconfig.pro":
           ipInfo = {
-            ip: (data as string).split(" - ").at(0),
+            ip: (data as string).split(" - ").at(0) as string,
             ...base,
           };
 
@@ -108,7 +108,12 @@ export async function fetchIPInfo(
       }
     }
 
-    if (ipInfo.ip) {
+    if (!ipInfo) {
+      reject(`Unsupported service: ${serviceName}`);
+    }
+
+
+    if (ipInfo?.ip) {
       const geo = geoIp.lookup(ipInfo.ip);
 
       ipInfo = {
@@ -119,16 +124,13 @@ export async function fetchIPInfo(
       reject(`Failed to fetch IP for "${serviceName}"`);
     }
 
-    if (!ipInfo) {
-      reject(`Unsupported service: ${serviceName}`);
-    }
 
-    resolve(ipInfo);
+    resolve(ipInfo as GeoIPInfo);
   });
 }
 
 export default async function getPublicIP(
-  proxyUser: string | null = getRandomUsername(),
+  proxyUser: string | undefined = getRandomUsername(),
 ): Promise<GeoIPInfo> {
   const services = getRandomizedServices();
   for (const service of services) {
