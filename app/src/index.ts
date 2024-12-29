@@ -14,7 +14,7 @@ import getHero from "./hero.ts";
 
     // await hero.waitForMillis(10000); // waits 5 seconds
 
-    await hero.close();
+    // await hero.close();
 
     return meta;
   } catch (e) {

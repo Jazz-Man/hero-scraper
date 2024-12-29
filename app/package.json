@@ -1,0 +1,13 @@
+{
+  "name": "@scraper/app",
+  "version": "0.0.0",
+  "private": true,
+  "dependencies": {
+    "@scraper/ip-info": "workspace:^",
+    "@ulixee/execute-js-plugin": "2.0.0-alpha.31",
+    "@ulixee/hero": "2.0.0-alpha.31"
+  },
+  "devDependencies": {
+    "@types/geoip-lite": "^1.4.4"
+  }
+}
