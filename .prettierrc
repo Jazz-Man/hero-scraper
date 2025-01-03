@@ -1,0 +1,25 @@
+{
+  "endOfLine": "lf",
+  "useTabs": false,
+  "tabWidth": 2,
+  "printWidth": 80,
+  "singleQuote": true,
+  "trailingComma": "none",
+  "bracketSameLine": false,
+  "bracketSpacing": true,
+  "semi": true,
+  "arrowParens": "always",
+  "overrides": [
+    {
+      "files": "*.{css,sass,scss}",
+      "options": {
+        "singleQuote": false
+      }
+    }
+  ],
+  "plugins": [
+    "prettier-plugin-organize-imports",
+    "prettier-plugin-organize-attributes",
+    "prettier-plugin-packagejson"
+  ]
+}
