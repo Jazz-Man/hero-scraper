@@ -55,6 +55,16 @@ export function createFlagDecorator(propertyGetter: string, errorMsg: string) {
   };
 }
 
+export const needsCsrfToken = createFlagDecorator(
+  'hasCsrfToken',
+  "Page mast have a csrf token before using '$key'."
+);
+
+export const needsPageReady = createFlagDecorator(
+  'getIsPageReady',
+  "Page mast be ready before using '$key'."
+);
+
 export const needsInit = createFlagDecorator(
   'getIsInitialised',
   "You must initalize the client before using '$key'."

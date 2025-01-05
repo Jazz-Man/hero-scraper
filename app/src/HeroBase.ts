@@ -1,34 +1,60 @@
 import getPublicIP from '@scraper/ip-info';
 import SuperDocument from '@ulixee/awaited-dom/impl/super-klasses/SuperDocument';
+import TypeSerializer from '@ulixee/commons/lib/TypeSerializer';
 import { OpenDnsAlternate } from '@ulixee/default-browser-emulator/lib/utils/DnsOverTlsProviders';
 import ExecuteJsPlugin from '@ulixee/execute-js-plugin';
-import { type ISuperElement, KeyboardKey, type Tab } from '@ulixee/hero';
+import {
+  type IHeroCreateOptions,
+  type ISuperElement,
+  KeyboardKey,
+  type Tab
+} from '@ulixee/hero';
 import CookieStorage from '@ulixee/hero/lib/CookieStorage';
 import Hero from '@ulixee/hero/lib/Hero';
-import type { ILoadStatus } from '@ulixee/unblocked-specification/agent/browser/Location';
-import { clearTimeout } from 'node:timers';
-import type { THeroOptions } from './App.ts';
-import { needsFree, needsInit } from './classDecorators.ts';
+import type { ILocationTrigger } from '@ulixee/unblocked-specification/agent/browser/Location';
+import type { ICookie } from '@ulixee/unblocked-specification/agent/net/ICookie';
+
+import { safeOverwriteFile } from '@ulixee/commons/lib/fileUtils';
+import type ISetCookieOptions from '@ulixee/hero-interfaces/ISetCookieOptions';
+import type IWaitForElementOptions from '@ulixee/hero-interfaces/IWaitForElementOptions';
+import { existsSync, readFileSync } from 'node:fs';
+import Path from 'path';
+import { needsFree, needsInit, needsPageReady } from './classDecorators.ts';
 import { useValidURL } from './utils/useValidURL.ts';
+
+export type THeroOptions = IHeroCreateOptions;
 
 export type MaybeUndefinedPromise<T> = Promise<T | undefined>;
 export type MaybeStringPromise = MaybeUndefinedPromise<string>;
 
+export type TSetCookieOptions = Omit<ICookie, 'name' | 'value' | 'expires'> & {
+  expires?: Date | number;
+};
+
 export default abstract class HeroBase {
   protected isInitialised = false;
   protected isBusy = false;
-  private _hero: Hero;
-  protected sessionId: string;
   protected activeTab: Tab;
   protected document: SuperDocument;
   protected cookieStorage: CookieStorage;
+  private isPageReady = false;
 
-  getIsInitialised() {
-    return this.isInitialised;
-  }
+  private _hero: Hero;
+  private readonly tmpDir: string;
+
+  private readonly profilePath: string;
+  protected profileCookies: ICookie[] | undefined;
 
   get hero(): Hero {
     return this._hero;
+  }
+
+  getIsPageReady(): boolean {
+    return this.isPageReady;
+  }
+
+  getIsInitialised() {
+    return this.isInitialised;
   }
 
   getIsBusy() {
@@ -37,6 +63,12 @@ export default abstract class HeroBase {
 
   getIsFree() {
     return !this.isBusy;
+  }
+
+  protected constructor() {
+    this.tmpDir = Path.join(__dirname, '../../.tmp');
+
+    this.profilePath = Path.join(this.tmpDir, 'profile-test.json');
   }
 
   @needsFree()
@@ -50,6 +82,8 @@ export default abstract class HeroBase {
         })
       : null;
 
+    this.profileCookies = this.getProfileCookies();
+
     this._hero = new Hero({
       connectionToCore: {
         host: `ws://localhost:1818`
@@ -58,6 +92,9 @@ export default abstract class HeroBase {
       upstreamProxyIpMask: {
         publicIp: ip,
         proxyIp: ip
+      },
+      userProfile: {
+        cookies: this.profileCookies
       },
       dnsOverTlsProvider: OpenDnsAlternate,
       locale: locale?.toString(),
@@ -70,14 +107,61 @@ export default abstract class HeroBase {
       ...createOptions
     } as THeroOptions);
 
-    this.isInitialised = true;
-
     this._hero.use(ExecuteJsPlugin);
 
-    this.sessionId = await this._hero.sessionId;
     this.activeTab = this._hero.activeTab;
     this.document = this._hero.document;
     this.cookieStorage = this.activeTab.cookieStorage;
+
+    this.isInitialised = true;
+  }
+
+  @needsPageReady()
+  @needsInit()
+  async setCookie(
+    key: string,
+    value: string,
+    options: TSetCookieOptions = {}
+  ): Promise<void> {
+    if (typeof options?.expires === 'number') {
+      const days = options.expires;
+      const time = (options.expires = new Date());
+      time.setMilliseconds(time.getMilliseconds() + days * 864e5);
+
+      options.expires = time;
+    }
+
+    await this.cookieStorage.setItem(key, value, options as ISetCookieOptions);
+  }
+
+  @needsPageReady()
+  @needsInit()
+  async getCookie(key: string) {
+    return await this.cookieStorage.getItem(key);
+  }
+
+  async getCookieValue(key: string): MaybeStringPromise {
+    return await this.getCookie(key).then((res) => res?.value);
+  }
+
+  @needsInit()
+  async goto(
+    href: string,
+    options?: {
+      timeoutMs?: number;
+      referrer?: string;
+    }
+  ) {
+    this.isPageReady = false;
+    await this._hero.goto(href, options);
+    await this.waitForAllContentLoaded();
+  }
+
+  @needsInit()
+  async reload() {
+    this.isPageReady = false;
+    await this._hero.reload();
+    await this.waitForAllContentLoaded();
   }
 
   /**
@@ -102,245 +186,113 @@ export default abstract class HeroBase {
   }
 
   @needsInit()
-  protected async waitForNoElementWithText(
-    selector: string,
-    text: string,
-    timeout?: number,
-    exactMatch?: boolean,
-    caseSensitive?: boolean,
-    checksIntervalMs?: number
-  ) {
-    console.log(
-      `Waiting for no '${selector}' element to exist with textContent '${text}'.`
-    );
+  protected async waitForAllContentLoaded() {
+    await this._hero.waitForPaintingStable();
+    await this._hero.waitForLoad('AllContentLoaded');
+    const currentUrl = await this._hero.url;
 
-    return this.waitFor(
-      async () =>
-        !(await this.findElementWithText(
-          selector,
-          text,
-          exactMatch,
-          caseSensitive
-        )),
-      timeout,
-      checksIntervalMs
-    );
+    this.isPageReady = useValidURL(currentUrl) instanceof URL;
   }
 
   @needsInit()
-  protected async waitForElementWithText(
-    selector: string,
-    text: string,
-    timeout?: number,
-    exactMatch?: boolean,
-    caseSensitive?: boolean,
-    checksIntervalMs?: number
-  ) {
-    console.log(
-      `Waiting for '${selector}' element to exist with textContent '${text}'.`
-    );
-
-    return this.waitFor(
-      () => this.findElementWithText(selector, text, exactMatch, caseSensitive),
-      timeout,
-      checksIntervalMs
-    );
-  }
-
-  @needsInit()
-  protected async findElementWithText(
-    selector: string,
-    text: string,
-    exactMatch = true,
-    caseSensitive = false
-  ) {
-    console.log(
-      `Finding '${selector}' element with textContent ${
-        exactMatch ? 'of' : 'containing'
-      } '${text}'.`
-    );
-    const elements = this.document.querySelectorAll(selector);
-
-    if (!caseSensitive) text = text.toLowerCase();
-
-    for (const el of elements) {
-      let elText = (await el.textContent) || '';
-      if (!caseSensitive) elText = elText.toLowerCase();
-
-      if (exactMatch && elText === text) return el;
-      else if (elText.includes(text)) return el;
-    }
-
-    return null;
-  }
-
-  @needsInit()
-  protected async waitForNoElement(
-    selector: string,
-    timeout?: number,
-    checksIntervalMs?: number
-  ) {
-    console.log(`Waiting for no element to exist with selector '${selector}'.`);
-
-    return this.waitFor(
-      async () => !(await this.querySelector(selector, true)),
-      timeout,
-      checksIntervalMs
-    );
-  }
-
-  @needsInit()
-  protected async waitForLoad(status: ILoadStatus = 'AllContentLoaded') {
-    await this._hero.waitForLoad(status);
-  }
-
-  @needsInit()
-  protected async waitForElement(
-    selector: string,
-    timeout?: number,
-    checksIntervalMs?: number
-  ) {
-    console.log(`Waiting for element with selector '${selector}' to exist.`);
-
-    return this.waitFor(
-      () => this.querySelector(selector),
-      timeout,
-      checksIntervalMs
-    );
-  }
-
-  /**
-   * Waits for a value to be truthy.
-   *
-   * NOTE: `this.document` and maybe other variables will not work inside a waitForValue call for some reason.
-   *       If you need to access the document, do so via another function call.
-   *
-   * @param waitForValue THe value to wait for to be truthy
-   * @param timeout The time in ms before timing out, throws after timeout
-   * @param checksIntervalMs The time in ms between value checks
-   * @returns The last value returned from waitForValue
-   */
-  @needsInit()
-  protected async waitFor<T>(
-    waitForValue: () => Promise<T>,
-    timeout = 10e3,
-    checksIntervalMs = 100
-  ) {
-    return new Promise<T>((resolve, reject) => {
-      let timedOut = false;
-      const id = timeout
-        ? setTimeout(() => {
-            timedOut = true;
-          }, timeout)
-        : null;
-
-      (async () => {
-        let value: T;
-        while (!timedOut && !(value = await waitForValue())) {
-          await this._hero.waitForMillis(checksIntervalMs);
-        }
-        if (timedOut) {
-          reject();
-          return;
-        }
-
-        if (id !== null) {
-          clearTimeout(id);
-        }
-        // @ts-ignore
-        resolve(value);
-      })();
+  @needsPageReady()
+  protected async querySelector(selector: string): Promise<ISuperElement> {
+    return new Promise((resolve, reject) => {
+      const element = this.document.querySelector(selector);
+      if (!element) {
+        reject(`Element not found: "${selector}"`);
+      }
+      resolve(element);
     });
   }
 
   @needsInit()
-  protected async querySelector(
-    selector: string,
-    silent = false
-  ): MaybeUndefinedPromise<ISuperElement> {
-    if (!silent) console.log(`Selecting element '${selector}'.`);
-
-    const element = this.document.querySelector(selector);
-    if (!element) {
-      if (!silent)
-        console.log(`Could not find any element with selector '${selector}'.`);
-      return undefined;
-    }
-
-    return element;
+  @needsPageReady()
+  protected async waitForElement(
+    element: ISuperElement,
+    options?: IWaitForElementOptions
+  ): Promise<ISuperElement> {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const el = await this.activeTab.waitForElement(element, options);
+        resolve(el);
+      } catch (e) {
+        reject(e);
+      }
+    });
   }
 
-  /**
-   * Calls waitForNavigation if `hero.url` includes `match`.
-   *
-   * @param match The string to match for in the url
-   * @param trigger The waitForLocation trigger
-   * @param status The waitForLoad status to wait for from the page
-   */
-  @needsInit()
-  protected async waitForNavigationConditional(
-    match: string,
-    trigger: 'change' | 'reload' = 'change',
-    status?: ILoadStatus
+  async queryElement(selector: string, options?: IWaitForElementOptions) {
+    const element = await this.querySelector(selector);
+    return await this.waitForElement(element, options);
+  }
+
+  async clickElement(
+    selector: string,
+    queryOptions?: IWaitForElementOptions
+  ): Promise<boolean> {
+    return new Promise<boolean>(async (resolve, reject) => {
+      try {
+        const element = await this.queryElement(selector, queryOptions);
+        await this._hero.interact({
+          click: { element, verification: 'exactElement' }
+        });
+        resolve(true);
+      } catch (e) {
+        reject(e);
+      }
+    });
+  }
+
+  async typeInput(
+    selector: string,
+    content: string,
+    queryOptions?: IWaitForElementOptions
   ) {
-    if ((await this._hero.url).includes(match))
-      await this.waitForNavigation(trigger, status);
+    return new Promise<boolean>(async (resolve, reject) => {
+      try {
+        const element = await this.queryElement(selector, queryOptions);
+        await this._hero.interact({
+          click: { element, verification: 'exactElement' },
+          type: content
+        });
+        resolve(true);
+      } catch (e) {
+        reject(e);
+      }
+    });
   }
 
   /**
    * Calls hero's waitForLocation and then waitForLoad.
    *
    * @param trigger The waitForLocation trigger
-   * @param status The waitForLoad status to wait for from the page
    */
   @needsInit()
-  protected async waitForNavigation(
-    trigger: 'change' | 'reload' = 'change',
-    status?: ILoadStatus
-  ) {
+  protected async waitForNavigation(trigger: ILocationTrigger = 'change') {
+    this.isPageReady = false;
     await this._hero.waitForLocation(trigger);
-    await this.waitForLoad(status);
+    await this.waitForAllContentLoaded();
   }
 
-  @needsInit()
-  async goto(
-    href: string,
-    skipIfAlreadyOnUrl = false,
-    waitForStatus: ILoadStatus = 'AllContentLoaded'
-  ) {
-    const url = useValidURL(href);
-    if (!url)
-      throw new Error(`'goto' requires a valid URL, '${url}' is not valid.`);
+  private getProfileCookies(): ICookie[] | undefined {
+    let cookies: ICookie[] | undefined = undefined;
+    const profileExists = existsSync(this.profilePath);
 
-    const currUrl = new URL(await this._hero.url);
-    if (
-      skipIfAlreadyOnUrl &&
-      (currUrl.href === url.href ||
-        (currUrl.href.endsWith('/') &&
-          currUrl.href.substring(0, currUrl.href.length - 1) === url.href))
-    )
-      return;
-
-    console.log(`Navigating to '${url.href}'.`);
-    await this._hero.goto(url.href);
-    await this._hero.waitForPaintingStable(); // waits for the page to load
-
-    console.log('Navigated, waiting for page to load.');
-    try {
-      await this.waitForLoad(waitForStatus);
-    } catch (error) {
-      console.log(
-        'Waiting for page load failed, waiting for additional 2 seconds and continuing.'
-      );
-      console.log('waitForLoad Error (can ignore):', error);
-      await this._hero.waitForMillis(2e3);
+    if (profileExists) {
+      cookies = TypeSerializer.parse(readFileSync(this.profilePath, 'utf8'));
     }
-    console.log(`Opened '${url.href}'.`);
+
+    return cookies;
   }
 
   @needsInit()
-  async reload() {
-    await this._hero.reload();
-    await this.waitForLoad();
+  @needsPageReady()
+  async saveProfileCookies() {
+    const profile = await this._hero.exportUserProfile();
+    await safeOverwriteFile(
+      this.profilePath,
+      TypeSerializer.stringify(profile.cookies)
+    );
   }
 }
