@@ -1,44 +1,17 @@
-import getPublicIP from '@scraper/ip-info';
-import { type IHeroCreateOptions, type ISuperElement } from '@ulixee/hero';
-
-import type IWaitForElementOptions from '@ulixee/hero-interfaces/IWaitForElementOptions';
-
-// @ts-ignore
-import IHeroMeta from '@ulixee/hero-interfaces/IHeroMeta';
-import type IUserProfile from '@ulixee/hero-interfaces/IUserProfile';
-
-import HeroBase, { type MaybeStringPromise } from './HeroBase.ts';
-
-import type ISetCookieOptions from '@ulixee/hero-interfaces/ISetCookieOptions';
-import type { ICookie } from '@ulixee/unblocked-specification/agent/net/ICookie';
-
-export type THeroOptions = IHeroCreateOptions;
-
-export type TSetCookieOptions = Omit<ICookie, 'name' | 'value' | 'expires'> & {
-  expires?: Date | number;
-};
-
-export type TJqCookie =
-  | {
-      expires?: number;
-      path?: string;
-      domain?: string;
-      secure?: boolean;
-    }
-  | undefined;
-
-export type TJqCookieValue = string | number;
-
-type TAjaxResponse = {
-  status: number;
-  statusText: string;
-  rawHeaders: string;
-  responseJSON?: any;
-  responseData?: any;
-};
+import HeroBase, {
+  type MaybeStringPromise,
+  type TSetCookieOptions
+} from './HeroBase.ts';
+import {
+  needsCsrfToken,
+  needsInit,
+  needsPageReady
+} from './classDecorators.ts';
 
 export default class App extends HeroBase {
-  private isLoggedIn: boolean;
+  private isLoggedIn: boolean = false;
+  private csrfToken: string | undefined;
+
   constructor(
     protected username: string,
     protected password: string,
@@ -47,24 +20,67 @@ export default class App extends HeroBase {
     super();
   }
 
-  async initCookie(): Promise<void> {
-    await this.cookieStorage.clear();
-
-    const hideCookies = ['mine_btc', 'earn_btc', 'push', 'free_wof_spins'];
-
-    for (const cookie of hideCookies) {
-      await this.hideCookieMsg(cookie);
-    }
-
-    await this.setCookie('cookieconsent_dismissed', 'yes', {
-      secure: false
-    });
+  hasCsrfToken() {
+    return !!this.csrfToken;
   }
 
-  async hideCookieMsg(message: string): Promise<void> {
-    await this.setCookie(`hide_${message}_msg`, '1', {
-      secure: true,
-      expires: 3650
+  getIsLoggedIn() {
+    return this.isLoggedIn;
+  }
+
+  @needsInit()
+  @needsPageReady()
+  async initCookie(): Promise<boolean> {
+    return new Promise(async (resolve, rejects) => {
+      try {
+        this.csrfToken = await this.getCookieValue('csrf_token');
+
+        const profile = this.profileCookies;
+
+        if (profile?.length) {
+          this.csrfToken = profile.find(
+            (cookie) =>
+              cookie.name === 'csrf_token' &&
+              cookie.path === '/' &&
+              cookie.domain === '.freebitco.in'
+          )?.value;
+
+          this.isLoggedIn = true;
+
+          resolve(true);
+        } else {
+          const btc_address = await this.getCookieValue('btc_address');
+
+          if (btc_address === this.username) {
+            this.isLoggedIn = true;
+            resolve(true);
+          }
+
+          const hideCookies = [
+            'mine_btc',
+            'earn_btc',
+            'push',
+            'free_wof_spins'
+          ];
+
+          for (const cookie of hideCookies) {
+            await this.setCookie(`hide_${cookie}_msg`, '1', {
+              secure: true,
+              expires: 3650
+            });
+          }
+
+          await this.setCookie('cookieconsent_dismissed', 'yes', {
+            secure: true
+          });
+
+          await this.reload();
+
+          resolve(true);
+        }
+      } catch (e) {
+        rejects(e);
+      }
     });
   }
 
@@ -73,168 +89,14 @@ export default class App extends HeroBase {
     value: string,
     options: TSetCookieOptions = {}
   ): Promise<void> => {
-    await this.cookieStorage.removeItem(key);
-
-    if (typeof options?.expires === 'number') {
-      const days = options.expires;
-      const time = (options.expires = new Date());
-      time.setMilliseconds(time.getMilliseconds() + days * 864e5);
-
-      options.expires = time;
-    }
-
     const domains = ['.freebitco.in', 'freebitco.in'];
 
     for (const domain of domains) {
-      await this.cookieStorage.setItem(key, value, {
-        domain: domain,
-        path: '/',
-        ...options
-      } as ISetCookieOptions);
-    }
-  };
-
-  getCookie = async (key: string) => await this.cookieStorage.getItem(key);
-
-  public queryEl = async (
-    selector: string,
-    options?: IWaitForElementOptions
-  ): Promise<ISuperElement | undefined> => {
-    try {
-      const element = this.document?.querySelector(selector);
-
-      if (!element) {
-        throw new Error(`Element not found: ${selector}`);
-      }
-
-      return await this.activeTab?.waitForElement(element, options);
-    } catch (e: any) {
-      throw new Error(e);
-    }
-  };
-
-  async jqCookie(
-    name: string,
-    value: TJqCookieValue | undefined = undefined,
-    options: TJqCookie = undefined
-  ) {
-    return await this.hero.executeJs(
-      (name, value, options) =>
-        // @ts-ignore
-        $.cookie(name, value, options),
-      name,
-      value,
-      options
-    );
-  }
-
-  async jqCookieSet(
-    name: string,
-    value: TJqCookieValue,
-    options: TJqCookie = undefined
-  ): Promise<void> {
-    const domains = ['.freebitco.in', 'freebitco.in'];
-
-    for (const domain of domains) {
-      await this.jqCookie(name, value, {
-        expires: 3650,
-        secure: true,
+      await super.setCookie(key, value, {
         domain: domain,
         path: '/',
         ...options
       });
-    }
-  }
-
-  async ajaxPost(
-    url: string,
-    data: Record<string, string | number>
-  ): Promise<Response> {
-    const res: TAjaxResponse = await this.hero.executeJs(
-      // @ts-ignore
-      (url, data) =>
-        new Promise((resolve, reject) => {
-          $.post(url, data)
-            .done((responseData: any, textStatus: string, jqXHR: JQueryXHR) => {
-              resolve({
-                status: jqXHR.status,
-                statusText: jqXHR.statusText,
-                rawHeaders: jqXHR.getAllResponseHeaders(),
-                responseJSON: jqXHR.responseJSON,
-                responseData
-              });
-            })
-            .fail(reject);
-        }),
-      url,
-      data
-    );
-
-    // Визначаємо body для Response
-    let body: BodyInit;
-    if (res.responseJSON !== undefined) {
-      // Якщо відповідь JSON, використовуємо responseJSON
-      body = JSON.stringify(res.responseJSON);
-    } else {
-      // Інакше використовуємо текстову відповідь
-      body = res.responseData;
-    }
-
-    const headers = new Headers(
-      res.rawHeaders.split('\n').reduce(
-        (acc, line) => {
-          const [key, value] = line.split(': ');
-          if (key && value) acc[key.trim()] = value.trim();
-          return acc;
-        },
-        {} as Record<string, string>
-      )
-    );
-
-    return new Response(body, {
-      status: res.status,
-      statusText: res.statusText,
-      headers
-    });
-  }
-
-  public clickEl = async (
-    selector: string,
-    queryOptions?: IWaitForElementOptions
-  ) => {
-    try {
-      const element = await this.queryEl(selector, queryOptions);
-
-      if (!element) {
-        throw new Error(`Element not found: ${selector}`);
-      }
-
-      await this.hero?.interact({
-        click: { element, verification: 'exactElement' }
-      });
-    } catch (e) {
-      throw new Error(e);
-    }
-  };
-
-  public typeInput = async (
-    selector: string,
-    content: string,
-    queryOptions?: IWaitForElementOptions
-  ) => {
-    try {
-      const element = await this.queryEl(selector, queryOptions);
-
-      if (!element) {
-        throw new Error(`Element not found: ${selector}`);
-      }
-
-      await this.hero.interact({
-        click: { element, verification: 'exactElement' },
-        type: content
-      });
-    } catch (e) {
-      console.log('typeInput', e);
     }
   };
 
@@ -280,28 +142,94 @@ export default class App extends HeroBase {
       return t.get();
     });
 
-  public getCsrfToken = async (): MaybeStringPromise =>
-    await this.getCookieValue('csrftoken');
-
-  public exportUserProfile = async (): Promise<IUserProfile> =>
-    await this.hero.exportUserProfile();
-
-  public getMeta = async (): Promise<IHeroMeta> => await this.hero.meta;
-
-  async login() {
-    if (this.isLoggedIn) {
-      throw new Error(`Already logged in to instagram, you must logout first.`);
-    }
+  @needsInit()
+  @needsPageReady()
+  async exportUserProfile() {
+    return await this.hero.exportUserProfile();
   }
 
-  private getHeroOptions = async (createOptions?: THeroOptions) => {
-    const { country, ll, ip, timezone, proxy } = await getPublicIP();
+  @needsInit()
+  @needsPageReady()
+  @needsCsrfToken()
+  async login(tfa_code: string): Promise<boolean> {
+    return new Promise(async (resolve, reject) => {
+      if (this.isLoggedIn) {
+        resolve(true);
+        return;
+      }
 
-    const options: THeroOptions = {
-      ...createOptions
-    };
-  };
+      const btc_address = await this.getCookieValue('btc_address');
 
-  private getCookieValue = async (name: string): MaybeStringPromise =>
-    await this.cookieStorage?.getItem(name)?.then((res) => res.value);
+      if (btc_address === this.username) {
+        this.isLoggedIn = true;
+        resolve(true);
+        return;
+      } else {
+        const csrfToken = this.csrfToken as string;
+
+        const params = new URLSearchParams();
+        params.append('csrf_token', csrfToken);
+        params.append('op', 'login_new');
+        params.append('btc_address', this.username);
+        params.append('password', this.password);
+        params.append('tfa_code', tfa_code);
+
+        let loginStatus: string = '';
+
+        try {
+          const request = new this.hero.Request('/', {
+            method: 'POST',
+            headers: {
+              'content-type':
+                'application/x-www-form-urlencoded; charset=UTF-8',
+              'x-csrf-token': csrfToken
+            },
+            body: params.toString()
+          });
+          const response = await this.hero.fetch(request);
+
+          loginStatus = await response.text();
+        } catch (e) {
+          reject(e);
+        }
+
+        const [status, ...loginData] = loginStatus?.split(':');
+
+        if (status !== 's') {
+          reject(loginData[0]);
+        } else {
+          const [btc_address, password, fbtc_userid, fbtc_session] = loginData;
+
+          await this.setCookie('btc_address', btc_address, {
+            expires: 3650,
+            secure: true
+          });
+          await this.setCookie('password', password, {
+            expires: 3650,
+            secure: true
+          });
+          await this.setCookie('fbtc_userid', fbtc_userid, {
+            expires: 3650,
+            secure: true
+          });
+
+          await this.setCookie('fbtc_session', fbtc_session, {
+            expires: 3650,
+            secure: true
+          });
+
+          await this.setCookie('have_account', '1', {
+            expires: 3650,
+            secure: true
+          });
+
+          this.isLoggedIn = true;
+
+          await this.goto('https://freebitco.in/?op=home');
+
+          resolve(true);
+        }
+      }
+    });
+  }
 }
