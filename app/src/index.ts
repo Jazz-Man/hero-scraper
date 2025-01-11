@@ -1,18 +1,19 @@
 import App from './App.ts';
-
 import getOtp from './otp.ts';
 
 (async () => {
   try {
     const app = new App(
+      // 'soyelami019@stu.ui.edu.ng',
       'rider_64paleo@icloud.com',
+      // 'sahmurhel',
       'jawheT-wiwsuc-7padpa',
       true
     );
 
     await app.init({
       showChrome: true,
-      showDevtools: true
+      showDevtools: false
     });
 
     await app.goto('https://freebitco.in/?op=home');
@@ -26,6 +27,8 @@ import getOtp from './otp.ts';
     } catch (e) {
       console.error(e);
     }
+
+    await app.freePlay();
 
     await app.saveProfileCookies();
 
