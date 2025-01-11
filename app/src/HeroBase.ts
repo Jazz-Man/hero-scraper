@@ -17,6 +17,13 @@ import type { ICookie } from '@ulixee/unblocked-specification/agent/net/ICookie'
 import { safeOverwriteFile } from '@ulixee/commons/lib/fileUtils';
 import type ISetCookieOptions from '@ulixee/hero-interfaces/ISetCookieOptions';
 import type IWaitForElementOptions from '@ulixee/hero-interfaces/IWaitForElementOptions';
+import type IViewport from '@ulixee/unblocked-specification/agent/browser/IViewport';
+import type IGeolocation from '@ulixee/unblocked-specification/plugin/IGeolocation';
+import {
+  type Fingerprint,
+  FingerprintGenerator,
+  type ScreenFingerprint
+} from 'fingerprint-generator';
 import { existsSync, readFileSync } from 'node:fs';
 import Path from 'path';
 import { needsFree, needsInit, needsPageReady } from './classDecorators.ts';
@@ -76,13 +83,37 @@ export default abstract class HeroBase {
   async init(createOptions?: THeroOptions) {
     const { country, ll, ip, timezone, proxy } = await getPublicIP();
 
-    const locale = country
+    const intLocale = country
       ? new Intl.Locale(country, {
           region: country
         })
       : null;
 
+    const locale = intLocale?.toString();
+
     this.profileCookies = this.getProfileCookies();
+
+    let geolocation: Partial<IGeolocation> | undefined = undefined;
+
+    if (ll) {
+      const latitude: number | undefined = ll.at(0);
+      const longitude: number | undefined = ll.at(1);
+
+      if (latitude && !(Math.abs(latitude) <= 90)) {
+        geolocation = {};
+
+        geolocation.latitude = latitude;
+      }
+
+      if (longitude && !(Math.abs(longitude) <= 180)) {
+        geolocation = geolocation || {};
+        geolocation.longitude = longitude;
+      }
+    }
+
+    const { navigator, screen } = await this.getFingerprint(locale);
+
+    const viewport = this.getViewport(screen);
 
     this._hero = new Hero({
       connectionToCore: {
@@ -94,11 +125,20 @@ export default abstract class HeroBase {
         proxyIp: ip
       },
       userProfile: {
-        cookies: this.profileCookies
+        cookies: this.profileCookies,
+        timezoneId: timezone,
+        locale,
+        geolocation,
+        deviceProfile: {
+          deviceMemory: navigator.deviceMemory,
+          hardwareConcurrency: navigator.hardwareConcurrency,
+          viewport
+        }
       },
+      viewport,
       dnsOverTlsProvider: OpenDnsAlternate,
-      locale: locale?.toString(),
-      geolocation: { latitude: ll?.at(0), longitude: ll?.at(1) },
+      locale,
+      geolocation,
       timezoneId: timezone,
       sessionKeepAlive: false,
       sessionPersistence: false,
@@ -114,6 +154,44 @@ export default abstract class HeroBase {
     this.cookieStorage = this.activeTab.cookieStorage;
 
     this.isInitialised = true;
+  }
+
+  private async getFingerprint(locale?: string): Promise<Fingerprint> {
+    return new Promise<Fingerprint>((resolve, reject) => {
+      try {
+        const locales: string[] = [];
+
+        if (locale) {
+          locales.push(locale);
+        }
+
+        const generator = new FingerprintGenerator({
+          mockWebRTC: true,
+          browsers: ['chrome'],
+          operatingSystems: ['macos'],
+          devices: ['desktop'],
+          httpVersion: '2',
+          locales
+        });
+        resolve(generator.getFingerprint().fingerprint);
+      } catch (e) {
+        reject(e);
+      }
+    });
+  }
+
+  private getViewport(screen: ScreenFingerprint): IViewport {
+    return {
+      positionX: screen.pageXOffset,
+      positionY: screen.pageYOffset,
+      height: screen.height,
+      width: screen.width,
+      screenWidth: screen.availWidth,
+      screenHeight: screen.availHeight,
+      colorDepth: screen.colorDepth,
+      deviceScaleFactor: screen.devicePixelRatio,
+      isDefault: true
+    };
   }
 
   @needsPageReady()
@@ -187,8 +265,8 @@ export default abstract class HeroBase {
 
   @needsInit()
   protected async waitForAllContentLoaded() {
-    await this._hero.waitForPaintingStable();
     await this._hero.waitForLoad('AllContentLoaded');
+    await this._hero.waitForPaintingStable();
     const currentUrl = await this._hero.url;
 
     this.isPageReady = useValidURL(currentUrl) instanceof URL;

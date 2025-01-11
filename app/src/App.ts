@@ -5,6 +5,7 @@ import HeroBase, {
 import {
   needsCsrfToken,
   needsInit,
+  needsLogin,
   needsPageReady
 } from './classDecorators.ts';
 
@@ -60,7 +61,9 @@ export default class App extends HeroBase {
             'mine_btc',
             'earn_btc',
             'push',
-            'free_wof_spins'
+            'free_wof_spins',
+            'premium_membership',
+            'rp_for_wof'
           ];
 
           for (const cookie of hideCookies) {
@@ -100,30 +103,44 @@ export default class App extends HeroBase {
     }
   };
 
-  public getInputValue = async (elementId: string): MaybeStringPromise =>
-    await this.hero.executeJs(
-      // @ts-ignore
-      (id) => document.getElementById(id)?.value,
-      elementId
-    );
+  async getInputValue<T extends string | number = string>(
+    selector: string,
+    options: { waitExistsTimeout: number; timeout: number } = {
+      waitExistsTimeout: 10000,
+      timeout: 10000
+    }
+  ) {
+    return new Promise<T>(async (resolve, reject) => {
+      try {
+        const element = await this.hero.document
+          .querySelector(selector)
+          .$waitForExists({ timeoutMs: options.waitExistsTimeout });
 
-  public getWidgetId = async (): MaybeStringPromise =>
-    await this.hero.executeJs(() => {
-      const widgetId =
-        // @ts-ignore
-        typeof window.freeplay_form_turnstile_widget !== 'undefined'
-          ? // @ts-ignore
-            freeplay_form_turnstile_widget
-          : // @ts-ignore
-            typeof window.signup_form_turnstile_widget !== 'undefined'
-            ? // @ts-ignore
-              window.signup_form_turnstile_widget
-            : undefined;
+        if (!element) {
+          reject('Element not found');
+          return;
+        }
 
-      return typeof widgetId === 'undefined' ? undefined : widgetId;
+        const startTime = Date.now();
+
+        async function getValue() {
+          const value = (await element.value) as T;
+          if (value?.toString()?.length > 0) {
+            resolve(value);
+          } else if (Date.now() - startTime > options.timeout) {
+            reject('timeout');
+          } else {
+            setTimeout(async () => await getValue(), 1000);
+          }
+        }
+
+        await getValue();
+      } catch (e) {
+        reject(e);
+      }
     });
-
-  public getFingerprint = async (): MaybeStringPromise =>
+  }
+  public getFingerprintMd5 = async (): MaybeStringPromise =>
     await this.hero.getJsValue<string>(`$.fingerprint()`);
 
   public getFingerprintT = async (): MaybeStringPromise =>
@@ -151,7 +168,7 @@ export default class App extends HeroBase {
   @needsInit()
   @needsPageReady()
   @needsCsrfToken()
-  async login(tfa_code: string): Promise<boolean> {
+  async login(tfa_code: string | undefined = undefined): Promise<boolean> {
     return new Promise(async (resolve, reject) => {
       if (this.isLoggedIn) {
         resolve(true);
@@ -172,7 +189,10 @@ export default class App extends HeroBase {
         params.append('op', 'login_new');
         params.append('btc_address', this.username);
         params.append('password', this.password);
-        params.append('tfa_code', tfa_code);
+
+        if (tfa_code) {
+          params.append('tfa_code', tfa_code);
+        }
 
         let loginStatus: string = '';
 
@@ -229,6 +249,162 @@ export default class App extends HeroBase {
 
           resolve(true);
         }
+      }
+    });
+  }
+
+  @needsInit()
+  @needsPageReady()
+  @needsCsrfToken()
+  @needsLogin()
+  async freePlay() {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const timeRemainingExists = await this.querySelector(
+          '#free_play_tab #wait #time_remaining'
+        ).then((el) => el.$exists);
+
+        if (timeRemainingExists) {
+          resolve(true);
+        }
+
+        const playBtn = await this.queryElement('#free_play_form_button');
+
+        await this.hero.interact({
+          scroll: playBtn
+        });
+
+        const fingerprint = await this.getFingerprintMd5();
+
+        if (!fingerprint) {
+          reject('fingerprint not found');
+          return;
+        }
+
+        const fingerprint2 = await this.getFingerprintT();
+
+        if (!fingerprint2) {
+          reject('fingerprint2 not found');
+          return;
+        }
+
+        const freePlayOp = await this.getInputValue<string>('#free_play_op');
+
+        const client_seed =
+          await this.getInputValue<string>('#next_client_seed');
+
+        const pwc = await this.getInputValue<string>('#pwc_input');
+
+        const cf_captcha_response = await this.getInputValue(
+          "#freeplay_form_cf_turnstile [name='cf-turnstile-response']"
+        );
+
+        const csrfToken = this.csrfToken as string;
+
+        const params = new URLSearchParams();
+        params.append('csrf_token', csrfToken);
+        params.append('op', freePlayOp);
+        params.append('fingerprint', fingerprint);
+        params.append('client_seed', client_seed);
+        params.append('fingerprint2', fingerprint2);
+        params.append('pwc', pwc);
+        params.append('cf_captcha_response', cf_captcha_response);
+
+        let playStatus: string = '';
+
+        try {
+          const request = new this.hero.Request('/', {
+            method: 'POST',
+            headers: {
+              'content-type':
+                'application/x-www-form-urlencoded; charset=UTF-8',
+              'x-csrf-token': csrfToken
+            },
+            body: params.toString()
+          });
+
+          const response = await this.hero.fetch(request);
+
+          playStatus = await response.text();
+        } catch (e) {
+          reject(e);
+        }
+
+        const [status, ...respData] = playStatus?.split(':') || [];
+
+        if (status === 's') {
+          // Успішна відповідь
+          const [
+            rollResult, // t[1]: Результат ролу
+            balanceBTC, // t[2]: Баланс у BTC
+            winnings, // t[3]: Виграші (наприклад, у сатошах)
+            lastPlayTime, // t[4]: Час останньої гри
+            balanceUSD, // t[5]: Баланс у USD
+            nextServerSeedHash, // t[6]: Хеш наступного серверного сіда
+            clientSeed, // t[11]: Клієнтський сид
+            nonce, // t[12]: Нонс
+            prevServerSeed, // t[9]: Попередній серверний сид
+            prevServerSeedHash, // t[10]: Хеш попереднього серверного сіда
+            prevRoll, // t[1]: Попередній рол
+            lotteryTickets, // t[13]: Лотерейні квитки
+            rewardPoints, // t[14]: Очки нагороди
+            spinsWon, // t[15]: Кількість WOF спінів
+            tokensWon, // t[20]: FUN токени
+            ...rest // Інші додаткові дані
+          ] = respData;
+
+          await this.setCookie('last_play', lastPlayTime, {
+            expires: 3650,
+            secure: true
+          });
+
+          await this.reload();
+
+          resolve({
+            rollResult,
+            balanceBTC,
+            winnings,
+            lastPlayTime, // Додано пропущене значення
+            balanceUSD,
+            nextServerSeedHash,
+            clientSeed,
+            nonce,
+            prevServerSeed,
+            prevServerSeedHash,
+            prevRoll,
+            lotteryTickets,
+            rewardPoints,
+            spinsWon,
+            tokensWon,
+            additionalData: rest
+          });
+        } else if (status === 'e') {
+          // Помилка
+          const [errorCode, errorMessage, ...errorDetails] = respData;
+
+          console.error('Помилка:', {
+            errorCode,
+            errorMessage,
+            errorDetails
+          });
+
+          if (errorCode === 'e1') {
+            console.log('Та ж сама IP адреса. Чекаємо таймер...');
+            const timeRemaining = parseInt(errorDetails[0], 10);
+            console.log(`Залишок часу: ${timeRemaining} секунд`);
+            setTimeout(async () => {
+              console.log('Оновлюємо сторінку...');
+              await this.reload();
+              await this.freePlay();
+            }, timeRemaining * 1000);
+          } else {
+            reject(errorMessage);
+          }
+        }
+
+        resolve(true);
+      } catch (e) {
+        reject(e);
       }
     });
   }
