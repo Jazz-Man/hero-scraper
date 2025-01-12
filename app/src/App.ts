@@ -9,6 +9,10 @@ import {
   needsPageReady
 } from './classDecorators.ts';
 
+type TCfType = 'free_play' | 'signup_form';
+
+type TCfTypeSelectors = Record<TCfType, string>;
+
 export default class App extends HeroBase {
   private isLoggedIn: boolean = false;
   private csrfToken: string | undefined;
@@ -103,43 +107,6 @@ export default class App extends HeroBase {
     }
   };
 
-  async getInputValue<T extends string | number = string>(
-    selector: string,
-    options: { waitExistsTimeout: number; timeout: number } = {
-      waitExistsTimeout: 10000,
-      timeout: 10000
-    }
-  ) {
-    return new Promise<T>(async (resolve, reject) => {
-      try {
-        const element = await this.hero.document
-          .querySelector(selector)
-          .$waitForExists({ timeoutMs: options.waitExistsTimeout });
-
-        if (!element) {
-          reject('Element not found');
-          return;
-        }
-
-        const startTime = Date.now();
-
-        async function getValue() {
-          const value = (await element.value) as T;
-          if (value?.toString()?.length > 0) {
-            resolve(value);
-          } else if (Date.now() - startTime > options.timeout) {
-            reject('timeout');
-          } else {
-            setTimeout(async () => await getValue(), 1000);
-          }
-        }
-
-        await getValue();
-      } catch (e) {
-        reject(e);
-      }
-    });
-  }
   public getFingerprintMd5 = async (): MaybeStringPromise =>
     await this.hero.getJsValue<string>(`$.fingerprint()`);
 
@@ -165,6 +132,41 @@ export default class App extends HeroBase {
     return await this.hero.exportUserProfile();
   }
 
+  @needsPageReady()
+  @needsCsrfToken()
+  async postRequest(
+    url: string,
+    bodyParams: Record<string, string>
+  ): Promise<string> {
+    return new Promise<string>(async (resolve, reject) => {
+      try {
+        const csrfToken = this.csrfToken as string;
+
+        const params = new URLSearchParams(bodyParams);
+
+        if (!params.has('csrf_token')) {
+          params.set('csrf_token', csrfToken);
+        }
+
+        const request = new this.hero.Request(url, {
+          credentials: 'include',
+          redirect: 'follow',
+          method: 'POST',
+          headers: {
+            'content-type': 'application/x-www-form-urlencoded; charset=UTF-8',
+            'x-csrf-token': csrfToken
+          },
+          body: params.toString()
+        });
+        const response = await this.hero.fetch(request);
+        const text = await response.text();
+        resolve(text);
+      } catch (e) {
+        reject(e);
+      }
+    });
+  }
+
   @needsInit()
   @needsPageReady()
   @needsCsrfToken()
@@ -177,41 +179,24 @@ export default class App extends HeroBase {
 
       const btc_address = await this.getCookieValue('btc_address');
 
-      if (btc_address === this.username) {
+      if (btc_address?.length) {
         this.isLoggedIn = true;
         resolve(true);
         return;
       } else {
-        const csrfToken = this.csrfToken as string;
-
-        const params = new URLSearchParams();
-        params.append('csrf_token', csrfToken);
-        params.append('op', 'login_new');
-        params.append('btc_address', this.username);
-        params.append('password', this.password);
+        const params: Record<string, string> = {
+          op: 'login_new',
+          btc_address: this.username,
+          password: this.password
+        };
 
         if (tfa_code) {
-          params.append('tfa_code', tfa_code);
+          params.tfa_code = tfa_code;
         }
 
-        let loginStatus: string = '';
+        const loginStatus = await this.postRequest('/', params);
 
-        try {
-          const request = new this.hero.Request('/', {
-            method: 'POST',
-            headers: {
-              'content-type':
-                'application/x-www-form-urlencoded; charset=UTF-8',
-              'x-csrf-token': csrfToken
-            },
-            body: params.toString()
-          });
-          const response = await this.hero.fetch(request);
-
-          loginStatus = await response.text();
-        } catch (e) {
-          reject(e);
-        }
+        console.log({ loginStatus });
 
         const [status, ...loginData] = loginStatus?.split(':');
 
@@ -253,9 +238,33 @@ export default class App extends HeroBase {
     });
   }
 
+  async getCfResponse(type: TCfType): Promise<string> {
+    return new Promise<string>(async (resolve, reject) => {
+      const selector: TCfTypeSelectors = {
+        free_play: '#freeplay_form_cf_turnstile',
+        signup_form: '#signup_form_cf_turnstile'
+      };
+
+      if (!selector.hasOwnProperty(type)) {
+        reject('invalid type');
+
+        return;
+      }
+
+      try {
+        const value = await this.getInputValue(
+          `${selector[type]} [name='cf-turnstile-response']`
+        );
+
+        resolve(value);
+      } catch (e) {
+        reject(e);
+      }
+    });
+  }
+
   @needsInit()
   @needsPageReady()
-  @needsCsrfToken()
   @needsLogin()
   async freePlay() {
     return new Promise(async (resolve, reject) => {
@@ -288,47 +297,27 @@ export default class App extends HeroBase {
           return;
         }
 
-        const freePlayOp = await this.getInputValue<string>('#free_play_op');
+        const op = await this.getInputValue<string>('#free_play_op');
 
         const client_seed =
           await this.getInputValue<string>('#next_client_seed');
 
         const pwc = await this.getInputValue<string>('#pwc_input');
 
-        const cf_captcha_response = await this.getInputValue(
-          "#freeplay_form_cf_turnstile [name='cf-turnstile-response']"
-        );
+        const cf_captcha_response = await this.getCfResponse('free_play');
 
-        const csrfToken = this.csrfToken as string;
+        const params: Record<string, string> = {
+          op,
+          fingerprint,
+          client_seed,
+          pwc,
+          fingerprint2,
+          cf_captcha_response
+        };
 
-        const params = new URLSearchParams();
-        params.append('csrf_token', csrfToken);
-        params.append('op', freePlayOp);
-        params.append('fingerprint', fingerprint);
-        params.append('client_seed', client_seed);
-        params.append('fingerprint2', fingerprint2);
-        params.append('pwc', pwc);
-        params.append('cf_captcha_response', cf_captcha_response);
+        const playStatus = await this.postRequest('/', params);
 
-        let playStatus: string = '';
-
-        try {
-          const request = new this.hero.Request('/', {
-            method: 'POST',
-            headers: {
-              'content-type':
-                'application/x-www-form-urlencoded; charset=UTF-8',
-              'x-csrf-token': csrfToken
-            },
-            body: params.toString()
-          });
-
-          const response = await this.hero.fetch(request);
-
-          playStatus = await response.text();
-        } catch (e) {
-          reject(e);
-        }
+        console.log({ playStatus });
 
         const [status, ...respData] = playStatus?.split(':') || [];
 
