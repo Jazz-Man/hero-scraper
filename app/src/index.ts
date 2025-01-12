@@ -1,19 +1,37 @@
 import App from './App.ts';
 import getOtp from './otp.ts';
 
+type TUser = {
+  username: string;
+  password: string;
+  tfa_secret: string;
+};
+
+const userRoot: TUser = {
+  username: 'info@vsokolyk.pp.ua',
+  password: 'finhap-xAfpux-5kifko',
+  tfa_secret: 'HXAZUGRYZXCG2K6N'
+};
+
+const testUser: TUser = {
+  username: 'rider_64paleo@icloud.com',
+  password: 'jawheT-wiwsuc-7padpa',
+  tfa_secret: 'SWDCEBDMWSWGGVMS'
+};
+
+const generateUser: TUser = {
+  username: 'info@gmail',
+  password: 'finhap-xAfpux-5kifko',
+  tfa_secret: 'HXAZUGRYZXCG2K6N'
+};
+
 (async () => {
   try {
-    const app = new App(
-      // 'soyelami019@stu.ui.edu.ng',
-      'rider_64paleo@icloud.com',
-      // 'sahmurhel',
-      'jawheT-wiwsuc-7padpa',
-      true
-    );
+    const app = new App(testUser.username, testUser.password, true);
 
     await app.init({
       showChrome: true,
-      showDevtools: false
+      showDevtools: true
     });
 
     await app.goto('https://freebitco.in/?op=home');
@@ -21,7 +39,7 @@ import getOtp from './otp.ts';
     await app.initCookie();
 
     try {
-      const tfa_code = getOtp('SWDCEBDMWSWGGVMS');
+      const tfa_code = getOtp(testUser.tfa_secret);
 
       await app.login(tfa_code);
     } catch (e) {
@@ -29,6 +47,8 @@ import getOtp from './otp.ts';
     }
 
     await app.freePlay();
+
+    await app.reload();
 
     await app.saveProfileCookies();
 

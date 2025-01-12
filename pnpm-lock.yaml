@@ -70,6 +70,9 @@ importers:
         specifier: workspace:^
         version: link:../packages/ip-info
     devDependencies:
+      '@faker-js/faker':
+        specifier: ^9.3.0
+        version: 9.3.0
       '@types/geoip-lite':
         specifier: ^1.4.4
         version: 1.4.4
@@ -130,6 +133,10 @@ packages:
 
   '@argonprotocol/mainchain@0.0.20':
     resolution: {integrity: sha512-7SOUd3cXB2nEtYOYU25Nvk+XDawqoWxMci15YQn8wIb9aVGilgl+G7Bfd7lwLm9VJax/owcPJ21uu9lGhVjWrA==}
+
+  '@faker-js/faker@9.3.0':
+    resolution: {integrity: sha512-r0tJ3ZOkMd9xsu3VRfqlFR6cz0V/jFYRswAIpC+m/DIfAUXq7g8N7wTAlhSANySXYGKzGryfDXwtwsY8TxEIDw==}
+    engines: {node: '>=18.0.0', npm: '>=9.0.0'}
 
   '@isaacs/cliui@8.0.2':
     resolution: {integrity: sha512-O8jcjabXaleOG9DQ0+ARXWZBTfnP4WNAqzuiJK7ll44AmxGKv/J2M4TPjxjY3znBCfvBXFzucm1twdyFybFqEA==}
@@ -1279,6 +1286,8 @@ snapshots:
       - bufferutil
       - supports-color
       - utf-8-validate
+
+  '@faker-js/faker@9.3.0': {}
 
   '@isaacs/cliui@8.0.2':
     dependencies:

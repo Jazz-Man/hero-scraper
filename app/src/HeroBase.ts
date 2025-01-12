@@ -341,6 +341,46 @@ export default abstract class HeroBase {
     });
   }
 
+  @needsInit()
+  @needsPageReady()
+  async getInputValue<T extends string | number = string>(
+    selector: string,
+    options: { waitExistsTimeout: number; timeout: number } = {
+      waitExistsTimeout: 10000,
+      timeout: 10000
+    }
+  ) {
+    return new Promise<T>(async (resolve, reject) => {
+      try {
+        const element = await this.hero.document
+          .querySelector(selector)
+          .$waitForExists({ timeoutMs: options.waitExistsTimeout });
+
+        if (!element) {
+          reject('Element not found');
+          return;
+        }
+
+        const startTime = Date.now();
+
+        async function getValue() {
+          const value = (await element.value) as T;
+          if (value?.toString()?.length > 0) {
+            resolve(value);
+          } else if (Date.now() - startTime > options.timeout) {
+            reject('timeout');
+          } else {
+            setTimeout(async () => await getValue(), 1000);
+          }
+        }
+
+        await getValue();
+      } catch (e) {
+        reject(e);
+      }
+    });
+  }
+
   /**
    * Calls hero's waitForLocation and then waitForLoad.
    *

@@ -6,6 +6,7 @@
     "@scraper/ip-info": "workspace:^"
   },
   "devDependencies": {
+    "@faker-js/faker": "^9.3.0",
     "@types/geoip-lite": "^1.4.4"
   }
 }
