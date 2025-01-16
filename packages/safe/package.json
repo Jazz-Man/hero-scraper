@@ -1,5 +1,5 @@
 {
-  "name": "@scraper/fetch",
+  "name": "@scraper/safe",
   "version": "0.0.0",
   "private": true,
   "main": "index.ts",
@@ -7,8 +7,5 @@
     ".": {
       "default": "./index.ts"
     }
-  },
-  "dependencies": {
-    "@scraper/safe": "workspace:^"
   }
 }

@@ -1,12 +1,12 @@
-import geoIp, { type Lookup } from "geoip-lite";
-import fetch from "@scraper/fetch";
+import fetch from '@scraper/fetch';
+import geoIp, { type Lookup } from 'geoip-lite';
 import ipServices, {
-    getRandomizedServices,
-    oneLineServices,
-    type ServiceName,
-    type ServiceUrl,
-} from "./src/ipServices";
-import { getProxyUrl, getRandomUsername } from "./src/proxy";
+  getRandomizedServices,
+  oneLineServices,
+  type ServiceName,
+  type ServiceUrl
+} from './src/ipServices';
+import { getProxyUrl, getRandomUsername } from './src/proxy';
 
 export type IPInfo = {
   ip: string;
@@ -21,7 +21,7 @@ export type GeoIPInfo = IPInfo & Partial<Lookup>;
 
 export async function fetchIPInfo(
   serviceName: ServiceName,
-  proxyUser: string | undefined = getRandomUsername(),
+  proxyUser: string | undefined = getRandomUsername()
 ): Promise<GeoIPInfo> {
   return new Promise<GeoIPInfo>(async (resolve, reject) => {
     const serviceNameUrl = ipServices[serviceName];
@@ -31,8 +31,8 @@ export async function fetchIPInfo(
     const data = await fetch(serviceNameUrl, {
       proxy,
       referrer:
-        "https://www.bing.com/search?pc=OA1&q=public%20IP%20checking%20services%20list",
-      signal: AbortSignal.timeout(30000),
+        'https://www.bing.com/search?pc=OA1&q=public%20IP%20checking%20services%20list',
+      signal: AbortSignal.timeout(30000)
       // verbose: false,
     })
       .then(async (response) => {
@@ -40,10 +40,10 @@ export async function fetchIPInfo(
           throw new Error(`HTTP error: ${response.status}`);
         }
 
-        const contentType = response.headers.get("content-type");
+        const contentType = response.headers.get('content-type');
 
         try {
-          return contentType?.includes("application/json")
+          return contentType?.includes('application/json')
             ? await response.json()
             : await response.text().then((string) => string.trim());
         } catch (error) {
@@ -61,48 +61,48 @@ export async function fetchIPInfo(
       serviceName,
       serviceNameUrl,
       proxy,
-      proxyUser,
+      proxyUser
     };
 
     if (oneLineServices.hasOwnProperty(serviceName)) {
       ipInfo = {
         ip: data || data?.ip,
-        ...base,
+        ...base
       };
     } else {
       switch (serviceName) {
-        case "httpbin.org":
+        case 'httpbin.org':
           ipInfo = {
             ip: data?.origin,
-            ...base,
+            ...base
           };
           break;
-        case "check.torproject.org":
+        case 'check.torproject.org':
           ipInfo = {
             ip: data?.IP,
-            ...base,
+            ...base
           };
           break;
 
-        case "api.my-ip.io/v2/ip.json":
+        case 'api.my-ip.io/v2/ip.json':
           ipInfo = {
             ip: data?.ip,
-            ...base,
+            ...base
           };
           break;
-        case "ifconfig.pro":
+        case 'ifconfig.pro':
           ipInfo = {
-            ip: (data as string).split(" - ").at(0) as string,
-            ...base,
+            ip: (data as string).split(' - ').at(0) as string,
+            ...base
           };
 
           break;
 
-        case "wtfismyip.com":
-        case "myip.wtf":
+        case 'wtfismyip.com':
+        case 'myip.wtf':
           ipInfo = {
             ip: data?.YourFuckingIPAddress,
-            ...base,
+            ...base
           };
           break;
       }
@@ -112,25 +112,23 @@ export async function fetchIPInfo(
       reject(`Unsupported service: ${serviceName}`);
     }
 
-
     if (ipInfo?.ip) {
       const geo = geoIp.lookup(ipInfo.ip);
 
       ipInfo = {
         ...ipInfo,
-        ...geo,
+        ...geo
       };
     } else {
       reject(`Failed to fetch IP for "${serviceName}"`);
     }
-
 
     resolve(ipInfo as GeoIPInfo);
   });
 }
 
 export default async function getPublicIP(
-  proxyUser: string | undefined = getRandomUsername(),
+  proxyUser: string | undefined = getRandomUsername()
 ): Promise<GeoIPInfo> {
   const services = getRandomizedServices();
   for (const service of services) {
@@ -140,5 +138,5 @@ export default async function getPublicIP(
       console.error(`Error with service ${service}:`, error);
     }
   }
-  throw new Error("All IP services are unavailable.");
+  throw new Error('All IP services are unavailable.');
 }

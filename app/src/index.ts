@@ -1,5 +1,9 @@
 import App from './App.ts';
 import getOtp from './otp.ts';
+import {
+  generateTestEmail,
+  generateTestPassword
+} from './utils/random-data.ts';
 
 type TUser = {
   username: string;
@@ -20,44 +24,39 @@ const testUser: TUser = {
 };
 
 const generateUser: TUser = {
-  username: 'info@gmail',
-  password: 'finhap-xAfpux-5kifko',
+  username: generateTestEmail(),
+  password: generateTestPassword(),
   tfa_secret: 'HXAZUGRYZXCG2K6N'
 };
 
-(async () => {
-  try {
-    const app = new App(testUser.username, testUser.password, true);
+const app = new App(generateUser.username, generateUser.password, true);
 
-    await app.init({
-      showChrome: true,
-      showDevtools: true
-    });
+await app.init({
+  showChrome: true,
+  showDevtools: true
+});
 
-    await app.goto('https://freebitco.in/?op=home');
+await app.goto('https://freebitco.in/?op=home');
 
-    await app.initCookie();
+await app.initCookie();
 
-    try {
-      const tfa_code = getOtp(testUser.tfa_secret);
+const tfa_code = getOtp(generateUser.tfa_secret);
 
-      await app.login(tfa_code);
-    } catch (e) {
-      console.error(e);
-    }
+// await app.login(tfa_code);
+//
+// try {
+//   await app.freePlay();
+// } catch (e) {
+//   console.error(e);
+// }
 
-    await app.freePlay();
+// await app.signup();
+// await app.freePlay();
 
-    await app.reload();
+await app.saveProfileCookies();
 
-    await app.saveProfileCookies();
+const meta = await app.hero.meta;
 
-    const meta = await app.hero.meta;
+await app.hero.close();
 
-    return meta;
-  } catch (e) {
-    throw e;
-  }
-})()
-  .then((res) => console.log(res))
-  .catch((e) => console.error(e));
+console.log(meta);
