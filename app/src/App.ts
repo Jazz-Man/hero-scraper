@@ -1,17 +1,23 @@
-import HeroBase, {
-  type MaybeStringPromise,
-  type TSetCookieOptions
-} from './HeroBase.ts';
-import {
-  needsCsrfToken,
-  needsInit,
-  needsLogin,
-  needsPageReady
-} from './classDecorators.ts';
+import setCookie from 'set-cookie-parser';
+
+import { safe, safePromise } from '@scraper/safe';
+import Response from '@ulixee/awaited-dom/impl/official-klasses/Response';
+import type { ICookie } from '@ulixee/unblocked-specification/agent/net/ICookie';
+import HeroBase, { type TSetCookieOptions } from './HeroBase.ts';
+import { needsInit, needsLogin, needsPageReady } from './classDecorators.ts';
 
 type TCfType = 'free_play' | 'signup_form';
 
 type TCfTypeSelectors = Record<TCfType, string>;
+
+type TPostBodyParams = Record<string, string> | string | URLSearchParams;
+
+type TAccountCookie = {
+  btc_address: string;
+  password: string;
+  fbtc_userid: string;
+  fbtc_session: string;
+};
 
 export default class App extends HeroBase {
   private isLoggedIn: boolean = false;
@@ -29,66 +35,97 @@ export default class App extends HeroBase {
     return !!this.csrfToken;
   }
 
+  @needsInit()
+  @needsPageReady()
   getIsLoggedIn() {
     return this.isLoggedIn;
   }
 
   @needsInit()
   @needsPageReady()
-  async initCookie(): Promise<boolean> {
-    return new Promise(async (resolve, rejects) => {
-      try {
-        this.csrfToken = await this.getCookieValue('csrf_token');
+  private async initCsrfToken() {
+    const csrfToken = await safe<ICookie>(
+      this.cookieStorage.getItem('csrf_token')
+    );
 
-        const profile = this.profileCookies;
-
-        if (profile?.length) {
-          this.csrfToken = profile.find(
-            (cookie) =>
-              cookie.name === 'csrf_token' &&
-              cookie.path === '/' &&
-              cookie.domain === '.freebitco.in'
-          )?.value;
-
-          this.isLoggedIn = true;
-
-          resolve(true);
-        } else {
-          const btc_address = await this.getCookieValue('btc_address');
-
-          if (btc_address === this.username) {
-            this.isLoggedIn = true;
-            resolve(true);
-          }
-
-          const hideCookies = [
-            'mine_btc',
-            'earn_btc',
-            'push',
-            'free_wof_spins',
-            'premium_membership',
-            'rp_for_wof'
-          ];
-
-          for (const cookie of hideCookies) {
-            await this.setCookie(`hide_${cookie}_msg`, '1', {
-              secure: true,
-              expires: 3650
-            });
-          }
-
-          await this.setCookie('cookieconsent_dismissed', 'yes', {
-            secure: true
-          });
-
-          await this.reload();
-
-          resolve(true);
-        }
-      } catch (e) {
-        rejects(e);
+    if (csrfToken.success && csrfToken.data.value.length) {
+      this.csrfToken = csrfToken.data.value;
+    } else {
+      const charSet2 =
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+      let randomString2 = '';
+      let i;
+      for (i = 0; i < 12; i++) {
+        const randomPoz = Math.floor(Math.random() * charSet2.length);
+        randomString2 += charSet2.substring(randomPoz, randomPoz + 1);
       }
+
+      await this.setCookie('csrf_token', randomString2, {
+        secure: true
+      });
+
+      this.csrfToken = randomString2;
+    }
+  }
+
+  @needsInit()
+  @needsPageReady()
+  async initCookie(): Promise<void> {
+    await safe(this.hero.waitForMillis(3000));
+
+    await this.initCsrfToken();
+
+    const profile = this.profileCookies;
+
+    if (profile?.length) {
+      this.csrfToken = profile.find(
+        (cookie) =>
+          cookie.name === 'csrf_token' &&
+          cookie.path === '/' &&
+          cookie.domain === '.freebitco.in'
+      )?.value;
+
+      this.isLoggedIn = true;
+
+      return;
+    }
+
+    const btc = await safe<ICookie>(this.cookieStorage.getItem('btc_address'));
+
+    if (btc.success && btc.data?.value.length) {
+      this.isLoggedIn = true;
+      console.log(
+        { btc_address: btc.data.value, isLoggedIn: this.isLoggedIn },
+        'initCookie'
+      );
+      return;
+    }
+
+    const hideCookies = [
+      'mine_btc',
+      'earn_btc',
+      'push',
+      'free_wof_spins',
+      'premium_membership',
+      'rp_for_wof'
+    ];
+
+    for (const cookie of hideCookies) {
+      await this.setCookie(`hide_${cookie}_msg`, '1', {
+        secure: true,
+        expires: 3650
+      });
+    }
+
+    await this.setCookie('cookieconsent_dismissed', 'yes', {
+      secure: true
     });
+
+    await this.reload();
+
+    console.log('initCookie done');
+
+    return;
   }
 
   setCookie = async (
@@ -107,294 +144,350 @@ export default class App extends HeroBase {
     }
   };
 
-  public getFingerprintMd5 = async (): MaybeStringPromise =>
-    await this.hero.getJsValue<string>(`$.fingerprint()`);
+  public getFingerprintMd5 = async (): Promise<string> =>
+    await this.getJsValue<string>(`$.fingerprint()`, {
+      err: '"$.fingerprint()" fingerprint not found'
+    });
 
-  public getFingerprintT = async (): MaybeStringPromise =>
-    await this.hero.executeJs(() => {
-      // @ts-ignore
-      if (window.Fingerprint === undefined) {
-        return undefined;
+  public getFingerprintT = async (): Promise<string> =>
+    await safePromise<string>(
+      this.hero.executeJs(() => {
+        // @ts-ignore
+        if (window.Fingerprint === undefined) {
+          return undefined;
+        }
+        // @ts-ignore
+        const t = new Fingerprint({
+          canvas: !0,
+          screen_resolution: !0,
+          ie_activex: !0
+        });
+
+        return t.get();
+      })
+    );
+
+  @needsPageReady()
+  // @needsCsrfToken()
+  async postRequest(url: string, bodyParams: TPostBodyParams): Promise<string> {
+    return new Promise<string>(async (resolve, reject) => {
+      const params = new URLSearchParams(bodyParams);
+
+      const token = params.has('csrf_token')
+        ? (params.get('csrf_token') as string)
+        : (this.csrfToken as string);
+
+      if (!params.has('csrf_token')) {
+        params.set('csrf_token', token);
       }
-      // @ts-ignore
-      const t = new Fingerprint({
-        canvas: !0,
-        screen_resolution: !0,
-        ie_activex: !0
+
+      const request = new this.hero.Request(url, {
+        credentials: 'include',
+        redirect: 'follow',
+        method: 'POST',
+        headers: {
+          'content-type': 'application/x-www-form-urlencoded; charset=UTF-8',
+          'x-csrf-token': token
+        },
+        body: params.toString()
       });
 
-      return t.get();
-    });
+      const response = await safePromise<Response>(this.hero.fetch(request), {
+        logError: true
+      });
 
-  @needsInit()
-  @needsPageReady()
-  async exportUserProfile() {
-    return await this.hero.exportUserProfile();
-  }
+      const responseStatusCode = await response.status;
+      const responseStatusText = await response.statusText;
 
-  @needsPageReady()
-  @needsCsrfToken()
-  async postRequest(
-    url: string,
-    bodyParams: Record<string, string>
-  ): Promise<string> {
-    return new Promise<string>(async (resolve, reject) => {
-      try {
-        const csrfToken = this.csrfToken as string;
-
-        const params = new URLSearchParams(bodyParams);
-
-        if (!params.has('csrf_token')) {
-          params.set('csrf_token', csrfToken);
-        }
-
-        const request = new this.hero.Request(url, {
-          credentials: 'include',
-          redirect: 'follow',
-          method: 'POST',
-          headers: {
-            'content-type': 'application/x-www-form-urlencoded; charset=UTF-8',
-            'x-csrf-token': csrfToken
-          },
-          body: params.toString()
-        });
-        const response = await this.hero.fetch(request);
-        const text = await response.text();
-        resolve(text);
-      } catch (e) {
-        reject(e);
+      if (responseStatusCode > 200) {
+        reject(responseStatusText);
+        return;
       }
+
+      const combinedCookieHeader = await safePromise<string | null>(
+        response.headers.get('set-cookie')
+      );
+
+      if (combinedCookieHeader?.length) {
+        const splitCookieHeaders =
+          setCookie.splitCookiesString(combinedCookieHeader);
+
+        const cookies = setCookie.parse(splitCookieHeaders);
+
+        for (const cookie of cookies) {
+          await this.setCookie(cookie.name, cookie.value, {
+            secure: cookie.secure,
+            httpOnly: cookie.httpOnly,
+            expires: cookie.expires
+          });
+        }
+      }
+
+      const text = await safePromise(response.text());
+      resolve(text);
     });
+  }
+
+  private async initAccountCookie(cookie: TAccountCookie) {
+    await this.setCookie('btc_address', cookie.btc_address, {
+      expires: 3650,
+      secure: true
+    });
+    await this.setCookie('password', cookie.password, {
+      expires: 3650,
+      secure: true
+    });
+    await this.setCookie('fbtc_userid', cookie.fbtc_userid, {
+      expires: 3650,
+      secure: true
+    });
+
+    await this.setCookie('fbtc_session', cookie.fbtc_session, {
+      expires: 3650,
+      secure: true
+    });
+
+    await this.setCookie('have_account', '1', {
+      expires: 3650,
+      secure: true
+    });
+
+    this.isLoggedIn = true;
+
+    await this.goto('https://freebitco.in/?op=home');
   }
 
   @needsInit()
   @needsPageReady()
-  @needsCsrfToken()
   async login(tfa_code: string | undefined = undefined): Promise<boolean> {
-    return new Promise(async (resolve, reject) => {
-      if (this.isLoggedIn) {
-        resolve(true);
-        return;
-      }
+    if (this.isLoggedIn) {
+      console.log('login ok', { isLoggedIn: this.isLoggedIn });
+      // resolve(true);
+      return true;
+    }
 
-      const btc_address = await this.getCookieValue('btc_address');
+    // const current_btc_address = await this.getCookieValue('btc_address');
+    //
+    // if (current_btc_address?.length) {
+    //   this.isLoggedIn = true;
+    //   console.log(
+    //     { btc_address: current_btc_address, isLoggedIn: this.isLoggedIn },
+    //     'login ok'
+    //   );
+    //   return true;
+    // }
 
-      if (btc_address?.length) {
-        this.isLoggedIn = true;
-        resolve(true);
-        return;
-      } else {
-        const params: Record<string, string> = {
-          op: 'login_new',
-          btc_address: this.username,
-          password: this.password
-        };
+    const params: TPostBodyParams = {
+      op: 'login_new',
+      btc_address: this.username,
+      password: this.password
+    };
 
-        if (tfa_code) {
-          params.tfa_code = tfa_code;
-        }
+    if (tfa_code) {
+      params.tfa_code = tfa_code;
+    }
 
-        const loginStatus = await this.postRequest('/', params);
+    const loginStatus = await this.postRequest('/', params);
 
-        console.log({ loginStatus });
+    console.log({ loginStatus }, 'loginStatus');
 
-        const [status, ...loginData] = loginStatus?.split(':');
+    const [status, ...loginData] = loginStatus?.split(':');
 
-        if (status !== 's') {
-          reject(loginData[0]);
-        } else {
-          const [btc_address, password, fbtc_userid, fbtc_session] = loginData;
+    if (status !== 's') {
+      console.log('login failed');
 
-          await this.setCookie('btc_address', btc_address, {
-            expires: 3650,
-            secure: true
-          });
-          await this.setCookie('password', password, {
-            expires: 3650,
-            secure: true
-          });
-          await this.setCookie('fbtc_userid', fbtc_userid, {
-            expires: 3650,
-            secure: true
-          });
+      throw new Error(loginData[0]);
+    }
 
-          await this.setCookie('fbtc_session', fbtc_session, {
-            expires: 3650,
-            secure: true
-          });
+    const [btc_address, password, fbtc_userid, fbtc_session] = loginData;
 
-          await this.setCookie('have_account', '1', {
-            expires: 3650,
-            secure: true
-          });
+    await this.initAccountCookie({
+      btc_address,
+      password,
+      fbtc_userid,
+      fbtc_session
+    });
 
-          this.isLoggedIn = true;
+    console.log('login ok', { isLoggedIn: this.isLoggedIn });
 
-          await this.goto('https://freebitco.in/?op=home');
+    return true;
 
-          resolve(true);
-        }
-      }
+    // return new Promise(async (resolve, reject) => {
+    //   resolve(true);
+    // });
+  }
+
+  @needsInit()
+  @needsPageReady()
+  async signup() {
+    await safe(this.cookieStorage.clear());
+
+    await this.reload();
+
+    const fingerprint = await this.getFingerprintMd5();
+
+    const cf_captcha_response = await this.getCfResponse('signup_form');
+
+    const params: TPostBodyParams = {
+      op: 'signup_new',
+      password: this.password,
+      email: this.username,
+      fingerprint,
+      // referrer: undefined,
+      // tag: undefined,
+      captcha_type: '77',
+      cf_captcha_response
+    };
+
+    const signupStatus = await this.postRequest('/', params);
+
+    const [status, ...signupData] = signupStatus?.split(':');
+
+    console.log({ status, signupData, params }, 'signupStatus');
+
+    if (status === 'e') {
+      const isEmailExists =
+        signupData?.at(1) && signupData[1] === 'email_exists';
+
+      const error = isEmailExists ? signupData[0] : signupData[0];
+
+      return;
+    }
+
+    const [btc_address, password, fbtc_userid, fbtc_session] = signupData;
+
+    await this.initAccountCookie({
+      btc_address,
+      password,
+      fbtc_userid,
+      fbtc_session
     });
   }
 
   async getCfResponse(type: TCfType): Promise<string> {
-    return new Promise<string>(async (resolve, reject) => {
-      const selector: TCfTypeSelectors = {
-        free_play: '#freeplay_form_cf_turnstile',
-        signup_form: '#signup_form_cf_turnstile'
-      };
+    const selector: TCfTypeSelectors = {
+      free_play: '#freeplay_form_cf_turnstile',
+      signup_form: '#signup_form_cf_turnstile'
+    };
 
-      if (!selector.hasOwnProperty(type)) {
-        reject('invalid type');
+    if (!selector.hasOwnProperty(type)) {
+      throw new Error('invalid type');
+    }
 
-        return;
-      }
-
-      try {
-        const value = await this.getInputValue(
-          `${selector[type]} [name='cf-turnstile-response']`
-        );
-
-        resolve(value);
-      } catch (e) {
-        reject(e);
-      }
-    });
+    return await this.getInputValue<string>(
+      `${selector[type]} [name='cf-turnstile-response']`
+    );
   }
 
-  @needsInit()
-  @needsPageReady()
   @needsLogin()
   async freePlay() {
-    return new Promise(async (resolve, reject) => {
-      try {
-        const timeRemainingExists = await this.querySelector(
-          '#free_play_tab #wait #time_remaining'
-        ).then((el) => el.$exists);
+    const timeRemainingExists = await this.isVisible(
+      '#free_play_tab #wait #time_remaining'
+    );
 
-        if (timeRemainingExists) {
-          resolve(true);
-        }
+    if (timeRemainingExists) {
+      console.log({ timeRemainingExists });
+      return;
+    }
 
-        const playBtn = await this.queryElement('#free_play_form_button');
+    const playBtn = await this.queryElement('#free_play_form_button');
 
-        await this.hero.interact({
-          scroll: playBtn
-        });
+    await safe(
+      this.hero.interact({
+        scroll: playBtn
+      })
+    );
 
-        const fingerprint = await this.getFingerprintMd5();
+    const fingerprint = await this.getFingerprintMd5();
 
-        if (!fingerprint) {
-          reject('fingerprint not found');
-          return;
-        }
+    if (!fingerprint) {
+      throw new Error('fingerprint not found');
+    }
 
-        const fingerprint2 = await this.getFingerprintT();
+    const fingerprint2 = await this.getFingerprintT();
 
-        if (!fingerprint2) {
-          reject('fingerprint2 not found');
-          return;
-        }
+    if (!fingerprint2) {
+      throw new Error('fingerprint2 not found');
+    }
 
-        const op = await this.getInputValue<string>('#free_play_op');
+    const op = await this.getInputValue<string>('#free_play_op');
 
-        const client_seed =
-          await this.getInputValue<string>('#next_client_seed');
+    const client_seed = await this.getInputValue<string>('#next_client_seed');
 
-        const pwc = await this.getInputValue<string>('#pwc_input');
+    const pwc = await this.getInputValue<string>('#pwc_input');
 
-        const cf_captcha_response = await this.getCfResponse('free_play');
+    const cf_captcha_response = await this.getCfResponse('free_play');
 
-        const params: Record<string, string> = {
-          op,
-          fingerprint,
-          client_seed,
-          pwc,
-          fingerprint2,
-          cf_captcha_response
-        };
+    const params: TPostBodyParams = {
+      op,
+      fingerprint,
+      client_seed,
+      pwc,
+      fingerprint2,
+      cf_captcha_response
+    };
 
-        const playStatus = await this.postRequest('/', params);
+    const playStatus = await this.postRequest('/', params);
 
-        console.log({ playStatus });
+    console.log({ playStatus, params });
 
-        const [status, ...respData] = playStatus?.split(':') || [];
+    const [status, ...respData] = playStatus?.split(':') || [];
 
-        if (status === 's') {
-          // Успішна відповідь
-          const [
-            rollResult, // t[1]: Результат ролу
-            balanceBTC, // t[2]: Баланс у BTC
-            winnings, // t[3]: Виграші (наприклад, у сатошах)
-            lastPlayTime, // t[4]: Час останньої гри
-            balanceUSD, // t[5]: Баланс у USD
-            nextServerSeedHash, // t[6]: Хеш наступного серверного сіда
-            clientSeed, // t[11]: Клієнтський сид
-            nonce, // t[12]: Нонс
-            prevServerSeed, // t[9]: Попередній серверний сид
-            prevServerSeedHash, // t[10]: Хеш попереднього серверного сіда
-            prevRoll, // t[1]: Попередній рол
-            lotteryTickets, // t[13]: Лотерейні квитки
-            rewardPoints, // t[14]: Очки нагороди
-            spinsWon, // t[15]: Кількість WOF спінів
-            tokensWon, // t[20]: FUN токени
-            ...rest // Інші додаткові дані
-          ] = respData;
+    if (status === 'e') {
+      // Помилка
+      const [errorCode, errorMessage, ...errorDetails] = respData;
 
-          await this.setCookie('last_play', lastPlayTime, {
-            expires: 3650,
-            secure: true
-          });
+      await this.reload();
 
-          await this.reload();
+      throw new Error(errorMessage);
+    }
 
-          resolve({
-            rollResult,
-            balanceBTC,
-            winnings,
-            lastPlayTime, // Додано пропущене значення
-            balanceUSD,
-            nextServerSeedHash,
-            clientSeed,
-            nonce,
-            prevServerSeed,
-            prevServerSeedHash,
-            prevRoll,
-            lotteryTickets,
-            rewardPoints,
-            spinsWon,
-            tokensWon,
-            additionalData: rest
-          });
-        } else if (status === 'e') {
-          // Помилка
-          const [errorCode, errorMessage, ...errorDetails] = respData;
+    // Успішна відповідь
+    const [
+      rollResult, // t[1]: Результат ролу
+      balanceBTC, // t[2]: Баланс у BTC
+      winnings, // t[3]: Виграші (наприклад, у сатошах)
+      lastPlayTime, // t[4]: Час останньої гри
+      balanceUSD, // t[5]: Баланс у USD
+      nextServerSeedHash, // t[6]: Хеш наступного серверного сіда
+      clientSeed, // t[11]: Клієнтський сид
+      nonce, // t[12]: Нонс
+      prevServerSeed, // t[9]: Попередній серверний сид
+      prevServerSeedHash, // t[10]: Хеш попереднього серверного сіда
+      prevRoll, // t[1]: Попередній рол
+      lotteryTickets, // t[13]: Лотерейні квитки
+      rewardPoints, // t[14]: Очки нагороди
+      spinsWon, // t[15]: Кількість WOF спінів
+      tokensWon, // t[20]: FUN токени
+      ...rest // Інші додаткові дані
+    ] = respData;
 
-          console.error('Помилка:', {
-            errorCode,
-            errorMessage,
-            errorDetails
-          });
-
-          if (errorCode === 'e1') {
-            console.log('Та ж сама IP адреса. Чекаємо таймер...');
-            const timeRemaining = parseInt(errorDetails[0], 10);
-            console.log(`Залишок часу: ${timeRemaining} секунд`);
-            setTimeout(async () => {
-              console.log('Оновлюємо сторінку...');
-              await this.reload();
-              await this.freePlay();
-            }, timeRemaining * 1000);
-          } else {
-            reject(errorMessage);
-          }
-        }
-
-        resolve(true);
-      } catch (e) {
-        reject(e);
-      }
+    await this.setCookie('last_play', lastPlayTime, {
+      expires: 3650,
+      secure: true
     });
+
+    await this.reload();
+
+    const result = {
+      rollResult,
+      balanceBTC,
+      winnings,
+      lastPlayTime, // Додано пропущене значення
+      balanceUSD,
+      nextServerSeedHash,
+      clientSeed,
+      nonce,
+      prevServerSeed,
+      prevServerSeedHash,
+      prevRoll,
+      lotteryTickets,
+      rewardPoints,
+      spinsWon,
+      tokensWon,
+      additionalData: rest
+    };
+
+    console.log({ result }, 'freePlay');
   }
 }

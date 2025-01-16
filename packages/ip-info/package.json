@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@scraper/fetch": "workspace:^",
+    "@scraper/safe": "workspace:^",
     "geoip-lite": "^1.4.10"
   },
   "devDependencies": {
