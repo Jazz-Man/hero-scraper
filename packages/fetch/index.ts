@@ -1,7 +1,10 @@
 import { safePromise } from '@scraper/safe';
 import { fetch as bunFetch } from 'bun';
 
-const fetch = async (url: string, options?: FetchRequestInit) =>
+const fetch = async (
+  url: RequestInfo | URL | string,
+  options?: FetchRequestInit
+) =>
   await safePromise<Response>(
     bunFetch(url, {
       verbose: true,
