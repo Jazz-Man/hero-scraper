@@ -1,21 +1,13 @@
 import getPublicIP from '@scraper/ip-info';
 import SuperDocument from '@ulixee/awaited-dom/impl/super-klasses/SuperDocument';
-import TypeSerializer from '@ulixee/commons/lib/TypeSerializer';
 import { OpenDnsAlternate } from '@ulixee/default-browser-emulator/lib/utils/DnsOverTlsProviders';
 import ExecuteJsPlugin from '@ulixee/execute-js-plugin';
-import {
-  type IHeroCreateOptions,
-  type ISuperElement,
-  KeyboardKey,
-  type Tab
-} from '@ulixee/hero';
+import { type ISuperElement, KeyboardKey, type Tab } from '@ulixee/hero';
 import CookieStorage from '@ulixee/hero/lib/CookieStorage';
 import Hero from '@ulixee/hero/lib/Hero';
-import type { ILocationTrigger } from '@ulixee/unblocked-specification/agent/browser/Location';
+import { type ILocationTrigger } from '@ulixee/unblocked-specification/agent/browser/Location';
 import type { ICookie } from '@ulixee/unblocked-specification/agent/net/ICookie';
 
-import { safeOverwriteFile } from '@ulixee/commons/lib/fileUtils';
-import type ISetCookieOptions from '@ulixee/hero-interfaces/ISetCookieOptions';
 import type IUserProfile from '@ulixee/hero-interfaces/IUserProfile';
 import type IWaitForElementOptions from '@ulixee/hero-interfaces/IWaitForElementOptions';
 import Resource from '@ulixee/hero/lib/Resource';
@@ -26,23 +18,16 @@ import {
   FingerprintGenerator,
   type ScreenFingerprint
 } from 'fingerprint-generator';
-import { existsSync, readFileSync } from 'node:fs';
-import Path from 'path';
 import { needsFree, needsInit, needsPageReady } from './classDecorators.ts';
 
 import { safe, safePromise, type TSafePromiseOptions } from '@scraper/safe';
+import type {
+  THeroOptions,
+  TInputValue,
+  TSetCookieOptions,
+  TTGotoOptions
+} from './@types';
 import { useValidURL } from './utils/useValidURL.ts';
-
-export type THeroOptions = IHeroCreateOptions;
-
-export type MaybeUndefinedPromise<T> = Promise<T | undefined>;
-export type MaybeStringPromise = MaybeUndefinedPromise<string>;
-
-export type TSetCookieOptions = Omit<ICookie, 'name' | 'value' | 'expires'> & {
-  expires?: Date | number;
-};
-
-export type TInputValue = string | number;
 
 export default abstract class HeroBase {
   protected isInitialised = false;
@@ -50,17 +35,20 @@ export default abstract class HeroBase {
   protected activeTab: Tab;
   protected document: SuperDocument;
   protected cookieStorage: CookieStorage;
+
+  private reinitCount = 0;
+  private reinitMaxCount = 3;
+
   protected profileCookies: ICookie[] | undefined;
+
+  protected cookiesMap: Map<string, ICookie> = new Map();
+  protected timeout = 30000;
+  protected waitExistsTimeoutMs = this.timeout;
   private isPageReady = false;
-  private readonly tmpDir: string;
+  private createOption: THeroOptions | undefined;
+  private initProfileCookies: ICookie[] | undefined;
 
-  private readonly profilePath: string;
-
-  protected constructor() {
-    this.tmpDir = Path.join(__dirname, '../../.tmp');
-
-    this.profilePath = Path.join(this.tmpDir, 'profile-test.json');
-  }
+  protected constructor() {}
 
   private _hero: Hero;
 
@@ -86,7 +74,15 @@ export default abstract class HeroBase {
 
   @needsFree()
   // @makesBusy()
-  async init(createOptions?: THeroOptions) {
+  async init(
+    createOptions?: THeroOptions,
+    profileCookies: ICookie[] | undefined = undefined
+  ) {
+    this.createOption = createOptions;
+    this.initProfileCookies = profileCookies;
+
+    this.profileCookies = this.prepareProfileCookies(this.initProfileCookies);
+
     const { country, ll, ip, timezone, proxy } = await getPublicIP();
 
     const intLocale = safe<string>(() =>
@@ -130,8 +126,6 @@ export default abstract class HeroBase {
 
     const viewport = this.getViewport(screen);
 
-    this.profileCookies = await this.getProfileCookies();
-
     this._hero = await safePromise<Hero>(
       () =>
         new Hero({
@@ -163,104 +157,140 @@ export default abstract class HeroBase {
           sessionPersistence: false,
           showChromeInteractions: false,
           mode: 'production',
-          ...createOptions
+          ...this.createOption
         } as THeroOptions)
     );
 
     this._hero.use(ExecuteJsPlugin);
 
+    this.initState();
+
+    this.isInitialised = true;
+  }
+
+  private initState() {
     this.activeTab = this._hero.activeTab;
     this.document = this._hero.document;
     this.cookieStorage = this.activeTab.cookieStorage;
-
-    this.isInitialised = true;
   }
 
   @needsPageReady()
   @needsInit()
   async setCookie(
-    key: string,
+    name: string,
     value: string,
-    options: TSetCookieOptions = {}
+    options: Omit<TSetCookieOptions, 'expires'> = {}
   ): Promise<void> {
-    if (typeof options?.expires === 'number') {
-      const days = options.expires;
-      const time = (options.expires = new Date());
-      time.setMilliseconds(time.getMilliseconds() + days * 864e5);
+    const expires = this.getOneYearFromNow();
 
-      options.expires = time;
+    if (options.domain !== 'freebitco.in') {
+      this.cookiesMap.set(name, {
+        ...options,
+        name: name,
+        value,
+        expires: expires.toString()
+      });
     }
 
-    await safe(
-      this.cookieStorage.setItem(key, value, options as ISetCookieOptions)
-    );
+    const domains = ['.freebitco.in', 'freebitco.in'];
+
+    for (const domain of domains) {
+      await safe(
+        this.cookieStorage.setItem(name, value, {
+          domain: domain,
+          path: '/',
+          expires: expires,
+          ...options
+        })
+      );
+    }
   }
 
   @needsPageReady()
   @needsInit()
-  async getCookie(key: string): Promise<ICookie> {
-    return safePromise<ICookie>(this.cookieStorage.getItem(key));
-  }
+  async getProfileCookie(name: string) {
+    let cookie: ICookie | undefined = undefined;
 
-  async getCookieValue(key: string): MaybeStringPromise {
-    const cookie = await this.getCookie(key);
+    if (this.cookiesMap.has(name)) {
+      cookie = this.cookiesMap.get(name);
+    }
 
-    return cookie?.value;
+    if (!cookie) {
+      const _cookie = await safe<ICookie>(this.cookieStorage.getItem(name));
+
+      if (_cookie.success && _cookie.data?.value?.length > 0) {
+        cookie = _cookie.data;
+      }
+    }
+
+    return cookie;
   }
 
   @needsInit()
   async goto(
     href: string,
-    options?: {
-      timeoutMs?: number;
-      referrer?: string;
+    options: TTGotoOptions = {
+      timeoutMs: this.timeout
     }
   ) {
-    return new Promise(async (resolve, reject) => {
-      try {
-        this.isPageReady = false;
+    const url = useValidURL(href);
 
-        const goto = await safePromise<Resource>(
-          this._hero.goto(href, options)
-        );
+    if (!url) {
+      throw new Error(`Invalid URL: ${href}`);
+    }
 
-        const response = goto.response;
+    this.isPageReady = false;
 
-        const statusCode = response.statusCode;
+    const goto = await safePromise<Resource>(
+      this._hero.goto(url.toString(), options)
+    );
 
-        if (statusCode > 500) {
-          const headers = response.headers;
-          const statusMessage = response.statusMessage;
-          const statusMessage2 = await response.text;
+    const response = goto.response;
 
-          const error = new Error('page is not accessible: code ' + statusCode);
+    const statusCode = response.statusCode;
 
-          // console.log({
-          //   statusCode,
-          //   statusMessage,
-          //   headers,
-          //   response,
-          //   statusMessage2
-          // });
+    if (statusCode > 500) {
+      const e = new Error(
+        `page "${url.toString()}" is not accessible: code ${statusCode}.`
+      );
 
-          reject(error);
+      if (this.reinitCount < this.reinitMaxCount) {
+        this.reinitCount++;
 
-          // await this.goto(href, options);
-          return;
+        console.error(e);
+
+        console.info('reinit');
+
+        await this._hero.waitForMillis(1000);
+
+        let cookies: ICookie[] | undefined | boolean =
+          await this.getProfileCookies();
+
+        if (!cookies) {
+          cookies = this.initProfileCookies;
         }
 
-        await this.waitForAllContentLoaded();
-        resolve(true);
-      } catch (e) {
-        reject(e);
+        await this.init(this.createOption, cookies as ICookie[]);
+
+        await this.goto(href, options);
+
+        return;
       }
-    });
+
+      throw e;
+    }
+
+    await this.waitForAllContentLoaded();
   }
 
   @needsInit()
   async reload() {
     this.isPageReady = false;
-    await safePromise(this._hero.reload());
+    await safePromise(
+      this._hero.reload({
+        timeoutMs: this.waitExistsTimeoutMs
+      })
+    );
     await this.waitForAllContentLoaded();
   }
 
@@ -271,7 +301,28 @@ export default abstract class HeroBase {
     const element = await this.querySelector(selector);
 
     return safePromise<ISuperElement>(
-      this.activeTab.waitForElement(element, options)
+      this.activeTab.waitForElement(element, {
+        timeoutMs: this.waitExistsTimeoutMs,
+        ...options
+      })
+    );
+  }
+
+  @needsInit()
+  @needsPageReady()
+  async waitForExists(
+    selector: string,
+    options: IWaitForElementOptions = {
+      timeoutMs: this.waitExistsTimeoutMs
+    }
+  ) {
+    return safePromise<ISuperElement>(
+      this.hero.document
+        .querySelector(selector)
+        .$waitForExists({ timeoutMs: options.timeoutMs, ...options }),
+      {
+        err: `Wait for exists: "${selector}"`
+      }
     );
   }
 
@@ -309,23 +360,19 @@ export default abstract class HeroBase {
   async getInputValue<T extends TInputValue = string>(
     selector: string,
     options: { waitExistsTimeout: number; timeout: number } = {
-      waitExistsTimeout: 10000,
-      timeout: 10000
+      waitExistsTimeout: this.waitExistsTimeoutMs,
+      timeout: this.timeout
     }
   ): Promise<T> {
-    const element = await safePromise<ISuperElement>(
-      this.hero.document
-        .querySelector(selector)
-        .$waitForExists({ timeoutMs: options.waitExistsTimeout }),
-      {
-        err: `Get Input Value error: "${selector}"`
-      }
-    );
+    const element = await this.waitForExists(selector, {
+      timeoutMs: options.waitExistsTimeout
+    });
 
     const startTime = Date.now();
 
     async function getValue(): Promise<T | undefined> {
       const value = (await element.value) as T;
+
       if (value?.toString()?.length > 0) {
         return value;
       } else if (Date.now() - startTime > options.timeout) {
@@ -339,25 +386,6 @@ export default abstract class HeroBase {
 
     return value as T;
   }
-  @needsInit()
-  @needsPageReady()
-  async saveProfileCookies() {
-    const profile = await safePromise<IUserProfile>(
-      this._hero.exportUserProfile()
-    );
-
-    if (!profile.cookies?.length) {
-      return;
-    }
-
-    const cookies = profile.cookies.filter(
-      (cookie) => cookie.name?.trim().length > 0
-    );
-
-    await safe(
-      safeOverwriteFile(this.profilePath, TypeSerializer.stringify(cookies))
-    );
-  }
 
   @needsInit()
   @needsPageReady()
@@ -370,7 +398,19 @@ export default abstract class HeroBase {
   async isVisible(selector: string): Promise<boolean> {
     const element = await this.querySelector(selector);
 
-    return safePromise(element.$isVisible);
+    return element ? element.$isVisible : false;
+  }
+
+  async getProfileCookies(): Promise<ICookie[] | boolean> {
+    const profile = await safePromise<IUserProfile>(
+      this._hero.exportUserProfile()
+    );
+
+    if (!profile.cookies?.length) {
+      return false;
+    }
+
+    return profile.cookies.filter((cookie) => cookie.name?.trim().length > 0);
   }
 
   /**
@@ -400,12 +440,22 @@ export default abstract class HeroBase {
 
   @needsInit()
   protected async waitForAllContentLoaded() {
-    await safe<void>(this._hero.waitForLoad('AllContentLoaded'));
-    await safe<void>(this._hero.waitForPaintingStable());
+    await safe<void>(
+      this._hero.waitForLoad('AllContentLoaded', {
+        timeoutMs: this.waitExistsTimeoutMs
+      })
+    );
+    await safe<void>(
+      this._hero.waitForPaintingStable({
+        timeoutMs: this.waitExistsTimeoutMs
+      })
+    );
 
     await safe(this._hero.waitForMillis(5000)); // waits 5 seconds
 
     const currentUrl = await this._hero.url;
+
+    this.initState();
 
     this.isPageReady = useValidURL(currentUrl) instanceof URL;
   }
@@ -418,8 +468,109 @@ export default abstract class HeroBase {
   @needsInit()
   protected async waitForNavigation(trigger: ILocationTrigger = 'change') {
     this.isPageReady = false;
-    await safe(this._hero.waitForLocation(trigger));
+    await safe(
+      this._hero.waitForLocation(trigger, {
+        timeoutMs: this.timeout
+      })
+    );
     await this.waitForAllContentLoaded();
+  }
+
+  private generateCsrfToken(): string {
+    const charSet2 =
+      'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let randomString2 = '';
+    let i;
+    for (i = 0; i < 12; i++) {
+      const randomPoz = Math.floor(Math.random() * charSet2.length);
+      randomString2 += charSet2.substring(randomPoz, randomPoz + 1);
+    }
+    return randomString2;
+  }
+
+  private getOneYearFromNow(): number {
+    const oneYearFromNow = new Date();
+
+    return oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+  }
+
+  private fixCookiesExpires(cookie: ICookie): ICookie {
+    if (typeof cookie.expires === 'undefined') {
+      cookie.expires = this.getOneYearFromNow().toString();
+    }
+
+    if (typeof cookie.path === 'undefined') {
+      cookie.path = '/';
+    }
+
+    return cookie;
+  }
+
+  private prepareProfileCookies(cookies: ICookie[] | undefined): ICookie[] {
+    const list: ICookie[] = [];
+
+    cookies?.forEach((cookie) => {
+      if (cookie.domain === 'freebitco.in') {
+        return;
+      }
+
+      this.cookiesMap.set(cookie.name, this.fixCookiesExpires(cookie));
+    });
+
+    const csrfToken = this.generateCsrfToken();
+
+    this.cookiesMap.set(
+      'csrf_token',
+      this.fixCookiesExpires({
+        name: 'csrf_token',
+        value: csrfToken,
+        secure: true
+      })
+    );
+
+    const hideCookiesList: string[] = [
+      'mine_btc',
+      'earn_btc',
+      'push',
+      'free_wof_spins',
+      'premium_membership',
+      'rp_for_wof'
+    ];
+
+    for (const cookie of hideCookiesList) {
+      const name = `hide_${cookie}_msg`;
+
+      this.cookiesMap.set(
+        name,
+        this.fixCookiesExpires({
+          name,
+          value: '1',
+          secure: true
+        })
+      );
+    }
+
+    this.cookiesMap.set(
+      'cookieconsent_dismissed',
+      this.fixCookiesExpires({
+        name: 'cookieconsent_dismissed',
+        value: 'yes',
+        secure: true
+      })
+    );
+
+    this.cookiesMap.forEach((cookie, name) => {
+      const domains = ['.freebitco.in', 'freebitco.in'];
+
+      domains.forEach((domain) => {
+        list.push({
+          ...cookie,
+          domain
+        });
+      });
+    });
+
+    return list;
   }
 
   private getViewport(screen: ScreenFingerprint): IViewport {
@@ -434,29 +585,5 @@ export default abstract class HeroBase {
       deviceScaleFactor: screen.devicePixelRatio,
       isDefault: true
     };
-  }
-
-  private async getProfileCookies(): Promise<ICookie[] | undefined> {
-    const profileExists = existsSync(this.profilePath);
-
-    if (!profileExists) {
-      return undefined;
-    }
-
-    const content = await safePromise<string>(() =>
-      readFileSync(this.profilePath, 'utf8')
-    );
-
-    if (content.length === 0) {
-      return undefined;
-    }
-
-    const cookies = await safePromise<ICookie[]>(() =>
-      TypeSerializer.parse(content)
-    );
-
-    return cookies.filter((cookie) => {
-      return cookie.name?.trim().length > 0;
-    });
   }
 }

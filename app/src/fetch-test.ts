@@ -1,4 +1,5 @@
-import getHero from './hero.ts';
+import type { TUser } from './@types';
+import App from './App.ts';
 import {
   generateTestEmail,
   generateTestPassword
@@ -6,24 +7,26 @@ import {
 
 (async () => {
   try {
-    const hero = await getHero({
+    const generateUser: TUser = {
+      username: generateTestEmail(),
+      password: generateTestPassword(),
+      tfa_secret: 'HXAZUGRYZXCG2K6N'
+    };
+
+    const app = new App(generateUser.username, generateUser.password);
+
+    await app.init({
       showChrome: true,
       showDevtools: true
     });
 
-    const urlBefore = await hero.url;
+    await app.goto('https://freebitco.in/?op=home');
 
-    await hero.goto('https://freebitco.in');
-    await hero.waitForPaintingStable();
-    await hero.waitForLoad('AllContentLoaded');
+    await app.initCookie();
 
-    const urlAfter = await hero.url;
+    const { Request, fetch } = app.hero;
 
-    console.log({ urlBefore, urlAfter });
-
-    const { Request, fetch } = hero;
-
-    const cookieStorage = hero.activeTab.cookieStorage;
+    const cookieStorage = app.hero.activeTab.cookieStorage;
 
     const csrf_token = await cookieStorage.getItem('csrf_token');
     const csrf_token_test = await cookieStorage.getItem('csrf_token_test');
@@ -33,8 +36,8 @@ import {
     const params = new URLSearchParams();
     params.append('csrf_token', csrf_token.value);
     params.append('op', 'login_new');
-    params.append('btc_address', generateTestEmail());
-    params.append('password', generateTestPassword());
+    params.append('btc_address', generateUser.username);
+    params.append('password', generateUser.password);
     params.append('tfa_code', '123456');
 
     const request = new Request('/', {
