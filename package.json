@@ -19,7 +19,8 @@
     "@ulixee/real-user-agents": "2.0.0-alpha.31",
     "@ulixee/unblocked-specification": "2.0.0-alpha.31",
     "fingerprint-generator": "^2.1.62",
-    "otpauth": "^9.3.6"
+    "otpauth": "^9.3.6",
+    "threads": "^1.7.0"
   },
   "devDependencies": {
     "@types/bun": "^1.1.14",
