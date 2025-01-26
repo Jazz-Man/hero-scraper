@@ -1,99 +1,102 @@
 import fetch from '@scraper/fetch';
 import Cloudflare from 'cloudflare';
+import type { Zone } from 'cloudflare/resources/zones/zones';
+import type { EmailRoutingRule } from 'cloudflare/src/resources/email-routing/rules/rules.ts';
 
-const client = new Cloudflare({
+export const cfClient = new Cloudflare({
   apiToken: Bun.env.CF_API_TOKEN,
   fetch
 });
 
-type TZones = 'mailcloud.pp.ua' | 'mailjet.pp.ua' | 'vsokolyk.pp.ua';
+export const zoneList = (): Promise<Zone[]> => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const zoneList = await cfClient.zones.list({
+        per_page: 50
+      });
 
-const zoneMapper = new Map<TZones, string>();
+      resolve(zoneList.result);
+    } catch (e) {
+      reject(e);
+    }
+  });
+};
 
-// zoneMapper.set('mailcloud.pp.ua', 'a2d34dce958887934390e3e312336977');
-// zoneMapper.set('mailjet.pp.ua', '5ab7a34be72b5dcb6b71d0f4cb5d4bd3');
-zoneMapper.set('vsokolyk.pp.ua', '17ca01797072147b7318379802ab4ef1');
+export type TEmailRule = {
+  id: string;
+  email: string;
+  forwardTo: string;
+  zoneId: string;
+};
 
-const zone_id = zoneMapper.get('vsokolyk.pp.ua') as string;
+export const emailRoutingList = async (
+  zone_id: string,
+  per_page: number = 50
+): Promise<TEmailRule[]> => {
+  const rules: EmailRoutingRule[] = [];
 
-// zoneMapper.forEach((zone_id, domain) => {
-//   const emails = Array.from({ length: 200 }, () =>
-//     faker.internet
-//       .email({
-//         provider: domain
-//       })
-//       .toLowerCase()
-//   );
-//
-//   const emailList = new Set<string>(emails);
-//
-//   emailList.forEach(async (email) => {
-//     // sleep(5000);
-//
-//     const emailRouting = await client.emailRouting.rules.create({
-//       actions: [
-//         {
-//           type: 'forward',
-//           value: ['Bun.env.IMAP_EMAIL_ADDRESS']
-//         }
-//       ],
-//       matchers: [
-//         {
-//           type: 'literal',
-//           field: 'to',
-//           value: email
-//         }
-//       ],
-//       zone_id
-//       // priority: 1,
-//       // enabled: true
-//     });
-//
-//     console.log(emailRouting);
-//   });
-//
-//   // console.log(emailList);
-// });
+  try {
+    let page = 1;
 
-// const emailRouting = await client.emailRouting.rules.create({
-//   zone_id,
-//   priority: 1,
-//   action: 'allow',
-//   pattern: 'example.com',
-//   description: 'example.com'
-// });
+    let response = await cfClient.emailRouting.rules.list({
+      zone_id,
+      enabled: true,
+      per_page,
+      page
+    });
 
-const emailRoutingList = await client.emailRouting.rules.list({
-  zone_id,
-  enabled: true,
-  // page: 1
-  per_page: 50
-});
+    rules.push(...response.getPaginatedItems());
 
-// console.log(
-//   emailRoutingList.result.filter(
-//     (item) => item.name === 'e922914181d54cd5a387aa01df848e61'
-//   )
-// );
+    // @ts-ignore
+    const totalCount = response.result_info?.total_count || 0;
+    const totalPages = Math.ceil(totalCount / per_page);
 
-emailRoutingList.result.forEach(async (item) => {
-  if (!item.enabled) {
-    return;
+    for (let i = 2; i <= totalPages; i++) {
+      page = i;
+
+      response = await cfClient.emailRouting.rules.list({
+        zone_id,
+        enabled: true,
+        per_page,
+        page
+      });
+
+      rules.push(...response.getPaginatedItems());
+    }
+  } catch (error) {
+    throw error;
   }
 
-  const matchers = item.matchers?.at(0);
+  return rules
+    .filter((rule) => {
+      if (!rule.enabled) {
+        return false;
+      }
 
-  if (matchers?.value === 'info@vsokolyk.pp.ua') {
-    return;
-  }
+      const matchers = rule.matchers?.at(0);
 
-  // if (item.id === 'e922914181d54cd5a387aa01df848e61') {
-  //   return;
-  // }
+      // @ts-ignore
+      if (matchers?.type === 'all') {
+        return false;
+      }
 
-  const res = await client.emailRouting.rules.delete(item.id as string, {
+      if (typeof matchers?.value === 'undefined') {
+        return false;
+      }
+
+      const forwardTo = rule.actions?.at(0)?.value?.at(0);
+
+      return typeof forwardTo !== 'undefined';
+    })
+    .map<TEmailRule>((rule) => ({
+      id: rule.id as string,
+      email: rule.matchers?.at(0)?.value || '',
+      forwardTo: rule.actions?.at(0)?.value?.at(0) || '',
+      zoneId: zone_id
+    }));
+};
+
+export const deleteEmailRoutingRule = async (id: string, zone_id: string) =>
+  await cfClient.emailRouting.rules.delete(id, {
     zone_id
   });
-
-  console.log(res);
-});
