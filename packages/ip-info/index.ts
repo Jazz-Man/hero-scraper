@@ -32,7 +32,7 @@ export async function fetchIPInfo(
       proxy,
       referrer:
         'https://www.bing.com/search?pc=OA1&q=public%20IP%20checking%20services%20list',
-      signal: AbortSignal.timeout(30000)
+      signal: AbortSignal.timeout(60000)
       // verbose: false,
     })
       .then(async (response) => {
