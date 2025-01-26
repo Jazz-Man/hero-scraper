@@ -1,0 +1,39 @@
+{
+  "name": "@scraper/db",
+  "version": "0.0.0",
+  "private": true,
+  "main": "index.ts",
+  "scripts": {
+    "db:ui": "prisma studio --schema=./prisma/schema.prisma --browser none",
+    "db:migrate:dev": "prisma migrate dev",
+    "db:reset": "prisma migrate reset --skip-seed -f",
+    "postdb:reset": "pnpm db:push && pnpm db:seed",
+    "db:migrate:deploy": "prisma migrate deploy",
+    "db:migrate:resolve": "prisma migrate resolve",
+    "db:migrate:status": "prisma migrate status",
+    "db:migrate:diff": "prisma migrate diff",
+    "db:push": "prisma db push --accept-data-loss",
+    "db:pull": "prisma db pull",
+    "db:seed": "DB_PRISMA=prisma-seed prisma db seed",
+    "db:generate": "prisma generate --watch",
+    "db:validate": "prisma validate",
+    "db:format": "prisma format"
+  },
+  "exports": {
+    ".": {
+      "default": "./index.ts"
+    }
+  },
+  "dependencies": {
+    "@faker-js/faker": "^9.4.0",
+    "@prisma/client": "6.2.1",
+    "@scraper/cloudflare": "workspace:^",
+    "prisma": "^6.2.1"
+  },
+  "prisma": {
+    "seed": "bun run seed-db.ts"
+  },
+  "devDependencies": {
+    "@prisma/language-server": "^6.2.0"
+  }
+}
