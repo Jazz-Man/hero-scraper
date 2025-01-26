@@ -1,0 +1,52 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../client"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Zone {
+  zoneId    String      @id @unique
+  domain    String      @unique
+  EmailRule EmailRule[]
+}
+
+model EmailRule {
+  id        String @id @unique
+  email     String @unique
+  forwardTo String
+  zoneId    String
+  Zone      Zone   @relation(fields: [zoneId], references: [zoneId], onDelete: Cascade)
+  User      User?
+}
+
+model User {
+  username   String        @id @unique
+  password   String
+  hasAccount Boolean       @default(false)
+  tfa_secret String?
+  email      EmailRule     @relation(fields: [username], references: [email], onDelete: Cascade)
+  cookies    UserCookies[]
+}
+
+model UserCookies {
+  name         String
+  value        String
+  domain       String    @default(".freebitco.in")
+  path         String    @default("/")
+  expires      DateTime?
+  httpOnly     Boolean   @default(false)
+  secure       Boolean   @default(false)
+  sameParty    Boolean   @default(false)
+  sameSite     String    @default("None")
+  User         User      @relation(fields: [userUsername], references: [username], onDelete: Cascade)
+  userUsername String
+
+  @@id(fields: [name, domain, userUsername], name: "cookieData")
+}
