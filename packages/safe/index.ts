@@ -1,3 +1,5 @@
+Error.stackTraceLimit = Infinity;
+
 export type TSafeError = {
   success: false;
   error: Error;
@@ -13,6 +15,7 @@ export type Safe<T> =
 export type TSafeOptions = {
   logError?: boolean;
   err?: string;
+  stack?: Error;
 };
 
 export type TSafePromiseOptions = TSafeOptions & {
@@ -52,6 +55,10 @@ function getSafePromiseResolve<T>(
 
     const error = new Error(message);
 
+    if (options.stack) {
+      error.stack = options.stack.stack;
+    }
+
     options?.logError && console.error(error);
 
     reject(error);
@@ -71,8 +78,11 @@ export function safe<T>(
   promiseOrFunc: Promise<T> | (() => T),
   options?: TSafeOptions
 ): Promise<Safe<T>> | Safe<T> {
+  const stack = new Error('stack');
+
   const config: TSafeOptions = {
     logError: true,
+    stack,
     ...options
   };
 
@@ -86,7 +96,10 @@ export function safePromise<T>(
   promiseOrFunc: Promise<T> | (() => T),
   options?: TSafePromiseOptions
 ): Promise<T> | T {
+  const stack = new Error('stack');
+
   const config: TSafePromiseOptions = {
+    stack,
     undefinedTest: true,
     logError: true,
     ...options
@@ -125,7 +138,8 @@ function safeAsyncPromise<T>(
   return new Promise<T>(async (resolve, reject) => {
     const res = await safeAsync<T>(promise, {
       logError: options?.logError,
-      err: options?.err
+      err: options?.err,
+      stack: options?.stack
     });
 
     getSafePromiseResolve(res, resolve, reject, options);
@@ -139,7 +153,8 @@ function safeSyncPromise<T>(
   return new Promise<T>((resolve, reject) => {
     const result = safeSync<T>(func, {
       logError: options?.logError,
-      err: options?.err
+      err: options?.err,
+      stack: options?.stack
     });
 
     getSafePromiseResolve(result, resolve, reject, options);
