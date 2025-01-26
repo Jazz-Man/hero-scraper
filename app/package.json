@@ -3,6 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "dependencies": {
+    "@scraper/db": "workspace:^",
     "@scraper/ip-info": "workspace:^",
     "@scraper/safe": "workspace:^",
     "set-cookie-parser": "^2.7.1"
