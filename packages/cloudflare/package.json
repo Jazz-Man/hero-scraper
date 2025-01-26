@@ -3,6 +3,10 @@
   "version": "0.0.0",
   "private": true,
   "main": "index.ts",
+  "scripts": {
+    "cf:delete": "bun run delete.ts",
+    "cf:create": "bun run create.ts"
+  },
   "exports": {
     ".": {
       "default": "./index.ts"
