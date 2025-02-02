@@ -1,7 +1,9 @@
 import setCookie from 'set-cookie-parser';
 
+import type { TUsersWithCookies } from '@scraper/db';
 import { safe, safePromise } from '@scraper/safe';
 import Response from '@ulixee/awaited-dom/impl/official-klasses/Response';
+import { URLSearchParams } from 'node:url';
 import type {
   TAccountCookie,
   TCfType,
@@ -15,16 +17,17 @@ import {
   needsLogin,
   needsPageReady
 } from './classDecorators.ts';
+import getOtp from './otp.ts';
 
-export default class App extends HeroBase {
+export default class FreeBitco extends HeroBase {
   private isLoggedIn: boolean = false;
   private csrfToken: string | undefined;
 
   constructor(
-    protected username: string,
-    protected password: string
+    baseUrl: string,
+    protected user: TUsersWithCookies
   ) {
-    super();
+    super(baseUrl);
   }
 
   hasCsrfToken() {
@@ -40,13 +43,44 @@ export default class App extends HeroBase {
   @needsInit()
   @needsPageReady()
   async initCookie(): Promise<void> {
-    const csrfTokenCookie = await this.getProfileCookie('csrf_token');
+    const hasInitCookie = await this.app.getCookie('init');
+
+    if (!hasInitCookie) {
+      const hideCookiesList: string[] = [
+        'mine_btc',
+        'earn_btc',
+        'push',
+        'free_wof_spins',
+        'premium_membership',
+        'rp_for_wof'
+      ];
+
+      for (const cookie of hideCookiesList) {
+        const name = `hide_${cookie}_msg`;
+
+        await this.app.setCookie(name, '1', {
+          secure: true
+        });
+      }
+
+      await this.app.setCookie('cookieconsent_dismissed', '1', {
+        secure: true
+      });
+
+      await this.app.setCookie('init', '1', {
+        secure: true
+      });
+
+      await this.reload();
+    }
+
+    const csrfTokenCookie = await this.app.getCookie('csrf_token');
 
     if (csrfTokenCookie) {
       this.csrfToken = csrfTokenCookie.value;
     }
 
-    const btc_address = this.cookiesMap.get('btc_address');
+    const btc_address = await this.app.getCookie('btc_address');
 
     if (btc_address) {
       this.isLoggedIn = true;
@@ -128,7 +162,7 @@ export default class App extends HeroBase {
         const cookies = setCookie.parse(splitCookieHeaders);
 
         for (const cookie of cookies) {
-          await this.setCookie(cookie.name, cookie.value, {
+          await this.app.setCookie(cookie.name, cookie.value, {
             secure: cookie.secure,
             httpOnly: cookie.httpOnly
           });
@@ -141,21 +175,21 @@ export default class App extends HeroBase {
   }
 
   private async initAccountCookie(cookie: TAccountCookie) {
-    await this.setCookie('btc_address', cookie.btc_address, {
+    await this.app.setCookie('btc_address', cookie.btc_address, {
       secure: true
     });
-    await this.setCookie('password', cookie.password, {
+    await this.app.setCookie('password', cookie.password, {
       secure: true
     });
-    await this.setCookie('fbtc_userid', cookie.fbtc_userid, {
-      secure: true
-    });
-
-    await this.setCookie('fbtc_session', cookie.fbtc_session, {
+    await this.app.setCookie('fbtc_userid', cookie.fbtc_userid, {
       secure: true
     });
 
-    await this.setCookie('have_account', '1', {
+    await this.app.setCookie('fbtc_session', cookie.fbtc_session, {
+      secure: true
+    });
+
+    await this.app.setCookie('have_account', '1', {
       secure: true
     });
 
@@ -166,7 +200,7 @@ export default class App extends HeroBase {
 
   @needsInit()
   @needsPageReady()
-  async login(tfa_code: string | undefined = undefined): Promise<boolean> {
+  async login(): Promise<boolean> {
     if (this.isLoggedIn) {
       console.log('login ok', { isLoggedIn: this.isLoggedIn });
       return true;
@@ -174,12 +208,12 @@ export default class App extends HeroBase {
 
     const params: TPostBodyParams = {
       op: 'login_new',
-      btc_address: this.username,
-      password: this.password
+      btc_address: this.user.username,
+      password: this.user.password
     };
 
-    if (tfa_code) {
-      params.tfa_code = tfa_code;
+    if (this.user.tfa_secret) {
+      params.tfa_code = getOtp(this.user.tfa_secret);
     }
 
     const loginStatus = await this.postRequest('/', params);
@@ -217,8 +251,8 @@ export default class App extends HeroBase {
 
     const params: TPostBodyParams = {
       op: 'signup_new',
-      password: this.password,
-      email: this.username,
+      password: this.user.password,
+      email: this.user.username,
       fingerprint,
       captcha_type: '77',
       cf_captcha_response
