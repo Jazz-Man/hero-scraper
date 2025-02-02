@@ -1,7 +1,8 @@
 import type { PrismaClient } from '../client';
 
+import { faker } from '@faker-js/faker';
+
 import { emailRoutingList, zoneList } from '@scraper/cloudflare';
-import { generatePassword } from '../password.ts';
 
 export default async function seedFunction(prisma: PrismaClient) {
   const zones = await zoneList();
@@ -22,7 +23,11 @@ export default async function seedFunction(prisma: PrismaClient) {
 
     await prisma.$transaction(async (t) => {
       for (const item of list) {
-        const password = generatePassword(32);
+        const password = faker.internet.password({
+          length: 17,
+          pattern: /\w/
+        });
+
         await t.emailRule.upsert({
           where: {
             id: item.id
