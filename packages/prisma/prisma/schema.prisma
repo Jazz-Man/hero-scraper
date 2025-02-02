@@ -2,8 +2,9 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client-js"
-  output   = "../client"
+  provider        = "prisma-client-js"
+  output          = "../client"
+  previewFeatures = ["strictUndefinedChecks"]
 }
 
 datasource db {
@@ -38,15 +39,21 @@ model User {
 model UserCookies {
   name         String
   value        String
-  domain       String    @default(".freebitco.in")
+  domain       String    @default("freebitco.in")
   path         String    @default("/")
   expires      DateTime?
   httpOnly     Boolean   @default(false)
   secure       Boolean   @default(false)
   sameParty    Boolean   @default(false)
-  sameSite     String    @default("None")
+  sameSite     SameSite  @default(None)
   User         User      @relation(fields: [userUsername], references: [username], onDelete: Cascade)
   userUsername String
 
   @@id(fields: [name, domain, userUsername], name: "cookieData")
+}
+
+enum SameSite {
+  Strict
+  Lax
+  None
 }
