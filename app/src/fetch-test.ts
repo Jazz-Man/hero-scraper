@@ -1,5 +1,5 @@
 import type { TUser } from './@types';
-import App from './App.ts';
+import FreeBitco from './FreeBitco.ts';
 import {
   generateTestEmail,
   generateTestPassword
@@ -13,7 +13,7 @@ import {
       tfa_secret: 'HXAZUGRYZXCG2K6N'
     };
 
-    const app = new App(generateUser.username, generateUser.password);
+    const app = new FreeBitco(generateUser.username, generateUser.password);
 
     await app.init({
       showChrome: true,

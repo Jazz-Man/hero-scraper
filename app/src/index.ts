@@ -1,55 +1,75 @@
-import type { TUser } from './@types';
-import App from './App.ts';
-import getOtp from './otp.ts';
-import {
-  generateTestEmail,
-  generateTestPassword
-} from './utils/random-data.ts';
+import { getUserWithCookies } from '@scraper/db';
+import type { ICookie } from '@ulixee/unblocked-specification/agent/net/ICookie';
+import FreeBitco from './FreeBitco.ts';
 
-const userRoot: TUser = {
-  username: 'info@vsokolyk.pp.ua',
-  password: 'finhap-xAfpux-5kifko',
-  tfa_secret: 'HXAZUGRYZXCG2K6N'
-};
+// const generateUser: TUser = {
+//   username: generateTestEmail(),
+//   password: generateTestPassword(),
+//   tfa_secret: 'HXAZUGRYZXCG2K6N'
+// };
 
-const testUser: TUser = {
-  username: 'rider_64paleo@icloud.com',
-  password: 'jawheT-wiwsuc-7padpa',
-  tfa_secret: 'SWDCEBDMWSWGGVMS'
-};
+try {
+  const username = 'brooklyn45@mailcloud.pp.ua';
 
-const generateUser: TUser = {
-  username: generateTestEmail(),
-  password: generateTestPassword(),
-  tfa_secret: 'HXAZUGRYZXCG2K6N'
-};
+  const user = await getUserWithCookies(username);
 
-const app = new App(userRoot.username, userRoot.password);
+  const app = new FreeBitco('https://freebitco.in/?op=home', user);
 
-await app.init({
-  showChrome: true,
-  showDevtools: true
-});
+  await app.init(
+    {
+      showChrome: true,
+      showDevtools: true
+    },
+    user.cookies
+  );
 
-await app.goto('https://freebitco.in/?op=home');
+  await app.goto('https://freebitco.in/?op=home');
 
-await app.initCookie();
+  await app.initCookie();
 
-const tfa_code = getOtp(userRoot.tfa_secret);
+  await app.login();
+  // await app.signup();
 
-await app.login(tfa_code);
-//
-// try {
-//   await app.freePlay();
-// } catch (e) {
-//   console.error(e);
-// }
+  // @ts-ignore
+  const profileCookies: ICookie[] = await app.getProfileCookies();
 
-// await app.signup('321654989');
-await app.freePlay();
+  console.log(profileCookies);
 
-const meta = await app.hero.meta;
-
-// await app.hero.close();
-
-console.log(meta);
+  // await db.$transaction(async (tx) => {
+  //   if (profileCookies && profileCookies.length > 0) {
+  //     await tx.user.update({
+  //       where: {
+  //         username
+  //       },
+  //       data: {
+  //         hasAccount: true
+  //       }
+  //     });
+  //
+  //     for (const cookie of profileCookies) {
+  //       const domain = cookie.domain ? cookie.domain : 'freebitco.in';
+  //       cookie.domain = domain;
+  //
+  //       await tx.userCookies.upsert({
+  //         where: {
+  //           cookieData: {
+  //             name: cookie.name,
+  //             userUsername: username,
+  //             domain
+  //           }
+  //         },
+  //         update: {
+  //           ...cookie,
+  //           userUsername: username
+  //         },
+  //         create: {
+  //           ...cookie,
+  //           userUsername: username
+  //         }
+  //       });
+  //     }
+  //   }
+  // });
+} catch (e) {
+  console.error(e);
+}

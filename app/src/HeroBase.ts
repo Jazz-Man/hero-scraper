@@ -1,9 +1,10 @@
-import getPublicIP from '@scraper/ip-info';
 import SuperDocument from '@ulixee/awaited-dom/impl/super-klasses/SuperDocument';
-import { OpenDnsAlternate } from '@ulixee/default-browser-emulator/lib/utils/DnsOverTlsProviders';
-import ExecuteJsPlugin from '@ulixee/execute-js-plugin';
-import { type ISuperElement, KeyboardKey, type Tab } from '@ulixee/hero';
-import CookieStorage from '@ulixee/hero/lib/CookieStorage';
+import {
+  FrameEnvironment,
+  type ISuperElement,
+  KeyboardKey,
+  type Tab
+} from '@ulixee/hero';
 import Hero from '@ulixee/hero/lib/Hero';
 import { type ILocationTrigger } from '@ulixee/unblocked-specification/agent/browser/Location';
 import type { ICookie } from '@ulixee/unblocked-specification/agent/net/ICookie';
@@ -11,44 +12,35 @@ import type { ICookie } from '@ulixee/unblocked-specification/agent/net/ICookie'
 import type IUserProfile from '@ulixee/hero-interfaces/IUserProfile';
 import type IWaitForElementOptions from '@ulixee/hero-interfaces/IWaitForElementOptions';
 import Resource from '@ulixee/hero/lib/Resource';
-import type IViewport from '@ulixee/unblocked-specification/agent/browser/IViewport';
-import type IGeolocation from '@ulixee/unblocked-specification/plugin/IGeolocation';
-import {
-  type Fingerprint,
-  FingerprintGenerator,
-  type ScreenFingerprint
-} from 'fingerprint-generator';
 import { needsFree, needsInit, needsPageReady } from './classDecorators.ts';
 
+import type { TUserCookies } from '@scraper/db';
 import { safe, safePromise, type TSafePromiseOptions } from '@scraper/safe';
-import type {
-  THeroOptions,
-  TInputValue,
-  TSetCookieOptions,
-  TTGotoOptions
-} from './@types';
+import type { IMousePositionXY } from '@ulixee/unblocked-specification/agent/interact/IInteractions';
+import type { THeroOptions, TInputValue, TTGotoOptions } from './@types';
+import HeroAppInstance from './hero';
 import { useValidURL } from './utils/useValidURL.ts';
 
+/**
+ * @deprecated
+ */
 export default abstract class HeroBase {
   protected isInitialised = false;
   protected isBusy = false;
   protected activeTab: Tab;
   protected document: SuperDocument;
-  protected cookieStorage: CookieStorage;
 
   private reinitCount = 0;
   private reinitMaxCount = 3;
 
-  protected profileCookies: ICookie[] | undefined;
-
-  protected cookiesMap: Map<string, ICookie> = new Map();
   protected timeout = 30000;
   protected waitExistsTimeoutMs = this.timeout;
   private isPageReady = false;
   private createOption: THeroOptions | undefined;
-  private initProfileCookies: ICookie[] | undefined;
+  private initProfileCookies: TUserCookies | undefined;
+  protected app: HeroAppInstance;
 
-  protected constructor() {}
+  protected constructor(protected baseUrl: string) {}
 
   private _hero: Hero;
 
@@ -74,156 +66,19 @@ export default abstract class HeroBase {
 
   @needsFree()
   // @makesBusy()
-  async init(
-    createOptions?: THeroOptions,
-    profileCookies: ICookie[] | undefined = undefined
-  ) {
+  async init(createOptions?: THeroOptions, profileCookies?: TUserCookies) {
     this.createOption = createOptions;
     this.initProfileCookies = profileCookies;
 
-    this.profileCookies = this.prepareProfileCookies(this.initProfileCookies);
-
-    const { country, ll, ip, timezone, proxy } = await getPublicIP();
-
-    const intLocale = safe<string>(() =>
-      new Intl.Locale(country as unknown as string, {
-        region: country as unknown as string
-      }).toString()
+    this.app = new HeroAppInstance(
+      this.baseUrl,
+      this.createOption,
+      profileCookies
     );
 
-    const locale = intLocale.success ? intLocale.data : undefined;
-
-    let geolocation: Partial<IGeolocation> | undefined = undefined;
-
-    if (ll) {
-      const latitude: number | undefined = ll.at(0);
-      const longitude: number | undefined = ll.at(1);
-
-      if (latitude && !(Math.abs(latitude) <= 90)) {
-        geolocation = {};
-
-        geolocation.latitude = latitude;
-      }
-
-      if (longitude && !(Math.abs(longitude) <= 180)) {
-        geolocation = geolocation || {};
-        geolocation.longitude = longitude;
-      }
-    }
-
-    const fingerprint = await safePromise<Fingerprint>(
-      () =>
-        new FingerprintGenerator({
-          mockWebRTC: true,
-          browsers: ['chrome'],
-          operatingSystems: ['macos'],
-          devices: ['desktop'],
-          httpVersion: '2'
-        }).getFingerprint().fingerprint
-    );
-
-    const { navigator, screen } = fingerprint;
-
-    const viewport = this.getViewport(screen);
-
-    this._hero = await safePromise<Hero>(
-      () =>
-        new Hero({
-          connectionToCore: {
-            host: `ws://localhost:1818`
-          },
-          upstreamProxyUrl: proxy,
-          upstreamProxyIpMask: {
-            publicIp: ip,
-            proxyIp: ip
-          },
-          userProfile: {
-            cookies: this.profileCookies,
-            timezoneId: timezone,
-            locale,
-            geolocation,
-            deviceProfile: {
-              deviceMemory: navigator.deviceMemory,
-              hardwareConcurrency: navigator.hardwareConcurrency,
-              viewport
-            }
-          },
-          viewport,
-          dnsOverTlsProvider: OpenDnsAlternate,
-          locale,
-          geolocation,
-          timezoneId: timezone,
-          sessionKeepAlive: false,
-          sessionPersistence: false,
-          showChromeInteractions: false,
-          mode: 'production',
-          ...this.createOption
-        } as THeroOptions)
-    );
-
-    this._hero.use(ExecuteJsPlugin);
-
-    this.initState();
+    this._hero = await this.app.getHero();
 
     this.isInitialised = true;
-  }
-
-  private initState() {
-    this.activeTab = this._hero.activeTab;
-    this.document = this._hero.document;
-    this.cookieStorage = this.activeTab.cookieStorage;
-  }
-
-  @needsPageReady()
-  @needsInit()
-  async setCookie(
-    name: string,
-    value: string,
-    options: Omit<TSetCookieOptions, 'expires'> = {}
-  ): Promise<void> {
-    const expires = this.getOneYearFromNow();
-
-    if (options.domain !== 'freebitco.in') {
-      this.cookiesMap.set(name, {
-        ...options,
-        name: name,
-        value,
-        expires: expires.toString()
-      });
-    }
-
-    const domains = ['.freebitco.in', 'freebitco.in'];
-
-    for (const domain of domains) {
-      await safe(
-        this.cookieStorage.setItem(name, value, {
-          domain: domain,
-          path: '/',
-          expires: expires,
-          ...options
-        })
-      );
-    }
-  }
-
-  @needsPageReady()
-  @needsInit()
-  async getProfileCookie(name: string) {
-    let cookie: ICookie | undefined = undefined;
-
-    if (this.cookiesMap.has(name)) {
-      cookie = this.cookiesMap.get(name);
-    }
-
-    if (!cookie) {
-      const _cookie = await safe<ICookie>(this.cookieStorage.getItem(name));
-
-      if (_cookie.success && _cookie.data?.value?.length > 0) {
-        cookie = _cookie.data;
-      }
-    }
-
-    return cookie;
   }
 
   @needsInit()
@@ -263,14 +118,7 @@ export default abstract class HeroBase {
 
         await this._hero.waitForMillis(1000);
 
-        let cookies: ICookie[] | undefined | boolean =
-          await this.getProfileCookies();
-
-        if (!cookies) {
-          cookies = this.initProfileCookies;
-        }
-
-        await this.init(this.createOption, cookies as ICookie[]);
+        await this.init(this.createOption, this.initProfileCookies);
 
         await this.goto(href, options);
 
@@ -280,7 +128,7 @@ export default abstract class HeroBase {
       throw e;
     }
 
-    await this.waitForAllContentLoaded();
+    await this.waitForContentLoaded();
   }
 
   @needsInit()
@@ -291,7 +139,7 @@ export default abstract class HeroBase {
         timeoutMs: this.waitExistsTimeoutMs
       })
     );
-    await this.waitForAllContentLoaded();
+    await this.waitForContentLoaded();
   }
 
   async queryElement(
@@ -401,13 +249,13 @@ export default abstract class HeroBase {
     return element ? element.$isVisible : false;
   }
 
-  async getProfileCookies(): Promise<ICookie[] | boolean> {
+  async getProfileCookies(): Promise<ICookie[] | undefined> {
     const profile = await safePromise<IUserProfile>(
       this._hero.exportUserProfile()
     );
 
     if (!profile.cookies?.length) {
-      return false;
+      return undefined;
     }
 
     return profile.cookies.filter((cookie) => cookie.name?.trim().length > 0);
@@ -439,7 +287,58 @@ export default abstract class HeroBase {
   }
 
   @needsInit()
-  protected async waitForAllContentLoaded() {
+  protected async handleTurnstileChallenge() {
+    const frames = await safePromise<FrameEnvironment[]>(
+      this.activeTab.frameEnvironments
+    );
+
+    for (const frame of frames) {
+      const isMainFrame = await frame.isMainFrame;
+      if (isMainFrame) {
+        continue;
+      }
+
+      const frameUrl = await frame.url;
+
+      if (!frameUrl.includes('challenges.cloudflare.com')) {
+        continue;
+      }
+
+      const body = frame.document.body;
+
+      const isVisible = await body.$isVisible;
+
+      if (!isVisible) {
+        continue;
+      }
+
+      const bodyRect = await body.getBoundingClientRect();
+
+      const mousePosition: IMousePositionXY = [
+        await bodyRect.x,
+        await bodyRect.y
+      ];
+
+      await safe(
+        this._hero.interact({
+          scroll: mousePosition
+        })
+      );
+
+      const checkbox = body.shadowRoot?.querySelector(
+        'div.main-wrapper label.cb-lb'
+      );
+
+      if (await checkbox?.$isVisible) {
+        await checkbox?.click();
+
+        await this.hero.waitForMillis(1000);
+      }
+    }
+  }
+
+  @needsInit()
+  private async waitForContentLoaded() {
     await safe<void>(
       this._hero.waitForLoad('AllContentLoaded', {
         timeoutMs: this.waitExistsTimeoutMs
@@ -454,8 +353,6 @@ export default abstract class HeroBase {
     await safe(this._hero.waitForMillis(5000)); // waits 5 seconds
 
     const currentUrl = await this._hero.url;
-
-    this.initState();
 
     this.isPageReady = useValidURL(currentUrl) instanceof URL;
   }
@@ -473,7 +370,7 @@ export default abstract class HeroBase {
         timeoutMs: this.timeout
       })
     );
-    await this.waitForAllContentLoaded();
+    await this.waitForContentLoaded();
   }
 
   private generateCsrfToken(): string {
@@ -486,104 +383,5 @@ export default abstract class HeroBase {
       randomString2 += charSet2.substring(randomPoz, randomPoz + 1);
     }
     return randomString2;
-  }
-
-  private getOneYearFromNow(): number {
-    const oneYearFromNow = new Date();
-
-    return oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
-  }
-
-  private fixCookiesExpires(cookie: ICookie): ICookie {
-    if (typeof cookie.expires === 'undefined') {
-      cookie.expires = this.getOneYearFromNow().toString();
-    }
-
-    if (typeof cookie.path === 'undefined') {
-      cookie.path = '/';
-    }
-
-    return cookie;
-  }
-
-  private prepareProfileCookies(cookies: ICookie[] | undefined): ICookie[] {
-    const list: ICookie[] = [];
-
-    cookies?.forEach((cookie) => {
-      if (cookie.domain === 'freebitco.in') {
-        return;
-      }
-
-      this.cookiesMap.set(cookie.name, this.fixCookiesExpires(cookie));
-    });
-
-    const csrfToken = this.generateCsrfToken();
-
-    this.cookiesMap.set(
-      'csrf_token',
-      this.fixCookiesExpires({
-        name: 'csrf_token',
-        value: csrfToken,
-        secure: true
-      })
-    );
-
-    const hideCookiesList: string[] = [
-      'mine_btc',
-      'earn_btc',
-      'push',
-      'free_wof_spins',
-      'premium_membership',
-      'rp_for_wof'
-    ];
-
-    for (const cookie of hideCookiesList) {
-      const name = `hide_${cookie}_msg`;
-
-      this.cookiesMap.set(
-        name,
-        this.fixCookiesExpires({
-          name,
-          value: '1',
-          secure: true
-        })
-      );
-    }
-
-    this.cookiesMap.set(
-      'cookieconsent_dismissed',
-      this.fixCookiesExpires({
-        name: 'cookieconsent_dismissed',
-        value: 'yes',
-        secure: true
-      })
-    );
-
-    this.cookiesMap.forEach((cookie, name) => {
-      const domains = ['.freebitco.in', 'freebitco.in'];
-
-      domains.forEach((domain) => {
-        list.push({
-          ...cookie,
-          domain
-        });
-      });
-    });
-
-    return list;
-  }
-
-  private getViewport(screen: ScreenFingerprint): IViewport {
-    return {
-      positionX: screen.pageXOffset,
-      positionY: screen.pageYOffset,
-      height: screen.height,
-      width: screen.width,
-      screenWidth: screen.availWidth,
-      screenHeight: screen.availHeight,
-      colorDepth: screen.colorDepth,
-      deviceScaleFactor: screen.devicePixelRatio,
-      isDefault: true
-    };
   }
 }
