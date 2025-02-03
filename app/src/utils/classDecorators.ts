@@ -75,7 +75,26 @@ export const needsLogin = createFlagDecorator(
   "The client must be logged in before using '$key'."
 );
 
-export const needsFree = createFlagDecorator(
-  'getIsFree',
-  "The client must be free in order to use '$key'."
+export const needsFaucet = createFlagDecorator(
+  'getIsFaucetReady',
+  "The faucet must be ready before using '$key'."
 );
+
+export interface IDecoratorBase {
+  getIsPageReady(): boolean;
+
+  getIsInitialised(): boolean;
+}
+
+export class DecoratorBaseClass implements IDecoratorBase {
+  protected isPageReady: boolean;
+  protected isInitialised: boolean;
+
+  getIsPageReady(): boolean {
+    return this.isPageReady;
+  }
+
+  getIsInitialised(): boolean {
+    return this.isInitialised;
+  }
+}
