@@ -1,0 +1,21 @@
+{
+  "name": "@scraper/cloudflare",
+  "version": "0.0.0",
+  "private": true,
+  "main": "index.ts",
+  "scripts": {
+    "cf:delete": "bun run delete.ts",
+    "cf:create": "bun run create.ts"
+  },
+  "exports": {
+    ".": {
+      "default": "./index.ts"
+    }
+  },
+  "dependencies": {
+    "@faker-js/faker": "^9.4.0",
+    "@scraper/fetch": "workspace:^",
+    "@scraper/safe": "workspace:^",
+    "cloudflare": "^4.0.0"
+  }
+}
