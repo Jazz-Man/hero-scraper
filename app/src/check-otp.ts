@@ -1,3 +1,3 @@
-import getOtp from './otp';
+import getOtp from './utils/otp.ts';
 
-console.log(getOtp('HXAZUGRYZXCG2K6N'));
+console.log(getOtp('SWDCEBDMWSWGGVMS'));
