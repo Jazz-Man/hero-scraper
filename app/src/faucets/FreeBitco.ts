@@ -267,7 +267,8 @@ export default class FreeBitco extends FaucetBase {
     await this.init(
       {
         showChrome: true,
-        showDevtools: true
+        showDevtools: true,
+        sessionPersistence: false
       },
       this.user.cookies
     );
@@ -276,7 +277,7 @@ export default class FreeBitco extends FaucetBase {
 
     const hasInitCookie = await this.app.getCookie('init');
 
-    if (!hasInitCookie) {
+    if (typeof hasInitCookie === 'undefined') {
       const hideCookiesList: string[] = [
         'mine_btc',
         'earn_btc',
@@ -383,7 +384,7 @@ export default class FreeBitco extends FaucetBase {
         return;
       }
 
-      await this.app.handleTurnstileChallenge(false);
+      await this.handleTurnstileChallenge();
 
       const value = await this.app.getInputValue<T>(
         `${selectors[type]} [name='cf-turnstile-response']`

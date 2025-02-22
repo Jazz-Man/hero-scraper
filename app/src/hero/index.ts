@@ -14,22 +14,19 @@ import type IWaitForElementOptions from '@ulixee/hero-interfaces/IWaitForElement
 import CookieStorage from '@ulixee/hero/lib/CookieStorage';
 import Hero from '@ulixee/hero/lib/Hero';
 import Resource from '@ulixee/hero/lib/Resource';
+import ResourceResponse from '@ulixee/hero/lib/ResourceResponse';
 import type IViewport from '@ulixee/unblocked-specification/agent/browser/IViewport';
 import type { ILocationTrigger } from '@ulixee/unblocked-specification/agent/browser/Location';
-import type { IMousePositionXY } from '@ulixee/unblocked-specification/agent/interact/IInteractions';
 import type { ICookie } from '@ulixee/unblocked-specification/agent/net/ICookie';
 import type IGeolocation from '@ulixee/unblocked-specification/plugin/IGeolocation';
 import {
   type Fingerprint,
   FingerprintGenerator,
+  type NavigatorFingerprint,
   type ScreenFingerprint
 } from 'fingerprint-generator';
 import type { THeroOptions, TInputValue } from '../@types';
-import {
-  DecoratorBaseClass,
-  needsInit,
-  needsPageReady
-} from '../utils/classDecorators.ts';
+import { DecoratorBaseClass, needsInit } from '../utils/classDecorators.ts';
 import { useValidURL } from '../utils/useValidURL.ts';
 
 type TTimeoutMsOptions = {
@@ -39,30 +36,6 @@ type TTimeoutMsOptions = {
 type TTGotoOptions = {
   referrer?: string;
 } & TTimeoutMsOptions;
-
-class Error4xx extends Error {
-  public is4xxError: boolean;
-  constructor(
-    public response: Response,
-    message: string
-  ) {
-    super(message);
-    this.name = '4xxError';
-    this.is4xxError = true;
-  }
-}
-
-class Error5xx extends Error {
-  public is4xxError: boolean;
-  constructor(
-    public response: Response,
-    message: string
-  ) {
-    super(message);
-    this.name = '5xxError';
-    this.is4xxError = true;
-  }
-}
 
 export interface IInitProfileCookies extends Omit<ICookie, 'expires'> {
   expires?: Date | null;
@@ -96,6 +69,10 @@ export default class HeroApp extends DecoratorBaseClass {
   private reinitCount = 0;
   private reinitMaxCount = 3;
   private hero: Hero;
+  private screen: ScreenFingerprint;
+  private navigator: NavigatorFingerprint;
+  private pageResponse: ResourceResponse;
+  private pageResponseHeaders: Headers;
 
   constructor(private options: THeroAppOptions) {
     super();
@@ -135,7 +112,7 @@ export default class HeroApp extends DecoratorBaseClass {
 
   private _cookieStorage: CookieStorage;
 
-  get cookieStorage(): any {
+  get cookieStorage(): CookieStorage {
     return this._cookieStorage;
   }
 
@@ -179,7 +156,10 @@ export default class HeroApp extends DecoratorBaseClass {
 
     const { navigator, screen } = fingerprint;
 
-    const viewport = this.getViewport(screen);
+    this.screen = screen;
+    this.navigator = navigator;
+
+    const viewport = this.getViewport(this.screen);
 
     this.hero = new Hero({
       connectionToCore: {
@@ -196,8 +176,8 @@ export default class HeroApp extends DecoratorBaseClass {
         locale,
         geolocation,
         deviceProfile: {
-          deviceMemory: navigator.deviceMemory,
-          hardwareConcurrency: navigator.hardwareConcurrency,
+          deviceMemory: this.navigator.deviceMemory,
+          hardwareConcurrency: this.navigator.hardwareConcurrency,
           viewport
         }
       },
@@ -228,57 +208,135 @@ export default class HeroApp extends DecoratorBaseClass {
   }
 
   @needsInit()
-  async handleTurnstileChallenge(waitForContentLoaded: boolean = true) {
-    if (waitForContentLoaded) {
+  private async handleTurnstileChallenge() {
+    await this.waitForContentLoaded(false);
+
+    const handle = async () => {
+      const frames = await this.hero.activeTab.frameEnvironments;
+
+      for (const frame of frames) {
+        const isMainFrame = await frame.isMainFrame;
+
+        if (isMainFrame) {
+          continue;
+        }
+
+        const frameUrl = useValidURL(await frame.url);
+
+        if (!frameUrl) {
+          continue;
+        }
+
+        if (frameUrl.protocol !== 'https:') {
+          continue;
+        }
+
+        if (frameUrl.hostname !== 'challenges.cloudflare.com') {
+          continue;
+        }
+
+        await frame.waitForLoad('AllContentLoaded');
+        await frame.waitForPaintingStable();
+
+        const body = frame.document.body;
+
+        if (!body) {
+          continue;
+        }
+
+        const isVisible = await body.$isVisible;
+
+        if (!isVisible) {
+          continue;
+        }
+
+        await body.shadowRoot.normalize();
+
+        await frame.document.scrollingElement?.scrollIntoView({
+          block: 'center',
+          inline: 'center'
+        });
+
+        const checkbox = await body.shadowRoot
+          ?.querySelector('div.main-wrapper .cb-c label.cb-lb')
+          ?.$waitForVisible();
+
+        await checkbox?.$waitForClickable();
+
+        await checkbox?.click();
+      }
+    };
+
+    await this.hero.flowCommand(
+      async () => {
+        await handle();
+      },
+
+      (assert) =>
+        assert(
+          this.hero.activeTab.querySelector('[name="cf-turnstile-response"]')
+            .$exists
+        )
+    );
+
+    await this.waitForNavigation('change', false);
+
+    const url = await this.hero.url;
+    const cfCookie = await this.cookieStorage.getItem('cf_chl_rc_m');
+
+    console.log({ cfCookie, url });
+
+    if (cfCookie?.value === '1') {
       await this.waitForContentLoaded(false);
-    }
-
-    const frames = await this.activeTab.frameEnvironments;
-
-    for (const frame of frames) {
-      const isMainFrame = await frame.isMainFrame;
-      const url = await frame.url;
-
-      if (isMainFrame) {
-        continue;
-      }
-
-      if (!url.includes('challenges.cloudflare.com')) {
-        continue;
-      }
-
-      const body = frame.document.body;
-
-      const isVisible = await body.$isVisible;
-
-      if (!isVisible) {
-        continue;
-      }
-
-      const bodyRect = await body.getBoundingClientRect();
-
-      const mousePosition: IMousePositionXY = [
-        await bodyRect.x,
-        await bodyRect.y
-      ];
-
-      await this.hero.interact({
-        scroll: mousePosition
-      });
-
-      const checkbox = body.shadowRoot?.querySelector(
-        'div.main-wrapper label.cb-lb'
+      const spinner = await this.waitForExists(
+        '.main-wrapper .main-content .loading-spinner'
       );
 
-      if (await checkbox?.$isVisible) {
-        await checkbox?.click();
+      const prevDiv = await spinner.previousSibling?.id;
 
-        await this.hero.waitForMillis(1000);
+      await spinner.$waitForHidden({ timeoutMs: this.waitExistsTimeoutMs });
 
-        if (waitForContentLoaded) {
-          await this.waitForNavigation('reload');
-        }
+      const shadowRoot = await this.queryElement(`#${prevDiv} > div > div`, {
+        waitForVisible: true
+      });
+
+      const iframe = await shadowRoot.shadowRoot
+        ?.querySelector('iframe')
+        .$waitForExists();
+
+      const iframeEnv = await this.hero.getFrameEnvironment(iframe);
+
+      await iframeEnv?.waitForLoad('AllContentLoaded');
+      await iframeEnv?.waitForPaintingStable();
+
+      const iframeBody = await iframeEnv?.document
+        ?.querySelector('body')
+        ?.$waitForVisible();
+
+      if (iframe) {
+        await this.hero.interact({
+          move: iframe
+        });
       }
+
+      await iframeBody?.shadowRoot.normalize();
+
+      await iframeEnv?.document.scrollingElement?.scrollIntoView({
+        block: 'center',
+        inline: 'center'
+      });
+
+      const checkbox = await iframeBody?.shadowRoot
+        .querySelector('div.main-wrapper .cb-c label.cb-lb')
+        ?.$waitForVisible();
+
+      await checkbox?.$waitForClickable();
+
+      await this.waitForMillis();
+
+      await checkbox?.click();
+
+      await this.waitForContentLoaded(false);
     }
   }
 
@@ -301,9 +359,13 @@ export default class HeroApp extends DecoratorBaseClass {
       this.hero.goto(url.toString(), options)
     );
 
-    const response = goto.response;
+    this.pageResponse = goto.response;
 
-    const statusCode = response.statusCode;
+    const statusCode = this.pageResponse.statusCode;
+
+    this.pageResponseHeaders = new Headers(
+      this.pageResponse.headers as HeadersInit
+    );
 
     if (statusCode >= 500) {
       const e = new Error(
@@ -332,20 +394,33 @@ export default class HeroApp extends DecoratorBaseClass {
 
       throw e;
     } else if (statusCode === 403) {
-      await this.handleTurnstileChallenge();
+      const e = new Error('page is not accessible: code 403.');
+
+      const serverInfo = this.pageResponseHeaders.get('server');
+
+      const isCloudflare = serverInfo?.toLocaleLowerCase() === 'cloudflare';
+
+      if (!isCloudflare) {
+        throw e;
+      }
+
+      console.error({ statusCode });
+      try {
+        await this.handleTurnstileChallenge();
+      } catch (e) {
+        throw e;
+      }
     }
 
     await this.waitForContentLoaded();
   }
 
   @needsInit()
-  @needsPageReady()
   async getJsValue<T>(path: string, options?: TSafePromiseOptions): Promise<T> {
     return safePromise<T>(this.hero.getJsValue<T>(path), options);
   }
 
   @needsInit()
-  @needsPageReady()
   async querySelector(selector: string): Promise<ISuperElement> {
     return safePromise<ISuperElement>(() => this.hero.querySelector(selector));
   }
@@ -359,28 +434,29 @@ export default class HeroApp extends DecoratorBaseClass {
   @needsInit()
   async reload() {
     this.isPageReady = false;
-    await safePromise(
-      this.hero.reload({
-        timeoutMs: this.waitExistsTimeoutMs
-      })
-    );
+    await this.activeTab.reload({
+      timeoutMs: this.waitExistsTimeoutMs
+    });
     await this.waitForContentLoaded();
   }
 
   @needsInit()
   async waitForContentLoaded(setPageReady: boolean = true) {
-    await safe<void>(
-      this.hero.waitForLoad('AllContentLoaded', {
-        timeoutMs: this.waitExistsTimeoutMs
-      })
-    );
-    await safe<void>(
-      this.hero.waitForPaintingStable({
-        timeoutMs: this.waitExistsTimeoutMs
-      })
-    );
+    const isContentLoaded = await this.hero.activeTab.isAllContentLoaded;
 
-    await safe(this.hero.waitForMillis(this.waitForContentLoadedMs));
+    if (!isContentLoaded) {
+      await this.hero.activeTab.waitForLoad('AllContentLoaded', {
+        timeoutMs: this.waitExistsTimeoutMs
+      });
+    }
+
+    const isPaintingStable = await this.hero.activeTab.isPaintingStable;
+
+    if (!isPaintingStable) {
+      await this.hero.activeTab.waitForPaintingStable({
+        timeoutMs: this.waitExistsTimeoutMs
+      });
+    }
 
     if (setPageReady) {
       const currentUrl = await this.hero.url;
@@ -431,7 +507,6 @@ export default class HeroApp extends DecoratorBaseClass {
   }
 
   @needsInit()
-  @needsPageReady()
   async waitForExists(selector: string, options?: IWaitForElementOptions) {
     return safePromise<ISuperElement>(
       this.hero.document
@@ -470,19 +545,23 @@ export default class HeroApp extends DecoratorBaseClass {
    * Calls hero's waitForLocation and then waitForLoad.
    *
    * @param trigger The waitForLocation trigger
+   * @param setPageReady
    */
   @needsInit()
-  async waitForNavigation(trigger: ILocationTrigger = 'change') {
-    this.isPageReady = false;
-    await safe(
-      this.hero.waitForLocation(trigger, {
-        timeoutMs: this.timeoutMs
-      })
-    );
-    await this.waitForContentLoaded();
+  async waitForNavigation(
+    trigger: ILocationTrigger = 'change',
+    setPageReady: boolean = true
+  ) {
+    if (setPageReady) {
+      this.isPageReady = false;
+    }
+
+    await this.hero.waitForLocation(trigger, {
+      timeoutMs: this.timeoutMs
+    });
+    await this.waitForContentLoaded(setPageReady);
   }
 
-  @needsPageReady()
   @needsInit()
   async fetch(_input: IRequestInfo, _init?: IRequestInit): Promise<Response> {
     const request = new this.hero.Request(_input, {
@@ -498,7 +577,6 @@ export default class HeroApp extends DecoratorBaseClass {
     });
   }
 
-  @needsPageReady()
   @needsInit()
   async setCookie(
     name: string,
@@ -514,25 +592,21 @@ export default class HeroApp extends DecoratorBaseClass {
     );
   }
 
-  @needsPageReady()
   @needsInit()
   async getCookie(key: string): Promise<ICookie> {
     return await this.cookieStorage.getItem(key);
   }
 
-  @needsPageReady()
   @needsInit()
   async deleteCookie(key: string): Promise<boolean> {
     return await this.cookieStorage.removeItem(key);
   }
 
-  @needsPageReady()
   @needsInit()
   async getAllCookies(): Promise<ICookie[]> {
     return await this.cookieStorage.getItems();
   }
 
-  @needsPageReady()
   @needsInit()
   async exportCookies(): Promise<TUserCookies | undefined> {
     const profile = await this.hero.exportUserProfile();
@@ -634,5 +708,9 @@ export default class HeroApp extends DecoratorBaseClass {
       deviceScaleFactor: screen.devicePixelRatio,
       isDefault: true
     };
+  }
+
+  async close() {
+    await this.hero.close();
   }
 }
