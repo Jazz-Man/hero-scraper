@@ -23,112 +23,78 @@ export async function fetchIPInfo(
   serviceName: ServiceName,
   proxyUser: string | undefined = getRandomUsername()
 ): Promise<GeoIPInfo> {
-  return new Promise<GeoIPInfo>(async (resolve, reject) => {
+  try {
     const serviceNameUrl = ipServices[serviceName];
-
     const proxy = getProxyUrl(proxyUser);
 
-    const data = await fetch(serviceNameUrl, {
+    const response = await fetch(serviceNameUrl, {
       proxy,
-      referrer:
-        'https://www.bing.com/search?pc=OA1&q=public%20IP%20checking%20services%20list',
-      signal: AbortSignal.timeout(60000)
-      // verbose: false,
-    })
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error(`HTTP error: ${response.status}`);
-        }
+      referrer: 'https://www.bing.com/search?pc=OA1&q=public%20IP%20checking%20services%20list',
+      signal: AbortSignal.timeout(60000),
+    });
 
-        const contentType = response.headers.get('content-type');
+    if (!response.ok) {
+      throw new Error(`HTTP error: ${response.status}`);
+    }
 
-        try {
-          return contentType?.includes('application/json')
-            ? await response.json()
-            : await response.text().then((string) => string.trim());
-        } catch (error) {
-          throw new Error(`Failed to parse response: ${error.message}`);
-        }
-      })
-      .catch((e) => {
-        reject(e);
-      });
-
-    let ipInfo: IPInfo | undefined = undefined;
+    const contentType = response.headers.get('content-type');
+    const data = contentType?.includes('application/json')
+      ? await response.json()
+      : (await response.text()).trim();
 
     const base: Partial<IPInfo> = {
       rawResponse: data,
       serviceName,
       serviceNameUrl,
       proxy,
-      proxyUser
+      proxyUser,
     };
 
+    let ipInfo: IPInfo | undefined;
+
     if (oneLineServices.hasOwnProperty(serviceName)) {
-      ipInfo = {
-        ip: data || data?.ip,
-        ...base
-      };
+      ipInfo = { ip: data || data?.ip, ...base };
     } else {
-      switch (serviceName) {
-        case 'httpbin.org':
-          ipInfo = {
-            ip: data?.origin,
-            ...base
-          };
-          break;
-        case 'check.torproject.org':
-          ipInfo = {
-            ip: data?.IP,
-            ...base
-          };
-          break;
-
-        case 'api.my-ip.io/v2/ip.json':
-          ipInfo = {
-            ip: data?.ip,
-            ...base
-          };
-          break;
-        case 'ifconfig.pro':
-          ipInfo = {
-            ip: (data as string).split(' - ').at(0) as string,
-            ...base
-          };
-
-          break;
-
-        case 'wtfismyip.com':
-        case 'myip.wtf':
-          ipInfo = {
-            ip: data?.YourFuckingIPAddress,
-            ...base
-          };
-          break;
-      }
+      ipInfo = getServiceSpecificIPInfo(serviceName, data, base);
     }
 
     if (!ipInfo) {
-      reject(`Unsupported service: ${serviceName}`);
+      throw new Error(`Unsupported service: ${serviceName}`);
     }
 
-    if (ipInfo?.ip) {
+    if (ipInfo.ip) {
       const geo = geoIp.lookup(ipInfo.ip);
-
-      ipInfo = {
-        ...ipInfo,
-        ...geo
-      };
+      ipInfo = { ...ipInfo, ...geo };
     } else {
-      reject(`Failed to fetch IP for "${serviceName}"`);
+      throw new Error(`Failed to fetch IP for "${serviceName}"`);
     }
 
-    resolve(ipInfo as GeoIPInfo);
-  });
+    return ipInfo as GeoIPInfo;
+  } catch (error) {
+    throw new Error(error instanceof Error ? error.message : String(error));
+  }
+}
+
+function getServiceSpecificIPInfo(serviceName: ServiceName, data: any, base: Partial<IPInfo>): IPInfo | undefined {
+  switch (serviceName) {
+    case 'httpbin.org':
+      return { ip: data?.origin, ...base };
+    case 'check.torproject.org':
+      return { ip: data?.IP, ...base };
+    case 'api.my-ip.io/v2/ip.json':
+      return { ip: data?.ip, ...base };
+    case 'ifconfig.pro':
+      return { ip: (data as string).split(' - ')[0], ...base };
+    case 'wtfismyip.com':
+    case 'myip.wtf':
+      return { ip: data?.YourFuckingIPAddress, ...base };
+    default:
+      return undefined;
+  }
 }
 
 export default async function getPublicIP(
-  proxyUser: string | undefined = getRandomUsername()
+  proxyUser: string = getRandomUsername()
 ): Promise<GeoIPInfo> {
   const services = getRandomizedServices();
   for (const service of services) {
