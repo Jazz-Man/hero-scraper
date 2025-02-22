@@ -67,28 +67,6 @@ importers:
         specifier: ^5.7.2
         version: 5.7.3
 
-  app:
-    dependencies:
-      '@scraper/db':
-        specifier: workspace:^
-        version: link:../packages/prisma
-      '@scraper/ip-info':
-        specifier: workspace:^
-        version: link:../packages/ip-info
-      '@scraper/safe':
-        specifier: workspace:^
-        version: link:../packages/safe
-    devDependencies:
-      '@faker-js/faker':
-        specifier: ^9.3.0
-        version: 9.3.0
-      '@types/geoip-lite':
-        specifier: ^1.4.4
-        version: 1.4.4
-      '@types/set-cookie-parser':
-        specifier: ^2.4.10
-        version: 2.4.10
-
   packages/cloudflare:
     dependencies:
       '@faker-js/faker':
@@ -188,10 +166,6 @@ packages:
 
   '@argonprotocol/mainchain@0.0.20':
     resolution: {integrity: sha512-7SOUd3cXB2nEtYOYU25Nvk+XDawqoWxMci15YQn8wIb9aVGilgl+G7Bfd7lwLm9VJax/owcPJ21uu9lGhVjWrA==}
-
-  '@faker-js/faker@9.3.0':
-    resolution: {integrity: sha512-r0tJ3ZOkMd9xsu3VRfqlFR6cz0V/jFYRswAIpC+m/DIfAUXq7g8N7wTAlhSANySXYGKzGryfDXwtwsY8TxEIDw==}
-    engines: {node: '>=18.0.0', npm: '>=9.0.0'}
 
   '@faker-js/faker@9.4.0':
     resolution: {integrity: sha512-85+k0AxaZSTowL0gXp8zYWDIrWclTbRPg/pm/V0dSFZ6W6D4lhcG3uuZl4zLsEKfEvs69xDbLN2cHQudwp95JA==}
@@ -491,9 +465,6 @@ packages:
 
   '@types/node@22.10.5':
     resolution: {integrity: sha512-F8Q+SeGimwOo86fiovQh8qiXfFEh2/ocYv7tU5pJ3EXMSSxk1Joj5wefpFK2fHTf/N6HKGSxIDBT9f3gCxXPkQ==}
-
-  '@types/set-cookie-parser@2.4.10':
-    resolution: {integrity: sha512-GGmQVGpQWUe5qglJozEjZV/5dyxbOOZ0LHe/lqyWssB88Y4svNfst0uqBVscdDeIKl5Jy5+aPSvy7mI9tYRguw==}
 
   '@types/ws@8.5.13':
     resolution: {integrity: sha512-osM/gWBTPKgHV8XkTunnegTRIsvF6owmf5w+JtAfOw472dptdm0dlGv4xCt6GwQRcC2XVOvvRE/0bAoQcL2QkA==}
@@ -1051,6 +1022,7 @@ packages:
 
   lodash.isequal@4.5.0:
     resolution: {integrity: sha512-pDo3lu8Jhfjqls6GkMgpahsF9kCyayhgykjyLMNFTKWrpVdAQtYyB4muAMWozBB4ig/dtWAmsMxLEI8wuz+DYQ==}
+    deprecated: This package is deprecated. Use require('node:util').isDeepStrictEqual instead.
 
   lodash@4.17.21:
     resolution: {integrity: sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg==}
@@ -1532,8 +1504,6 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@faker-js/faker@9.3.0': {}
-
   '@faker-js/faker@9.4.0': {}
 
   '@isaacs/cliui@8.0.2':
@@ -1996,10 +1966,6 @@ snapshots:
   '@types/node@22.10.5':
     dependencies:
       undici-types: 6.20.0
-
-  '@types/set-cookie-parser@2.4.10':
-    dependencies:
-      '@types/node': 22.10.5
 
   '@types/ws@8.5.13':
     dependencies:

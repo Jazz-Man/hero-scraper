@@ -1,54 +1,21 @@
-// export const makesBusy = () => {
-//   return (target: any, key: string, descriptor: PropertyDescriptor) => {
-//     const originalFunc = descriptor.value;
-//
-//     descriptor.value = async function (...args: any[]) {
-//       this.isBusy = true;
-//       try {
-//         const returnVal = await originalFunc.apply(this, args);
-//         return returnVal;
-//       } finally {
-//         this.isBusy = false;
-//       }
-//     };
-//   };
-// };
-
-// export const gracefulHeroClose = () => {
-//   return (target: any, key: string, descriptor: PropertyDescriptor) => {
-//     const originalFunc = descriptor.value;
-//
-//     descriptor.value = async function (...args: any[]) {
-//       if (!this.close || typeof this.close !== 'function') {
-//         throw new Error('Object does not have a close function.');
-//       }
-//
-//       try {
-//         const returnValue = await originalFunc.apply(this, args);
-//         return returnValue;
-//       } catch (error) {
-//         await this.close();
-//         throw error;
-//       }
-//     };
-//   };
-// };
+const sanitize = (msg: string) => msg.replace(/[^a-zA-Z0-9 ]/g, '');
 
 export function createFlagDecorator(propertyGetter: string, errorMsg: string) {
   return () => {
-    return (target: any, key: string, descriptor: PropertyDescriptor) => {
-      if (!target[propertyGetter])
+    return (target: { [key: string]: any }, key: string, descriptor: PropertyDescriptor) => {
+      if (!Reflect.has(target, propertyGetter))
         throw new Error(
-          `Target does not contain getter for '${propertyGetter}'.`
+          `Target does not contain getter for '${sanitize(propertyGetter)}'.`
         );
 
       const originalFunc = descriptor.value;
 
       descriptor.value = function (...args: any[]) {
-        if (target[propertyGetter].apply(this)) {
+        const propertyValue = Reflect.get(target, propertyGetter);
+        if (propertyValue.apply(this)) {
           return originalFunc.apply(this, args);
         } else {
-          throw new Error(errorMsg.replace('$key', key));
+          throw new Error(sanitize(errorMsg).replace('$key', key));
         }
       };
     };

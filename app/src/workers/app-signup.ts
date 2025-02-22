@@ -1,34 +1,37 @@
-import { getUserWithCookies } from '@scraper/db';
+import { type TUsersWithCookies } from '@scraper/db';
 import { expose } from 'threads/worker';
-import type { TWorkerProxyUser, TWorkerResult } from '../@types';
+import type { TWorkerResult } from '../@types';
 import FreeBitco from '../faucets/FreeBitco.ts';
 
-const appSignup = async (_user: TWorkerProxyUser): Promise<TWorkerResult> => {
+const appSignup = async (user: TUsersWithCookies): Promise<TWorkerResult> => {
   return new Promise(async (resolve, reject) => {
-    try {
-      const user = await getUserWithCookies(_user.username);
+    console.time('FreeBitco');
 
-      const app = new FreeBitco(user);
+    let app: FreeBitco | undefined = undefined;
+
+    try {
+      app = new FreeBitco(user);
 
       await app.initFaucet();
 
-      // const tfa_code = getOtp(user.tfa_secret as string);
-
-      await app.signup('54827183');
-
-      // await app.login(tfa_code);
-
       const cookies = await app.getProfileCookies();
 
-      // await app.hero.close();
+      await app.hero.close();
 
       resolve({ cookies, username: user.username });
     } catch (e) {
-      console.error(e);
-      // reject(e);
+      await app?.hero.close();
+
+      if (e instanceof Error) {
+        console.error(e.toString());
+      } else {
+        console.error(e);
+      }
     }
 
-    resolve({ cookies: [], username: _user.username });
+    console.timeEnd('FreeBitco');
+
+    resolve({ cookies: [], username: user.username });
   });
 };
 

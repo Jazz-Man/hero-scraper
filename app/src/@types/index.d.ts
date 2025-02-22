@@ -1,9 +1,10 @@
+import type { TUserCookies } from '@scraper/db';
 import type { IHeroCreateOptions } from '@ulixee/hero';
 import type { ICookie } from '@ulixee/unblocked-specification/agent/net/ICookie';
 
 export type TWorkerResult = {
   username: string;
-  cookies: ICookie[] | undefined;
+  cookies: TUserCookies | undefined;
 };
 
 export type TWorkerProxyUser = {

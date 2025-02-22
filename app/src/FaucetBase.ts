@@ -6,6 +6,7 @@ import {
   updateUserCookies
 } from '@scraper/db';
 import type { Tab } from '@ulixee/hero';
+import type { IMousePositionXY } from '@ulixee/unblocked-specification/agent/interact/IInteractions';
 import type { THeroOptions } from './@types';
 import HeroApp from './hero';
 import {
@@ -118,5 +119,52 @@ export default abstract class FaucetBase implements IFaucet {
     this.activeTab = this._app.activeTab;
 
     this.isFaucetReady = true;
+  }
+
+  @needsInit()
+  async handleTurnstileChallenge() {
+    const frames = await this.activeTab.frameEnvironments;
+
+    for (const frame of frames) {
+      const isMainFrame = await frame.isMainFrame;
+      const url = await frame.url;
+
+      if (isMainFrame) {
+        continue;
+      }
+
+      if (!url.includes('challenges.cloudflare.com')) {
+        continue;
+      }
+
+      const body = frame.document.body;
+
+      const isVisible = await body.$isVisible;
+
+      if (!isVisible) {
+        continue;
+      }
+
+      const bodyRect = await body.getBoundingClientRect();
+
+      const mousePosition: IMousePositionXY = [
+        await bodyRect.x,
+        await bodyRect.y
+      ];
+
+      await this.hero.interact({
+        scroll: mousePosition
+      });
+
+      const checkbox = body.shadowRoot?.querySelector(
+        'div.main-wrapper label.cb-lb'
+      );
+
+      if (await checkbox?.$isVisible) {
+        await checkbox?.click();
+
+        await this.hero.waitForMillis(1000);
+      }
+    }
   }
 }
