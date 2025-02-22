@@ -1,5 +1,5 @@
 import { getUserWithCookies } from '@scraper/db';
-import FreeBitco from './faucets/FreeBitco.ts';
+import FreeBitco from '../faucets/FreeBitco.ts';
 
 (async () => {
   try {
@@ -10,7 +10,7 @@ import FreeBitco from './faucets/FreeBitco.ts';
     const app = new FreeBitco(user);
 
     await app.initFaucet();
-    await app.login();
+    // await app.login();
 
     const response = await app.getCurrentAddressAndBalance();
 

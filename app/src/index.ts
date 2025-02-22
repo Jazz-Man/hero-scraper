@@ -13,8 +13,6 @@ try {
   await faucet.login();
   // await app.signup();
 
-  await faucet.app.handleTurnstileChallenge();
-
   await faucet.saveProfileCookies();
 } catch (e) {
   console.error(e);

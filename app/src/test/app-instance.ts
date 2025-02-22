@@ -1,17 +1,17 @@
 import { getUserWithCookies } from '@scraper/db';
-import HeroApp from './hero';
+import HeroApp from '../hero';
 
 try {
   const user = await getUserWithCookies('brooklyn45@mailcloud.pp.ua');
 
-  const app = new HeroApp(
-    'https://freebitco.in/?op=home',
-    {
+  const app = new HeroApp({
+    baseUrl: 'https://freebitco.in/?op=home',
+    createOptions: {
       showChrome: true,
       showDevtools: true
     },
-    user?.cookies
-  );
+    profileCookies: user?.cookies
+  });
 
   console.log(user);
 
