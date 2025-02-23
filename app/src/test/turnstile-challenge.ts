@@ -1,4 +1,4 @@
-import HeroApp from '../hero';
+import HeroApp from '@scraper/hero';
 
 console.time('FreeBitco');
 

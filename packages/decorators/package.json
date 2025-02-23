@@ -1,0 +1,17 @@
+{
+  "name": "@scraper/decorators",
+  "version": "0.0.0",
+  "private": true,
+  "main": "index.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "exports": {
+    ".": {
+      "default": "./index.ts"
+    }
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

@@ -4,6 +4,8 @@
   "private": true,
   "dependencies": {
     "@scraper/db": "workspace:^",
+    "@scraper/decorators": "workspace:^",
+    "@scraper/hero": "workspace:^",
     "@scraper/ip-info": "workspace:^",
     "@scraper/safe": "workspace:^"
   },

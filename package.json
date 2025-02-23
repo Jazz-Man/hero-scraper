@@ -2,7 +2,7 @@
   "name": "scraper",
   "private": true,
   "scripts": {
-    "cloud:start": "cloud start --env=${PWD}/.env"
+    "cloud:start": "bun --filter '@scraper/cloud' start"
   },
   "engines": {
     "node": ">=22.0.0",
@@ -10,15 +10,6 @@
     "bun": ">=1.1.0"
   },
   "dependencies": {
-    "@ulixee/awaited-dom": "^1.4.2",
-    "@ulixee/cloud": "2.0.0-alpha.31",
-    "@ulixee/commons": "2.0.0-alpha.31",
-    "@ulixee/execute-js-plugin": "2.0.0-alpha.31",
-    "@ulixee/hero": "2.0.0-alpha.31",
-    "@ulixee/hero-interfaces": "2.0.0-alpha.31",
-    "@ulixee/real-user-agents": "2.0.0-alpha.31",
-    "@ulixee/unblocked-specification": "2.0.0-alpha.31",
-    "fingerprint-generator": "^2.1.62",
     "otpauth": "^9.3.6",
     "threads": "^1.7.0"
   },
