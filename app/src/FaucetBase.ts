@@ -1,20 +1,20 @@
-import Hero from '@ulixee/hero/lib/Hero';
-
 import {
+  updateUserCookies,
   type TUserCookies,
-  type TUsersWithCookies,
-  updateUserCookies
+  type TUsersWithCookies
 } from '@scraper/db';
-import type { Tab } from '@ulixee/hero';
-import type { IMousePositionXY } from '@ulixee/unblocked-specification/agent/interact/IInteractions';
-import type { THeroOptions } from './@types';
-import HeroApp from './hero';
 import {
-  type IDecoratorBase,
   needsInit,
   needsLogin,
-  needsPageReady
-} from './utils/classDecorators.ts';
+  needsPageReady,
+  type IDecoratorBase
+} from '@scraper/decorators';
+import HeroApp, {
+  type IMousePositionXY,
+  type THero,
+  type THeroOptions,
+  type TTab
+} from '@scraper/hero';
 
 export interface IFaucet extends IDecoratorBase {
   get baseUrl(): string;
@@ -37,7 +37,7 @@ export default abstract class FaucetBase implements IFaucet {
   protected isLoggedIn: boolean = false;
   private createOption: THeroOptions | undefined;
   private initProfileCookies: TUserCookies | undefined;
-  protected activeTab: Tab;
+  protected activeTab: TTab;
 
   constructor(protected user: TUsersWithCookies) {}
 
@@ -66,9 +66,9 @@ export default abstract class FaucetBase implements IFaucet {
     return this.isFaucetReady;
   }
 
-  private _hero: Hero;
+  private _hero: THero;
 
-  get hero(): Hero {
+  get hero(): THero {
     return this._hero;
   }
 
