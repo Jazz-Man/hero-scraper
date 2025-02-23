@@ -2,7 +2,11 @@ const sanitize = (msg: string) => msg.replace(/[^a-zA-Z0-9 ]/g, '');
 
 export function createFlagDecorator(propertyGetter: string, errorMsg: string) {
   return () => {
-    return (target: { [key: string]: any }, key: string, descriptor: PropertyDescriptor) => {
+    return (
+      target: { [key: string]: any },
+      key: string,
+      descriptor: PropertyDescriptor
+    ) => {
       if (!Reflect.has(target, propertyGetter))
         throw new Error(
           `Target does not contain getter for '${sanitize(propertyGetter)}'.`
