@@ -8,26 +8,31 @@ import type {
 import type Response from '@ulixee/awaited-dom/impl/official-klasses/Response';
 import { OpenDnsAlternate } from '@ulixee/default-browser-emulator/lib/utils/DnsOverTlsProviders';
 import ExecuteJsPlugin from '@ulixee/execute-js-plugin';
-import { type ISuperElement, type Tab } from '@ulixee/hero';
+import {
+  type IHeroCreateOptions,
+  type ISuperElement,
+  type Tab
+} from '@ulixee/hero';
 import type ISetCookieOptions from '@ulixee/hero-interfaces/ISetCookieOptions';
 import type IWaitForElementOptions from '@ulixee/hero-interfaces/IWaitForElementOptions';
 import CookieStorage from '@ulixee/hero/lib/CookieStorage';
 import Hero from '@ulixee/hero/lib/Hero';
 import Resource from '@ulixee/hero/lib/Resource';
 import ResourceResponse from '@ulixee/hero/lib/ResourceResponse';
-import type IViewport from '@ulixee/unblocked-specification/agent/browser/IViewport';
 import type { ILocationTrigger } from '@ulixee/unblocked-specification/agent/browser/Location';
 import type { ICookie } from '@ulixee/unblocked-specification/agent/net/ICookie';
 import type IGeolocation from '@ulixee/unblocked-specification/plugin/IGeolocation';
-import {
-  type Fingerprint,
-  FingerprintGenerator,
-  type NavigatorFingerprint,
-  type ScreenFingerprint
-} from 'fingerprint-generator';
-import type { THeroOptions, TInputValue } from '../@types';
-import { DecoratorBaseClass, needsInit } from '../utils/classDecorators.ts';
-import { useValidURL } from '../utils/useValidURL.ts';
+
+import type { IMousePositionXY } from '@ulixee/unblocked-specification/agent/interact/IInteractions';
+
+import { DecoratorBaseClass, needsInit } from '@scraper/decorators';
+import getFingerprint from './fingerprint.ts';
+
+export type { IMousePositionXY };
+
+export type TInputValue = string | number;
+
+export type THeroOptions = IHeroCreateOptions;
 
 type TTimeoutMsOptions = {
   timeoutMs?: number;
@@ -49,11 +54,13 @@ export type THeroAppOptions = {
   profileCookies?: TUserCookies;
   reinitWaitMs?: number; // default: 3?
   reinitMaxCount?: number; // default: 3?
-
   timeoutMs?: number; // default: 30000
   waitExistsTimeoutMs?: number; // default: this.timeoutMs
   waitForContentLoadedMs?: number; // default: this.timeoutMs
 };
+
+export type THero = Hero;
+export type TTab = Tab;
 
 export default class HeroApp extends DecoratorBaseClass {
   private timezone: string | undefined;
@@ -68,9 +75,8 @@ export default class HeroApp extends DecoratorBaseClass {
   private baseUrl: URL;
   private reinitCount = 0;
   private reinitMaxCount = 3;
-  private hero: Hero;
-  private screen: ScreenFingerprint;
-  private navigator: NavigatorFingerprint;
+  private hero: THero;
+
   private pageResponse: ResourceResponse;
   private pageResponseHeaders: Headers;
 
@@ -104,9 +110,9 @@ export default class HeroApp extends DecoratorBaseClass {
     this.oneYearFromNow.setFullYear(this.oneYearFromNow.getFullYear() + 1);
   }
 
-  private _activeTab: Tab;
+  private _activeTab: TTab;
 
-  get activeTab(): Tab {
+  get activeTab(): TTab {
     return this._activeTab;
   }
 
@@ -152,14 +158,7 @@ export default class HeroApp extends DecoratorBaseClass {
       }
     }
 
-    const fingerprint = await this.getFingerprint();
-
-    const { navigator, screen } = fingerprint;
-
-    this.screen = screen;
-    this.navigator = navigator;
-
-    const viewport = this.getViewport(this.screen);
+    const { navigator, viewport } = await getFingerprint();
 
     this.hero = new Hero({
       connectionToCore: {
@@ -176,8 +175,8 @@ export default class HeroApp extends DecoratorBaseClass {
         locale,
         geolocation,
         deviceProfile: {
-          deviceMemory: this.navigator.deviceMemory,
-          hardwareConcurrency: this.navigator.hardwareConcurrency,
+          deviceMemory: navigator.deviceMemory,
+          hardwareConcurrency: navigator.hardwareConcurrency,
           viewport
         }
       },
@@ -221,9 +220,9 @@ export default class HeroApp extends DecoratorBaseClass {
           continue;
         }
 
-        const frameUrl = useValidURL(await frame.url);
+        const frameUrl = this.useValidURL(await frame.url);
 
-        if (!frameUrl) {
+        if (!(frameUrl instanceof URL)) {
           continue;
         }
 
@@ -340,6 +339,14 @@ export default class HeroApp extends DecoratorBaseClass {
     }
   }
 
+  private useValidURL(url: string): boolean | URL {
+    try {
+      return new URL(url);
+    } catch (_) {
+      return false;
+    }
+  }
+
   @needsInit()
   async goto(
     href: string,
@@ -347,7 +354,7 @@ export default class HeroApp extends DecoratorBaseClass {
       timeoutMs: this.timeoutMs
     }
   ) {
-    const url = useValidURL(href);
+    const url = this.useValidURL(href);
 
     if (!url) {
       throw new Error(`Invalid URL: ${href}`);
@@ -461,7 +468,7 @@ export default class HeroApp extends DecoratorBaseClass {
     if (setPageReady) {
       const currentUrl = await this.hero.url;
 
-      this.isPageReady = useValidURL(currentUrl) instanceof URL;
+      this.isPageReady = this.useValidURL(currentUrl) instanceof URL;
     }
   }
 
@@ -611,40 +618,22 @@ export default class HeroApp extends DecoratorBaseClass {
   async exportCookies(): Promise<TUserCookies | undefined> {
     const profile = await this.hero.exportUserProfile();
 
+    const cookies = profile.cookies?.filter(
+      (cookie) => cookie.name?.length > 0 && cookie.name !== 'undefined'
+    );
+
     // @ts-ignore
-    return profile.cookies
-      ?.filter(
-        (cookie) => cookie.name?.length > 0 && cookie.name !== 'undefined'
-      )
-      ?.map((cookie) => ({
-        name: cookie.name,
-        value: cookie.value,
-        domain: cookie.domain as string,
-        path: cookie.path as string,
-        expires: cookie.expires,
-        secure: cookie.secure as boolean,
-        httpOnly: cookie.httpOnly as boolean,
-        sameSite: cookie.sameSite as TSameSiteCookie,
-        sameParty: cookie.sameParty as boolean
-      }));
-  }
-
-  private async getFingerprint(): Promise<Fingerprint> {
-    return new Promise<Fingerprint>((resolve, reject) => {
-      try {
-        const fingerprint = new FingerprintGenerator({
-          mockWebRTC: true,
-          browsers: ['chrome'],
-          operatingSystems: ['macos'],
-          devices: ['desktop'],
-          httpVersion: '2'
-        }).getFingerprint().fingerprint;
-
-        resolve(fingerprint);
-      } catch (e) {
-        reject(e);
-      }
-    });
+    return cookies?.map((cookie) => ({
+      name: cookie.name,
+      value: cookie.value,
+      domain: cookie.domain as string,
+      path: cookie.path as string,
+      expires: cookie.expires,
+      secure: cookie.secure as boolean,
+      httpOnly: cookie.httpOnly as boolean,
+      sameSite: cookie.sameSite as TSameSiteCookie,
+      sameParty: cookie.sameParty as boolean
+    }));
   }
 
   private fixDateWithTimezone = (
@@ -695,21 +684,6 @@ export default class HeroApp extends DecoratorBaseClass {
 
     return cookies?.map((cookie) => this.prepareProfileCookie(cookie));
   }
-
-  private getViewport(screen: ScreenFingerprint): IViewport {
-    return {
-      positionX: screen.pageXOffset,
-      positionY: screen.pageYOffset,
-      height: screen.height,
-      width: screen.width,
-      screenWidth: screen.availWidth,
-      screenHeight: screen.availHeight,
-      colorDepth: screen.colorDepth,
-      deviceScaleFactor: screen.devicePixelRatio,
-      isDefault: true
-    };
-  }
-
   async close() {
     await this.hero.close();
   }
