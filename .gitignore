@@ -307,7 +307,7 @@ dist
 
 .tmp/
 
-app/real-src
+apps/faucet/real-src
 
 
 .qodo
