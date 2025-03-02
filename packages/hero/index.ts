@@ -1,4 +1,4 @@
-import type { TSameSiteCookie, TUserCookies } from '@scraper/db';
+import type { TSameSiteCookie, TUserCookies } from '@scraper/prisma';
 import getPublicIP from '@scraper/ip-info';
 import { safe, safePromise, type TSafePromiseOptions } from '@scraper/safe';
 import type {
