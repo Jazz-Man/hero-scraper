@@ -1,7 +1,7 @@
 {
-  "name": "@scraper/db",
+  "name": "@scraper/prisma",
   "version": "0.0.0",
-  "private": true,
+  "type": "module",
   "main": "index.ts",
   "scripts": {
     "db:ui": "prisma studio --schema=./prisma/schema.prisma --browser none",
@@ -25,9 +25,9 @@
     }
   },
   "dependencies": {
-    "@faker-js/faker": "^9.4.0",
     "@prisma/client": "6.2.1",
     "@scraper/cloudflare": "workspace:^",
+    "@scraper/faker": "workspace:*",
     "prisma": "^6.2.1"
   },
   "prisma": {

@@ -1,4 +1,4 @@
-import { getUserWithCookies } from '@scraper/db';
+import { getUserWithCookies } from '@scraper/prisma';
 import FreeBitco from '../faucets/FreeBitco.ts';
 
 (async () => {

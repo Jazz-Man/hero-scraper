@@ -1,4 +1,4 @@
-import { type TUsersWithCookies } from '@scraper/db';
+import { type TUsersWithCookies } from '@scraper/prisma';
 import { expose } from 'threads/worker';
 import type { TWorkerResult } from '../@types';
 import FreeBitco from '../faucets/FreeBitco.ts';
