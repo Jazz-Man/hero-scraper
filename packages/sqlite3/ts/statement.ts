@@ -1,10 +1,14 @@
+// @ts-ignore
+import type { ColumnDefinition } from 'better-sqlite3';
 import {
   Database as BunDatabase,
   type Statement as BunStatementType,
   type Changes,
   type SQLQueryBindings
 } from 'bun:sqlite';
-import { type ColumnDefinition, type IStatement } from './types';
+import { type IStatement } from './types';
+
+
 
 type StatementParams<T extends SQLQueryBindings[]> = T extends any[] ? T : [T];
 
@@ -18,12 +22,14 @@ export default class BunStatement<
   #statement: BunStatementType<ReturnType, StatementParams<ParamsType>>;
 
   #isPluck: boolean = false;
-  #params: StatementParams<ParamsType>;
+  #params: StatementParams<ParamsType> | undefined = undefined;
 
   constructor(
     db: BunDatabase,
     public source: string
   ) {
+    this.readonly = false;
+    this.busy = false;
     this.#statement = db.prepare<ReturnType, ParamsType>(this.source);
   }
 
@@ -69,7 +75,7 @@ export default class BunStatement<
   #prepareParams(
     params: StatementParams<ParamsType>
   ): StatementParams<ParamsType> {
-    return this.#params?.length > 0 ? this.#params : params;
+    return this.#params || params;
   }
 
   // Повернення всіх рядків запиту

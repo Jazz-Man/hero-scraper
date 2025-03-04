@@ -21,9 +21,9 @@ type TOptions = {
 };
 
 export default class Database implements IDatabaseBase {
-  memory: boolean;
-  readonly: boolean;
-  open: boolean;
+  memory: boolean = true;
+  readonly: boolean = false;
+  open: boolean = false;
 
   prepare<ReturnType = unknown, ParamsType extends SQLQueryBindings[] = any[]>(
     source: string
@@ -31,6 +31,7 @@ export default class Database implements IDatabaseBase {
     return new BunStatement<ReturnType, ParamsType>(this.#db, source);
   }
 
+  // @ts-ignore
   #db: BunDatabase;
   #filename: string;
   #options: TOptions | undefined;
@@ -42,6 +43,7 @@ export default class Database implements IDatabaseBase {
       safeIntegers: true
     }
   ) {
+    this.#filename = filename;
     this.#init(filename, options);
   }
 
@@ -99,7 +101,11 @@ export default class Database implements IDatabaseBase {
   }
 
   unsafeMode(unsafe?: boolean): this {
-    throw new Error('Method not implemented.');
+    // throw new Error('Method not implemented.');
+
+    return this;
+
+
   }
 
   serialize(options?: SerializeOptions): Buffer {
