@@ -7,7 +7,10 @@
   },
   "private": true,
   "scripts": {
-    "cloud:start": "bun --filter '@scraper/cloud' start"
+    "cloud:start": "bun --filter '@scraper/cloud' --bun start",
+    "prereinstall:all": "find . -type d -name '*node_modules*' -exec rm -rfv {} + && bun pm cache rm && rm bun.lock 2> /dev/null || true",
+    "reinstall:all": "bun install",
+    "postinstall": "echo 'test'"
   },
   "workspaces": [
     "apps/*",

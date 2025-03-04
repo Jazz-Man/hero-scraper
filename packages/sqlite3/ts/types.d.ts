@@ -1,6 +1,8 @@
 import type { SerializeOptions, Statement, Transaction } from 'better-sqlite3';
 
-export { SerializeOptions, Transaction };
+import { Database as BunDatabase, type SQLQueryBindings } from 'bun:sqlite';
+
+export { BunDatabase, SerializeOptions, Transaction };
 
 export interface VirtualTableOptions {
   rows: (...params: unknown[]) => Generator;
@@ -26,7 +28,7 @@ export interface IDatabaseBase
   >;
 }
 
-interface IStatement<
+export interface IStatement<
   Result = unknown,
   ParamsType extends SQLQueryBindings[] = any[]
 > extends Omit<Statement<ParamsType, Result>, 'database'> {}

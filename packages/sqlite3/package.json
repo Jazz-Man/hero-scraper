@@ -1,6 +1,6 @@
 {
   "name": "better-sqlite3",
-  "module": "index.ts",
+  "module": "index.js",
   "type": "module",
   "private": true,
   "devDependencies": {
@@ -12,7 +12,8 @@
   },
   "exports": {
     ".": {
-      "default": "./js/database.js"
+      "import": "./js/database.js",
+      "require": "./js/database.cjs"
     }
   }
 }
