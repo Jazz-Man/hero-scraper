@@ -12,9 +12,9 @@
   "dependencies": {
     "@scraper/decorators": "workspace:*",
     "@scraper/hero": "workspace:*",
+    "@scraper/otp": "workspace:*",
     "@scraper/prisma": "workspace:*",
     "@scraper/safe": "workspace:*",
-    "otpauth": "9.3.6",
     "threads": "1.7.0"
   }
 }

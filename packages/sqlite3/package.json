@@ -1,5 +1,5 @@
 {
-  "name": "better-sqlite3",
+  "name": "@scraper/sqlite3",
   "module": "index.js",
   "type": "module",
   "private": true,
