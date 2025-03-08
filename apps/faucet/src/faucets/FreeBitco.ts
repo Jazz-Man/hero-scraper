@@ -9,7 +9,7 @@ import {
   needsLogin,
   needsPageReady
 } from '@scraper/decorators';
-import getOtp from '../utils/otp.ts';
+import getOtp from '@scraper/otp';
 
 type TAjaxRequestParams = Record<string, string> | string | URLSearchParams;
 

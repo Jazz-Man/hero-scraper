@@ -1,4 +1,4 @@
-import { getUserListWithCookies, updateUserCookies } from '@scraper/db';
+import { getUserListWithCookies, updateUserCookies } from '@scraper/prisma';
 import { Pool, spawn, Worker } from 'threads';
 import type { TWorkerResult } from './@types';
 import type { TAppSignup } from './workers/app-signup.ts';

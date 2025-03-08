@@ -1,3 +1,3 @@
-import getOtp from './utils/otp.ts';
+import getOtp from './index';
 
 console.log(getOtp('SWDCEBDMWSWGGVMS'));
