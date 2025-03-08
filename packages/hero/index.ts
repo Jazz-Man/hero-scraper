@@ -1,5 +1,5 @@
-import type { TSameSiteCookie, TUserCookies } from '@scraper/prisma';
 import getPublicIP from '@scraper/ip-info';
+import type { TSameSiteCookie, TUserCookies } from '@scraper/prisma';
 import { safe, safePromise, type TSafePromiseOptions } from '@scraper/safe';
 import type {
   IRequestInfo,
@@ -686,5 +686,9 @@ export default class HeroApp extends DecoratorBaseClass {
   }
   async close() {
     await this.hero.close();
+  }
+
+  async [Symbol.asyncDispose]() {
+    await this.close();
   }
 }

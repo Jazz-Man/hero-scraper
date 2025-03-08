@@ -7,10 +7,9 @@
   },
   "private": true,
   "scripts": {
-    "cloud:start": "bun --filter '@scraper/cloud' --bun start",
-    "prereinstall:all": "find . -type d -name '*node_modules*' -exec rm -rfv {} + && bun pm cache rm && rm bun.lock 2> /dev/null || true",
-    "reinstall:all": "bun install",
-    "postinstall": "echo 'test'"
+    "cloud:start": "bun --filter '@scraper/cloud' start",
+    "prereinstall:all": "find . -type d -name '*node_modules*' -exec rm -rfv {} + && rm bun.lock 2> /dev/null || true",
+    "reinstall:all": "bun --bun install"
   },
   "workspaces": [
     "apps/*",
@@ -21,10 +20,8 @@
     "@prisma/engines",
     "@ulixee/chrome-131-0",
     "@ulixee/unblocked-agent-mitm-socket",
+    "better-sqlite3",
     "esbuild",
     "prisma"
-  ],
-  "resolutions": {
-    "better-sqlite3": "npm:better-sqlite3@workspace:*"
-  }
+  ]
 }
