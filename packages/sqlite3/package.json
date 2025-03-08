@@ -1,0 +1,19 @@
+{
+  "name": "@scraper/sqlite3",
+  "module": "index.js",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@types/better-sqlite3": "7.6.12",
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "exports": {
+    ".": {
+      "import": "./js/database.js",
+      "require": "./js/database.cjs"
+    }
+  }
+}

@@ -12,10 +12,10 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
-    "@scraper/decorators": "workspace:^",
-    "@scraper/ip-info": "workspace:^",
-    "@scraper/safe": "workspace:^",
-    "@ulixee/awaited-dom": "^1.4.2",
+    "@scraper/decorators": "workspace:*",
+    "@scraper/ip-info": "workspace:*",
+    "@scraper/safe": "workspace:*",
+    "@ulixee/awaited-dom": "1.4.2",
     "@ulixee/commons": "2.0.0-alpha.31",
     "@ulixee/execute-js-plugin": "2.0.0-alpha.31",
     "@ulixee/hero": "2.0.0-alpha.31",
@@ -25,6 +25,6 @@
     "fingerprint-generator": "^2.1.62"
   },
   "devDependencies": {
-    "@scraper/db": "workspace:^"
+    "@scraper/prisma": "workspace:*"
   }
 }
