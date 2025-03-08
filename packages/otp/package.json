@@ -1,7 +1,5 @@
 {
-  "name": "@scraper/fetch",
-  "main": "index.ts",
-  "version": "0.0.0",
+  "name": "@scraper/otp",
   "module": "index.ts",
   "type": "module",
   "private": true,
@@ -15,5 +13,8 @@
   },
   "peerDependencies": {
     "typescript": "^5"
+  },
+  "dependencies": {
+    "otpauth": "9.3.6"
   }
 }

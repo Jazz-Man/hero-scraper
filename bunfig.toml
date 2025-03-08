@@ -1,16 +1,22 @@
 logLevel = "debug" # "debug" | "warn" | "error"
 telemetry = false
 
+
+[test]
+root = "./__tests__"
+coverage = false
+
+
 [install]
+exact = true
 optional = true
 dev = true
 peer = true
 auto = "auto"
-frozenLockfile = false
+saveTextLockfile = true
 
 [install.lockfile]
 save = true
-print = "yarn"
 
 
 [run]
@@ -18,3 +24,4 @@ print = "yarn"
 shell = "system"
 # equivalent to `bun --bun` for all `bun run` commands
 bun = true
+silent = true

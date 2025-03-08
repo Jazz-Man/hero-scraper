@@ -1,19 +1,15 @@
 {
-  "name": "@scraper/fetch",
-  "main": "index.ts",
-  "version": "0.0.0",
+  "name": "@scraper/faker",
   "module": "index.ts",
   "type": "module",
   "private": true,
-  "exports": {
-    ".": {
-      "default": "./index.ts"
-    }
-  },
   "devDependencies": {
     "@types/bun": "latest"
   },
   "peerDependencies": {
     "typescript": "^5"
+  },
+  "dependencies": {
+    "@faker-js/faker": "9.5.0"
   }
 }

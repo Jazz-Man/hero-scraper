@@ -1,9 +1,4 @@
 import {
-  updateUserCookies,
-  type TUserCookies,
-  type TUsersWithCookies
-} from '@scraper/db';
-import {
   needsInit,
   needsLogin,
   needsPageReady,
@@ -15,6 +10,11 @@ import HeroApp, {
   type THeroOptions,
   type TTab
 } from '@scraper/hero';
+import {
+  updateUserCookies,
+  type TUserCookies,
+  type TUsersWithCookies
+} from '@scraper/prisma';
 
 export interface IFaucet extends IDecoratorBase {
   get baseUrl(): string;

@@ -1,6 +1,6 @@
 import type { PrismaClient } from '../client';
 
-import { faker } from '@faker-js/faker';
+import faker from '@scraper/faker';
 
 import { emailRoutingList, zoneList } from '@scraper/cloudflare';
 
