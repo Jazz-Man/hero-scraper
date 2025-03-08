@@ -1,4 +1,4 @@
-import { faker } from '@faker-js/faker';
+import faker from '@scraper/faker';
 import { cfClient, zoneList } from './index';
 
 const zones = await zoneList();

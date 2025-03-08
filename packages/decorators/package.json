@@ -1,17 +1,12 @@
 {
   "name": "@scraper/decorators",
-  "version": "0.0.0",
+  "module": "index.ts",
+  "type": "module",
   "private": true,
-  "main": "index.ts",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "devDependencies": {
+    "@types/bun": "latest"
   },
-  "exports": {
-    ".": {
-      "default": "./index.ts"
-    }
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC"
+  "peerDependencies": {
+    "typescript": "^5"
+  }
 }

@@ -1,4 +1,4 @@
-import type { TUserCookies } from '@scraper/db';
+import type { TUserCookies } from '@scraper/prisma';
 
 export type TWorkerResult = {
   username: string;
