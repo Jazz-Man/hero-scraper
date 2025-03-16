@@ -8,12 +8,13 @@
   "private": true,
   "scripts": {
     "cloud:start": "bun --filter '@scraper/cloud' start",
-    "prereinstall:all": "find . -type d -name '*node_modules*' -exec rm -rfv {} + && rm bun.lock 2> /dev/null || true",
-    "reinstall:all": "bun --bun install"
+    "cf:delete": "bun --filter '@scraper/cloudflare' run delete.ts",
+    "cf:create": "bun --filter '@scraper/cloudflare' run create.ts"
   },
   "workspaces": [
     "apps/*",
-    "packages/*"
+    "packages/*",
+    "resolutions/*"
   ],
   "trustedDependencies": [
     "@prisma/client",
@@ -23,5 +24,8 @@
     "better-sqlite3",
     "esbuild",
     "prisma"
-  ]
+  ],
+  "resolutions": {
+    "utf7": "npm:utf7@workspace:*"
+  }
 }
