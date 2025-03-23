@@ -181,6 +181,7 @@ export class TorClient {
 	async getInfoNames(): Promise<Record<string, string>> {
 		const reply = await this.getInfo(TorClient.GETINFO_INFO_NAMES);
 
+		// biome-ignore lint/suspicious/noAsyncPromiseExecutor: <explanation>
 		return new Promise(async (resolve, reject) => {
 			const info: Record<string, string> = {};
 
@@ -197,6 +198,7 @@ export class TorClient {
 	async getConfigDefaults(): Promise<Record<string, string>> {
 		const reply = await this.getInfo(TorClient.GETINFO_CONFIG_DEFAULTS);
 
+		// biome-ignore lint/suspicious/noAsyncPromiseExecutor: <explanation>
 		return new Promise(async (resolve, reject) => {
 			const info: Record<string, string> = {};
 
@@ -257,7 +259,7 @@ export class TorClient {
 				config += parts[0];
 
 				if (parts[1]) {
-					config += " " + parts[1];
+					config += ` ${parts[1]}`;
 				}
 				config += "\n";
 			}
@@ -382,6 +384,7 @@ export class TorClient {
 	}
 
 	async getListeners(): Promise<Record<string, string | null>> {
+		// biome-ignore lint/suspicious/noAsyncPromiseExecutor: <explanation>
 		return new Promise(async (resolve, reject) => {
 			const ports: Record<string, string | null> = {
 				or: TorClient.GETINFO_STATUS_ORPORT,
