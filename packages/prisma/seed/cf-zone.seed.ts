@@ -1,8 +1,7 @@
-import type { PrismaClient } from "../client";
-
 import faker from "@scraper/faker";
 
 import { emailRoutingList, zoneList } from "@scraper/cloudflare";
+import type { PrismaClient } from "../client/index.js";
 
 export default async function seedFunction(prisma: PrismaClient) {
 	const zones = await zoneList();
