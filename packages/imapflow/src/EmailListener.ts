@@ -1,183 +1,182 @@
-import { EventEmitter } from 'node:events';
+import { EventEmitter } from "node:events";
 
 import Imap, {
-  type Config,
-  type ImapMessage,
-  type ImapMessageAttributes
-} from 'imap';
-import { type ParsedMail, simpleParser } from 'mailparser';
+	type Config,
+	type ImapMessage,
+	type ImapMessageAttributes,
+} from "imap";
+import { type ParsedMail, simpleParser } from "mailparser";
 
 type TSearchCriteria =
-  | 'ALL'
-  | 'ANSWERED'
-  | 'DELETED'
-  | 'DRAFT'
-  | 'FLAGGED'
-  | 'NEW'
-  | 'SEEN'
-  | 'RECENT'
-  | 'OLD'
-  | 'UNANSWERED'
-  | 'UNDELETED'
-  | 'UNDRAFT'
-  | 'UNFLAGGED'
-  | 'UNSEEN'
-  | ['FROM', string]
-  | ['TO', string]
-  | ['CC', string]
-  | ['BCC', string]
-  | ['SUBJECT', string]
-  | ['BODY', string]
-  | ['TEXT', string]
-  | ['BEFORE', string | Date]
-  | ['ON', string | Date]
-  | ['SINCE', string | Date]
-  | ['SENTBEFORE', string | Date]
-  | ['SENTON', string | Date]
-  | ['SENTSINCE', string | Date]
-  | ['HEADER', string, string]
-  | ['LARGER', number]
-  | ['SMALLER', number]
-  | ['UID', string | number]
-  | ['X-GM-RAW', string]
-  | ['X-GM-THRID', string | number]
-  | ['X-GM-MSGID', string | number]
-  | ['X-GM-LABELS', string]
-  | TSearchCriteria[];
+	| "ALL"
+	| "ANSWERED"
+	| "DELETED"
+	| "DRAFT"
+	| "FLAGGED"
+	| "NEW"
+	| "SEEN"
+	| "RECENT"
+	| "OLD"
+	| "UNANSWERED"
+	| "UNDELETED"
+	| "UNDRAFT"
+	| "UNFLAGGED"
+	| "UNSEEN"
+	| ["FROM", string]
+	| ["TO", string]
+	| ["CC", string]
+	| ["BCC", string]
+	| ["SUBJECT", string]
+	| ["BODY", string]
+	| ["TEXT", string]
+	| ["BEFORE", string | Date]
+	| ["ON", string | Date]
+	| ["SINCE", string | Date]
+	| ["SENTBEFORE", string | Date]
+	| ["SENTON", string | Date]
+	| ["SENTSINCE", string | Date]
+	| ["HEADER", string, string]
+	| ["LARGER", number]
+	| ["SMALLER", number]
+	| ["UID", string | number]
+	| ["X-GM-RAW", string]
+	| ["X-GM-THRID", string | number]
+	| ["X-GM-MSGID", string | number]
+	| ["X-GM-LABELS", string]
+	| TSearchCriteria[];
 
 type MailOptions = {
-  markSeen?: boolean;
-  mailbox?: string;
-  searchFilter?: TSearchCriteria[];
-  fetchUnreadOnStart?: boolean;
+	markSeen?: boolean;
+	mailbox?: string;
+	searchFilter?: TSearchCriteria[];
+	fetchUnreadOnStart?: boolean;
 } & Config;
 
 export class EmailListener extends EventEmitter<{
-  error: [Error];
-  'server:connected': [];
-  'server:disconnected': [];
-  mail: [ParsedMail, number, ImapMessageAttributes];
+	error: [Error];
+	"server:connected": [];
+	"server:disconnected": [];
+	mail: [ParsedMail, number, ImapMessageAttributes];
 }> {
-  #imap: Imap;
+	#imap: Imap;
 
-  private readonly markSeen: boolean;
+	private readonly markSeen: boolean;
 
-  private readonly mailbox: string;
+	private readonly mailbox: string;
 
-  private readonly fetchUnreadOnStart: boolean;
+	private readonly fetchUnreadOnStart: boolean;
 
-  private readonly searchFilter: TSearchCriteria[];
+	private readonly searchFilter: TSearchCriteria[];
 
-  constructor(options: MailOptions) {
-    super();
+	constructor(options: MailOptions) {
+		super();
 
-    this.markSeen = options.markSeen ?? true;
-    this.mailbox = options.mailbox ?? 'INBOX';
+		this.markSeen = options.markSeen ?? true;
+		this.mailbox = options.mailbox ?? "INBOX";
 
-    this.searchFilter = options.searchFilter || ['UNSEEN'];
+		this.searchFilter = options.searchFilter || ["UNSEEN"];
 
-    this.fetchUnreadOnStart = options.fetchUnreadOnStart ?? true;
+		this.fetchUnreadOnStart = options.fetchUnreadOnStart ?? true;
 
-    this.#imap = new Imap({
-      xoauth2: options.xoauth2,
-      user: options.user,
-      password: options.password,
-      host: options.host,
-      port: options.port,
-      tls: options.tls,
-      tlsOptions: options.tlsOptions,
-      connTimeout: options.connTimeout,
-      authTimeout: options.authTimeout,
-      debug: options.debug
-    });
+		this.#imap = new Imap({
+			xoauth2: options.xoauth2,
+			user: options.user,
+			password: options.password,
+			host: options.host,
+			port: options.port,
+			tls: options.tls,
+			tlsOptions: options.tlsOptions,
+			connTimeout: options.connTimeout,
+			authTimeout: options.authTimeout,
+			debug: options.debug,
+		});
 
-    this.#imap.once('ready', this.imapReady.bind(this));
-    this.#imap.once('close', this.imapClose.bind(this));
-    this.#imap.on('error', this.imapError.bind(this));
-  }
+		this.#imap.once("ready", this.imapReady.bind(this));
+		this.#imap.once("close", this.imapClose.bind(this));
+		this.#imap.on("error", this.imapError.bind(this));
+	}
 
-  start() {
-    this.#imap.connect();
-  }
+	start() {
+		this.#imap.connect();
+	}
 
-  stop() {
-    this.#imap.end();
-  }
+	stop() {
+		this.#imap.end();
+	}
 
-  private imapReady() {
-    this.#imap.openBox(this.mailbox, false, (err) => {
-      if (err) {
-        this.emit('error', err);
-      } else {
-        this.emit('server:connected');
-        if (this.fetchUnreadOnStart) {
-          this.parseUnread();
-        }
+	private imapReady() {
+		this.#imap.openBox(this.mailbox, false, (err) => {
+			if (err) {
+				this.emit("error", err);
+			} else {
+				this.emit("server:connected");
+				if (this.fetchUnreadOnStart) {
+					this.parseUnread();
+				}
 
-        this.#imap.on('mail', this.imapMail.bind(this));
-        this.#imap.on('update', this.imapMail.bind(this));
-      }
-    });
-  }
+				this.#imap.on("mail", this.imapMail.bind(this));
+				this.#imap.on("update", this.imapMail.bind(this));
+			}
+		});
+	}
 
-  private imapClose() {
-    this.emit('server:disconnected');
-  }
+	private imapClose() {
+		this.emit("server:disconnected");
+	}
 
-  private imapError(err: Error) {
-    this.emit('error', err);
-  }
+	private imapError(err: Error) {
+		this.emit("error", err);
+	}
 
-  private imapMail() {
-    this.parseUnread();
-  }
+	private imapMail() {
+		this.parseUnread();
+	}
 
-  private parseUnread() {
-    this.#imap.search(this.searchFilter, (err, results) => {
-      if (err) {
-        this.emit('error', err);
-      } else if (results.length > 0) {
-        // eslint-disable-next-line no-restricted-syntax
-        for (const result of results) {
-          const f = this.#imap.fetch(result, {
-            bodies: '',
-            markSeen: this.markSeen
-          });
+	private parseUnread() {
+		this.#imap.search(this.searchFilter, (err, results) => {
+			if (err) {
+				this.emit("error", err);
+			} else if (results.length > 0) {
+				// eslint-disable-next-line no-restricted-syntax
+				for (const result of results) {
+					const f = this.#imap.fetch(result, {
+						bodies: "",
+						markSeen: this.markSeen,
+					});
 
-          f.once('error', (error) => {
-            this.emit('error', error);
-          });
+					f.once("error", (error) => {
+						this.emit("error", error);
+					});
 
+					f.on("message", this.handleMessage.bind(this));
+				}
+			}
+		});
+	}
 
-          f.on('message', this.handleMessage.bind(this));
-        }
-      }
-    });
-  }
+	private handleMessage(message: ImapMessage, seqno: number) {
+		let attributes: ImapMessageAttributes;
 
-  private handleMessage(message: ImapMessage, seqno: number) {
-    let attributes: ImapMessageAttributes;
+		message.on("body", (stream: NodeJS.ReadableStream) => {
+			let data = "";
+			stream.on("data", (chunk) => {
+				data += chunk.toString("UTF-8");
+			});
 
-    message.on('body', (stream: NodeJS.ReadableStream) => {
-      let data = '';
-      stream.on('data', (chunk) => {
-        data += chunk.toString('UTF-8');
-      });
+			stream.once("end", () => {
+				simpleParser(data, (err1: Error | undefined, mail: ParsedMail) => {
+					if (err1) {
+						this.emit("error", err1);
+						return;
+					}
 
-      stream.once('end', () => {
-        simpleParser(data, (err1: Error | undefined, mail: ParsedMail) => {
-          if (err1) {
-            this.emit('error', err1);
-            return;
-          }
+					this.emit("mail", mail, seqno, attributes);
+				});
+			});
+		});
 
-          this.emit('mail', mail, seqno, attributes);
-        });
-      });
-    });
-
-    message.on('attributes', (attrs) => {
-      attributes = attrs;
-    });
-  }
+		message.on("attributes", (attrs) => {
+			attributes = attrs;
+		});
+	}
 }

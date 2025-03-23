@@ -1,19 +1,19 @@
-import { getUserWithCookies } from '@scraper/prisma';
-import FreeBitco from './faucets/FreeBitco.ts';
+import { getUserWithCookies } from "@scraper/prisma";
+import FreeBitco from "./faucets/FreeBitco.ts";
 
 try {
-  const username = 'brooklyn45@mailcloud.pp.ua';
+	const username = "brooklyn45@mailcloud.pp.ua";
 
-  const user = await getUserWithCookies(username);
+	const user = await getUserWithCookies(username);
 
-  const faucet = new FreeBitco(user);
+	const faucet = new FreeBitco(user);
 
-  await faucet.initFaucet();
+	await faucet.initFaucet();
 
-  await faucet.login();
-  // await app.signup();
+	await faucet.login();
+	// await app.signup();
 
-  await faucet.saveProfileCookies();
+	await faucet.saveProfileCookies();
 } catch (e) {
-  console.error(e);
+	console.error(e);
 }

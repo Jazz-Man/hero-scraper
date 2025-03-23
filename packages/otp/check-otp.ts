@@ -1,3 +1,3 @@
-import getOtp from './index';
+import getOtp from "./index";
 
-console.log(getOtp('SWDCEBDMWSWGGVMS'));
+console.log(getOtp("SWDCEBDMWSWGGVMS"));

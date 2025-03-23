@@ -1,4 +1,4 @@
-import { en_US, Faker as FakerBase } from '@faker-js/faker';
+import { Faker as FakerBase, en_US } from '@faker-js/faker';
 
 const faker = new FakerBase({ locale: [en_US] });
 

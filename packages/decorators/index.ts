@@ -1,71 +1,71 @@
-const sanitize = (msg: string) => msg.replace(/[^a-zA-Z0-9 ]/g, '');
+const sanitize = (msg: string) => msg.replace(/[^a-zA-Z0-9 ]/g, "");
 
 export function createFlagDecorator(propertyGetter: string, errorMsg: string) {
-  return () => {
-    return (
-      target: { [key: string]: any },
-      key: string,
-      descriptor: PropertyDescriptor
-    ) => {
-      if (!Reflect.has(target, propertyGetter))
-        throw new Error(
-          `Target does not contain getter for '${sanitize(propertyGetter)}'.`
-        );
+	return () => {
+		return (
+			target: { [key: string]: any },
+			key: string,
+			descriptor: PropertyDescriptor,
+		) => {
+			if (!Reflect.has(target, propertyGetter))
+				throw new Error(
+					`Target does not contain getter for '${sanitize(propertyGetter)}'.`,
+				);
 
-      const originalFunc = descriptor.value;
+			const originalFunc = descriptor.value;
 
-      descriptor.value = function (...args: any[]) {
-        const propertyValue = Reflect.get(target, propertyGetter);
-        if (propertyValue.apply(this)) {
-          return originalFunc.apply(this, args);
-        } else {
-          throw new Error(sanitize(errorMsg).replace('$key', key));
-        }
-      };
-    };
-  };
+			descriptor.value = function (...args: any[]) {
+				const propertyValue = Reflect.get(target, propertyGetter);
+				if (propertyValue.apply(this)) {
+					return originalFunc.apply(this, args);
+				} else {
+					throw new Error(sanitize(errorMsg).replace("$key", key));
+				}
+			};
+		};
+	};
 }
 
 export const needsCsrfToken = createFlagDecorator(
-  'hasCsrfToken',
-  "Page mast have a csrf token before using '$key'."
+	"hasCsrfToken",
+	"Page must have a csrf token before using '$key'.",
 );
 
 export const needsPageReady = createFlagDecorator(
-  'getIsPageReady',
-  "Page mast be ready before using '$key'."
+	"getIsPageReady",
+	"Page mast be ready before using '$key'.",
 );
 
 export const needsInit = createFlagDecorator(
-  'getIsInitialised',
-  "You must initalize the client before using '$key'."
+	"getIsInitialised",
+	"You must initalize the client before using '$key'.",
 );
 
 export const needsLogin = createFlagDecorator(
-  'getIsLoggedIn',
-  "The client must be logged in before using '$key'."
+	"getIsLoggedIn",
+	"The client must be logged in before using '$key'.",
 );
 
 export const needsFaucet = createFlagDecorator(
-  'getIsFaucetReady',
-  "The faucet must be ready before using '$key'."
+	"getIsFaucetReady",
+	"The faucet must be ready before using '$key'.",
 );
 
 export interface IDecoratorBase {
-  getIsPageReady(): boolean;
+	getIsPageReady(): boolean;
 
-  getIsInitialised(): boolean;
+	getIsInitialised(): boolean;
 }
 
 export class DecoratorBaseClass implements IDecoratorBase {
-  protected isPageReady: boolean;
-  protected isInitialised: boolean;
+	protected isPageReady: boolean;
+	protected isInitialised: boolean;
 
-  getIsPageReady(): boolean {
-    return this.isPageReady;
-  }
+	getIsPageReady(): boolean {
+		return this.isPageReady;
+	}
 
-  getIsInitialised(): boolean {
-    return this.isInitialised;
-  }
+	getIsInitialised(): boolean {
+		return this.isInitialised;
+	}
 }

@@ -1,37 +1,37 @@
-import HeroApp from '@scraper/hero';
+import HeroApp from "@scraper/hero";
 
-console.time('FreeBitco');
+console.time("FreeBitco");
 
 let app: HeroApp | undefined = undefined;
 
 try {
-  app = new HeroApp({
-    baseUrl: 'https://bun.vsokolyk.pp.ua',
-    createOptions: {
-      showChrome: true,
-      showDevtools: true
-    }
-  });
+	app = new HeroApp({
+		baseUrl: "https://bun.vsokolyk.pp.ua",
+		createOptions: {
+			showChrome: true,
+			showDevtools: true,
+		},
+	});
 
-  const hero = await app.getHero();
+	const hero = await app.getHero();
 
-  await app.goto('https://bun.vsokolyk.pp.ua');
+	await app.goto("https://bun.vsokolyk.pp.ua");
 
-  const url = await hero.url;
-  const cookies = await app.exportCookies();
+	const url = await hero.url;
+	const cookies = await app.exportCookies();
 
-  console.log({ cookies, url });
+	console.log({ cookies, url });
 
-  const profile = await hero.exportUserProfile();
+	const profile = await hero.exportUserProfile();
 
-  console.log(profile);
+	console.log(profile);
 
-  // await app.close();
+	// await app.close();
 } catch (e) {
-  // await app?.close();
-  console.error(e.toString());
+	// await app?.close();
+	console.error(e.toString());
 }
 
-console.timeLog('FreeBitco');
+console.timeLog("FreeBitco");
 
 // console.log('end');

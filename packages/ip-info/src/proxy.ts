@@ -1,4 +1,4 @@
-import crypto from 'crypto';
+import crypto from "node:crypto";
 
 /**
  * Generates a random username by wrapping a UUID with 'x' characters.
@@ -8,4 +8,4 @@ import crypto from 'crypto';
 export const getRandomUsername = (): string => `x${crypto.randomUUID()}x`;
 
 export const getProxyUrl = (username: string = getRandomUsername()) =>
-  `http://${username}:pass@127.0.0.1:8118`;
+	`http://${username}:pass@127.0.0.1:8118`;
