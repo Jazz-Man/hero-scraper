@@ -1,5 +1,5 @@
-import getPublicIP, { type IPInfo } from "./index";
-import { getRandomUsername } from "./src/proxy";
+import getPublicIP, { type IPInfo } from "./index.ts";
+import { getRandomUsername } from "./src/proxy.ts";
 
 const promises = [];
 
