@@ -3,7 +3,7 @@ const sanitize = (msg: string) => msg.replace(/[^a-zA-Z0-9 ]/g, "");
 export function createFlagDecorator(propertyGetter: string, errorMsg: string) {
 	return () => {
 		return (
-			target: { [key: string]: any },
+			target: { [key: string]: unknown },
 			key: string,
 			descriptor: PropertyDescriptor,
 		) => {
@@ -14,13 +14,14 @@ export function createFlagDecorator(propertyGetter: string, errorMsg: string) {
 
 			const originalFunc = descriptor.value;
 
-			descriptor.value = function (...args: any[]) {
-				const propertyValue = Reflect.get(target, propertyGetter);
+			descriptor.value = function (...args: unknown[]) {
+				const propertyValue = Reflect.get(target, propertyGetter) as (
+					...args: unknown[]
+				) => boolean;
 				if (propertyValue.apply(this)) {
 					return originalFunc.apply(this, args);
-				} else {
-					throw new Error(sanitize(errorMsg).replace("$key", key));
 				}
+				throw new Error(sanitize(errorMsg).replace("$key", key));
 			};
 		};
 	};

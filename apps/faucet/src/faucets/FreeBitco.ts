@@ -64,6 +64,7 @@ export default class FreeBitco extends FaucetBase {
 		url: string,
 		bodyParams: TAjaxRequestParams,
 	): Promise<string> {
+		// biome-ignore lint/suspicious/noAsyncPromiseExecutor: <explanation>
 		return new Promise<string>(async (resolve, reject) => {
 			const params = new URLSearchParams(bodyParams);
 
@@ -99,6 +100,7 @@ export default class FreeBitco extends FaucetBase {
 		url: string,
 		bodyParams: TAjaxRequestParams,
 	): Promise<T> {
+		// biome-ignore lint/suspicious/noAsyncPromiseExecutor: <explanation>
 		return new Promise<T>(async (resolve, reject) => {
 			const params = new URLSearchParams(bodyParams);
 
@@ -145,6 +147,7 @@ export default class FreeBitco extends FaucetBase {
 	}
 
 	async getCurrentAddressAndBalance(): Promise<TCurrentAddressAndBalance> {
+		// biome-ignore lint/suspicious/noAsyncPromiseExecutor: <explanation>
 		return new Promise(async (resolve, reject) => {
 			try {
 				const response = await this.ajaxGetRequest<string>("/", {
@@ -330,6 +333,7 @@ export default class FreeBitco extends FaucetBase {
 	@needsInit()
 	@needsPageReady()
 	async getTurnstileResponse<T extends string>(type: TCfType): Promise<T> {
+		// biome-ignore lint/suspicious/noAsyncPromiseExecutor: <explanation>
 		return new Promise<T>(async (resolve, reject) => {
 			const selectors: TCfTypeSelectors = {
 				free_play: "#freeplay_form_cf_turnstile",
