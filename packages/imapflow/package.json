@@ -1,0 +1,19 @@
+{
+  "name": "@scraper/imapflow",
+  "module": "index.ts",
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/imap": "0.8.42",
+    "@types/mailparser": "3.4.5"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "html-entities-decode": "1.0.2",
+    "imap": "0.8.19",
+    "mailparser": "3.7.2"
+  }
+}
