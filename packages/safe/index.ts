@@ -135,6 +135,7 @@ function safeAsyncPromise<T>(
 	promise: Promise<T>,
 	options?: TSafePromiseOptions,
 ): Promise<T> {
+	// biome-ignore lint/suspicious/noAsyncPromiseExecutor: <explanation>
 	return new Promise<T>(async (resolve, reject) => {
 		const res = await safeAsync<T>(promise, {
 			logError: options?.logError,
