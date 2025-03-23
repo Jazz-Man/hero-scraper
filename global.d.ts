@@ -1,3 +1,5 @@
+/// <reference types="threads" />
+
 interface FetchRequestInit extends RequestInit {
 	/**
 	 * Log the raw HTTP request & response to stdout. This API may be
