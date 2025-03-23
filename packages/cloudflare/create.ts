@@ -1,5 +1,5 @@
 import faker from "@scraper/faker";
-import { cfClient, zoneList } from "./index";
+import { cfClient, zoneList } from "./index.ts";
 
 const zones = await zoneList();
 
