@@ -31,6 +31,7 @@
 		"inlineSourceMap": true,
 		"useUnknownInCatchVariables": false,
 		"experimentalDecorators": true,
+		"emitDecoratorMetadata": true,
 		"strictPropertyInitialization": false
 	},
 	"include": ["app/**/**/*.ts", "packages/**/**/*.ts", "*.d.ts"],
