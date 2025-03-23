@@ -3,15 +3,15 @@
 		// Enable latest features
 		"lib": ["ESNext", "DOM"],
 		"target": "ESNext",
-		"module": "ESNext",
+		"module": "NodeNext",
 		"moduleDetection": "auto",
 		"allowJs": true,
 
 		// Bundler mode
-		"moduleResolution": "node",
+		"moduleResolution": "nodenext",
 		"allowImportingTsExtensions": true,
 		"allowSyntheticDefaultImports": true,
-		"verbatimModuleSyntax": true,
+		// "verbatimModuleSyntax": true,
 		"noEmit": true,
 
 		// Best practices
@@ -27,7 +27,7 @@
 		"forceConsistentCasingInFileNames": true,
 
 		"newLine": "LF",
-		//    "esModuleInterop": true,
+		// "esModuleInterop": true,
 		"inlineSourceMap": true,
 		"useUnknownInCatchVariables": false,
 		"experimentalDecorators": true,
