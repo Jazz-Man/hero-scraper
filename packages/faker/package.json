@@ -6,6 +6,11 @@
 	"devDependencies": {
 		"@types/bun": "latest"
 	},
+	"exports": {
+		".": {
+			"default": "./index.ts"
+		}
+	},
 	"peerDependencies": {
 		"typescript": "^5"
 	},
