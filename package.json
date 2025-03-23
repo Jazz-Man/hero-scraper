@@ -9,7 +9,8 @@
 	"scripts": {
 		"cloud:start": "bun --filter '@scraper/cloud' start",
 		"cf:delete": "bun --filter '@scraper/cloudflare' run delete.ts",
-		"cf:create": "bun --filter '@scraper/cloudflare' run create.ts"
+		"cf:create": "bun --filter '@scraper/cloudflare' run create.ts",
+		"imap:test": "bun --filter '@scraper/imapflow' run index.ts"
 	},
 	"workspaces": ["apps/*", "packages/*", "resolutions/*"],
 	"trustedDependencies": [

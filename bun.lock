@@ -92,7 +92,6 @@
     "packages/imapflow": {
       "name": "@scraper/imapflow",
       "dependencies": {
-        "html-entities-decode": "1.0.2",
         "imap": "0.8.19",
         "mailparser": "3.7.2",
       },
@@ -688,8 +687,6 @@
     "he": ["he@1.2.0", "", { "bin": { "he": "bin/he" } }, "sha512-F/1DnUGPopORZi0ni+CvrCgHQ5FyEAHRLSApuYWMmrbSwoN2Mn/7k+Gl38gJnR7yyDZk6WLXwiGod1JOWNDKGw=="],
 
     "header-generator": ["header-generator@2.1.62", "", { "dependencies": { "browserslist": "^4.21.1", "generative-bayesian-network": "^2.1.62", "ow": "^0.28.1", "tslib": "^2.4.0" } }, "sha512-L4y1Fush4bkC/3zEurWjiwzeuekAH3HMYA508EZDmvk1wPmcbpV/mq3u3d3fxq7v4oPmaCfsRm1T5DUH19uikA=="],
-
-    "html-entities-decode": ["html-entities-decode@1.0.2", "", {}, "sha512-dXeAN5/DVTdCfxmKSzvNuuCX/mMDrlPWJbqJKr9qGRuD+NPacHkvfYMhv6KfuPWJisPzla/6z1e8eWzKcr3ggQ=="],
 
     "html-escaper": ["html-escaper@3.0.3", "", {}, "sha512-RuMffC89BOWQoY0WKGpIhn5gX3iI54O6nRA0yC124NYVtzjmFWBIiFd8M0x+ZdX0P9R4lADg1mgP8C7PxGOWuQ=="],
 

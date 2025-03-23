@@ -12,8 +12,10 @@
 	"private": true,
 	"type": "module",
 	"dependencies": {
-		"html-entities-decode": "1.0.2",
 		"imap": "0.8.19",
 		"mailparser": "3.7.2"
+	},
+	"scripts": {
+		"test:imap": "bun run index.ts"
 	}
 }
