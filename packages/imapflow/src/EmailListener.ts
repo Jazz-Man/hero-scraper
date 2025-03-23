@@ -7,6 +7,8 @@ import Imap, {
 } from "imap";
 import { type ParsedMail, simpleParser } from "mailparser";
 
+export type TParsedMail = ParsedMail;
+
 type TSearchCriteria =
 	| "ALL"
 	| "ANSWERED"
@@ -56,7 +58,7 @@ export class EmailListener extends EventEmitter<{
 	error: [Error];
 	"server:connected": [];
 	"server:disconnected": [];
-	mail: [ParsedMail, number, ImapMessageAttributes];
+	mail: [TParsedMail, number, ImapMessageAttributes];
 }> {
 	#imap: Imap;
 
@@ -84,8 +86,8 @@ export class EmailListener extends EventEmitter<{
 			password: options.password,
 			host: options.host,
 			port: options.port,
-			tls: options.tls,
-			tlsOptions: options.tlsOptions,
+			tls: options.tls || true,
+			tlsOptions: options.tlsOptions || { rejectUnauthorized: false },
 			connTimeout: options.connTimeout,
 			authTimeout: options.authTimeout,
 			debug: options.debug,
@@ -164,7 +166,7 @@ export class EmailListener extends EventEmitter<{
 			});
 
 			stream.once("end", () => {
-				simpleParser(data, (err1: Error | undefined, mail: ParsedMail) => {
+				simpleParser(data, (err1: Error | undefined, mail: TParsedMail) => {
 					if (err1) {
 						this.emit("error", err1);
 						return;
