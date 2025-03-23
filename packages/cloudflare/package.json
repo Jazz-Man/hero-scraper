@@ -4,7 +4,7 @@
   "private": true,
   "main": "index.ts",
   "scripts": {
-    "cf:delete": "bun run delete.ts",
+    "delete": "bun run delete.ts",
     "cf:create": "bun run create.ts"
   },
   "exports": {
