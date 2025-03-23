@@ -32,7 +32,7 @@ export type TUsersWithCookies = Prisma.PromiseReturnType<
 export const getUserListWithCookies = (limit: number = 50) =>
   db.user.findMany({
     where: {
-      hasAccount: true
+      hasAccount: false
     },
     take: limit,
     include: {
@@ -59,7 +59,7 @@ export type TUserCookies = TUsersWithCookies['cookies'];
 
 export type TSameSiteCookie = $Enums.SameSite;
 
-export const updateUserCookies = async (
+export const updateSignupUserCookies = async (
   userUsername: string,
   cookies: TUserCookies | undefined
 ) => {
@@ -68,6 +68,15 @@ export const updateUserCookies = async (
   }
 
   await db.$transaction(async (tx) => {
+    await tx.user.update({
+      where: {
+        username: userUsername
+      },
+      data: {
+        hasAccount: true
+      }
+    });
+
     for (const cookie of cookies) {
       await tx.userCookies.upsert({
         where: {
