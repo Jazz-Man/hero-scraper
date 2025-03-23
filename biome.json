@@ -19,10 +19,7 @@
 	"linter": {
 		"enabled": true,
 		"rules": {
-			"recommended": true,
-			"suspicious": {
-				"noAsyncPromiseExecutor": "off"
-			}
+			"recommended": true
 		}
 	},
 	"javascript": {

@@ -1,19 +1,19 @@
 {
-  "name": "@scraper/ip-info",
-  "version": "0.0.0",
-  "private": true,
-  "main": "index.ts",
-  "exports": {
-    ".": {
-      "default": "./index.ts"
-    }
-  },
-  "dependencies": {
-    "@scraper/fetch": "workspace:*",
-    "@scraper/safe": "workspace:*",
-    "geoip-lite": "1.4.10"
-  },
-  "devDependencies": {
-    "@types/geoip-lite": "1.4.4"
-  }
+	"name": "@scraper/ip-info",
+	"version": "0.0.0",
+	"private": true,
+	"main": "index.ts",
+	"exports": {
+		".": {
+			"default": "./index.ts"
+		}
+	},
+	"dependencies": {
+		"@scraper/fetch": "workspace:*",
+		"@scraper/safe": "workspace:*",
+		"geoip-lite": "1.4.10"
+	},
+	"devDependencies": {
+		"@types/geoip-lite": "1.4.4"
+	}
 }

@@ -1,2 +1,2 @@
-const Database = require('./database.js').default;
+const Database = require("./database.js").default;
 module.exports = Database;

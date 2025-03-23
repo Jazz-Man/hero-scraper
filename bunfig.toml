@@ -19,6 +19,10 @@ saveTextLockfile = true
 save = true
 
 
+[define]
+"process.env.bagel" = "'lox'"
+
+
 [run]
 # default outside of Windows
 shell = "system"

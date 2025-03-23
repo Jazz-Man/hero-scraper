@@ -1,30 +1,30 @@
 {
-  "name": "@scraper/hero",
-  "version": "0.0.0",
-  "private": true,
-  "main": "index.ts",
-  "exports": {
-    ".": {
-      "default": "./index.ts"
-    }
-  },
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "dependencies": {
-    "@scraper/decorators": "workspace:*",
-    "@scraper/ip-info": "workspace:*",
-    "@scraper/safe": "workspace:*",
-    "@ulixee/awaited-dom": "1.4.2",
-    "@ulixee/commons": "2.0.0-alpha.31",
-    "@ulixee/execute-js-plugin": "2.0.0-alpha.31",
-    "@ulixee/hero": "2.0.0-alpha.31",
-    "@ulixee/hero-interfaces": "2.0.0-alpha.31",
-    "@ulixee/real-user-agents": "2.0.0-alpha.31",
-    "@ulixee/unblocked-specification": "2.0.0-alpha.31",
-    "fingerprint-generator": "^2.1.62"
-  },
-  "devDependencies": {
-    "@scraper/prisma": "workspace:*"
-  }
+	"name": "@scraper/hero",
+	"version": "0.0.0",
+	"private": true,
+	"main": "index.ts",
+	"exports": {
+		".": {
+			"default": "./index.ts"
+		}
+	},
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"dependencies": {
+		"@scraper/decorators": "workspace:*",
+		"@scraper/ip-info": "workspace:*",
+		"@scraper/safe": "workspace:*",
+		"@ulixee/awaited-dom": "1.4.2",
+		"@ulixee/commons": "2.0.0-alpha.31",
+		"@ulixee/execute-js-plugin": "2.0.0-alpha.31",
+		"@ulixee/hero": "2.0.0-alpha.31",
+		"@ulixee/hero-interfaces": "2.0.0-alpha.31",
+		"@ulixee/real-user-agents": "2.0.0-alpha.31",
+		"@ulixee/unblocked-specification": "2.0.0-alpha.31",
+		"fingerprint-generator": "^2.1.62"
+	},
+	"devDependencies": {
+		"@scraper/prisma": "workspace:*"
+	}
 }

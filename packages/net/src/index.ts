@@ -1,5 +1,5 @@
-import { TorClient } from "./client.ts";
 import { BunTCPClient } from "./bun.ts";
+import { TorClient } from "./client.ts";
 import Parser from "./lib/Parser.ts";
 import { NodeTCPClient } from "./node.ts";
 

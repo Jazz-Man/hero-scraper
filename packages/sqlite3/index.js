@@ -1,1 +1,1 @@
-module.exports = require('./js/database');
+module.exports = require("./js/database");

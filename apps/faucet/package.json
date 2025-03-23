@@ -1,20 +1,20 @@
 {
-  "name": "@scraper/faucet",
-  "module": "src/index.ts",
-  "type": "module",
-  "private": true,
-  "devDependencies": {
-    "@types/bun": "latest"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
-  },
-  "dependencies": {
-    "@scraper/decorators": "workspace:*",
-    "@scraper/hero": "workspace:*",
-    "@scraper/otp": "workspace:*",
-    "@scraper/prisma": "workspace:*",
-    "@scraper/safe": "workspace:*",
-    "threads": "1.7.0"
-  }
+	"name": "@scraper/faucet",
+	"module": "src/index.ts",
+	"type": "module",
+	"private": true,
+	"devDependencies": {
+		"@types/bun": "latest"
+	},
+	"peerDependencies": {
+		"typescript": "^5"
+	},
+	"dependencies": {
+		"@scraper/decorators": "workspace:*",
+		"@scraper/hero": "workspace:*",
+		"@scraper/otp": "workspace:*",
+		"@scraper/prisma": "workspace:*",
+		"@scraper/safe": "workspace:*",
+		"threads": "1.7.0"
+	}
 }

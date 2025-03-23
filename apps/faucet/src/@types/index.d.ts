@@ -1,6 +1,6 @@
-import type { TUserCookies } from '@scraper/prisma';
+import type { TUserCookies } from "@scraper/prisma";
 
 export type TWorkerResult = {
-  username: string;
-  cookies: TUserCookies | undefined;
+	username: string;
+	cookies: TUserCookies | undefined;
 };

@@ -1,31 +1,27 @@
 {
-  "name": "scraper",
-  "engines": {
-    "node": ">=22.0.0",
-    "pnpm": ">=9.0.0",
-    "bun": ">=1.1.0"
-  },
-  "private": true,
-  "scripts": {
-    "cloud:start": "bun --filter '@scraper/cloud' start",
-    "cf:delete": "bun --filter '@scraper/cloudflare' run delete.ts",
-    "cf:create": "bun --filter '@scraper/cloudflare' run create.ts"
-  },
-  "workspaces": [
-    "apps/*",
-    "packages/*",
-    "resolutions/*"
-  ],
-  "trustedDependencies": [
-    "@prisma/client",
-    "@prisma/engines",
-    "@ulixee/chrome-131-0",
-    "@ulixee/unblocked-agent-mitm-socket",
-    "better-sqlite3",
-    "esbuild",
-    "prisma"
-  ],
-  "resolutions": {
-    "utf7": "npm:utf7@workspace:*"
-  }
+	"name": "scraper",
+	"engines": {
+		"node": ">=22.0.0",
+		"pnpm": ">=9.0.0",
+		"bun": ">=1.1.0"
+	},
+	"private": true,
+	"scripts": {
+		"cloud:start": "bun --filter '@scraper/cloud' start",
+		"cf:delete": "bun --filter '@scraper/cloudflare' run delete.ts",
+		"cf:create": "bun --filter '@scraper/cloudflare' run create.ts"
+	},
+	"workspaces": ["apps/*", "packages/*", "resolutions/*"],
+	"trustedDependencies": [
+		"@prisma/client",
+		"@prisma/engines",
+		"@ulixee/chrome-131-0",
+		"@ulixee/unblocked-agent-mitm-socket",
+		"better-sqlite3",
+		"esbuild",
+		"prisma"
+	],
+	"resolutions": {
+		"utf7": "npm:utf7@workspace:*"
+	}
 }

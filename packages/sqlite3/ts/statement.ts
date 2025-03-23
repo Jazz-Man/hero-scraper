@@ -1,11 +1,11 @@
-// @ts-ignore
-import type { ColumnDefinition } from "better-sqlite3";
 import type {
 	Database as BunDatabase,
 	Statement as BunStatementType,
 	Changes,
 	SQLQueryBindings,
 } from "bun:sqlite";
+// @ts-ignore
+import type { ColumnDefinition } from "better-sqlite3";
 import type { IStatement } from "./types";
 
 type StatementParams<T extends SQLQueryBindings[]> = T extends any[] ? T : [T];

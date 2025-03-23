@@ -1,8 +1,8 @@
 import {
+	type IDecoratorBase,
 	needsInit,
 	needsLogin,
 	needsPageReady,
-	type IDecoratorBase,
 } from "@scraper/decorators";
 import HeroApp, {
 	type IMousePositionXY,
@@ -11,9 +11,9 @@ import HeroApp, {
 	type TTab,
 } from "@scraper/hero";
 import {
-	updateSignupUserCookies,
 	type TUserCookies,
 	type TUsersWithCookies,
+	updateSignupUserCookies,
 } from "@scraper/prisma";
 
 export interface IFaucet extends IDecoratorBase {
