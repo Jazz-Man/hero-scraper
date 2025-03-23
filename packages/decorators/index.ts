@@ -2,11 +2,8 @@ const sanitize = (msg: string) => msg.replace(/[^a-zA-Z0-9 ]/g, "");
 
 export function createFlagDecorator(propertyGetter: string, errorMsg: string) {
 	return () => {
-		return (
-			target: { [key: string]: unknown },
-			key: string,
-			descriptor: PropertyDescriptor,
-		) => {
+		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+		return (target: any, key: string, descriptor: PropertyDescriptor) => {
 			if (!Reflect.has(target, propertyGetter))
 				throw new Error(
 					`Target does not contain getter for '${sanitize(propertyGetter)}'.`,
@@ -18,9 +15,11 @@ export function createFlagDecorator(propertyGetter: string, errorMsg: string) {
 				const propertyValue = Reflect.get(target, propertyGetter) as (
 					...args: unknown[]
 				) => boolean;
+
 				if (propertyValue.apply(this)) {
 					return originalFunc.apply(this, args);
 				}
+
 				throw new Error(sanitize(errorMsg).replace("$key", key));
 			};
 		};
