@@ -1,14 +1,15 @@
 import fetch from "@scraper/fetch";
 import Cloudflare from "cloudflare";
+import type { Fetch } from "cloudflare/core";
 import type { Zone } from "cloudflare/resources/zones/zones";
-import type { EmailRoutingRule } from "cloudflare/src/resources/email-routing/rules/rules.ts";
 
 export const cfClient = new Cloudflare({
 	apiToken: Bun.env.CF_API_TOKEN,
-	fetch,
+	fetch: fetch as unknown as Fetch,
 });
 
 export const zoneList = (): Promise<Zone[]> => {
+	// biome-ignore lint/suspicious/noAsyncPromiseExecutor: <explanation>
 	return new Promise(async (resolve, reject) => {
 		try {
 			const zoneList = await cfClient.zones.list({
@@ -33,7 +34,7 @@ export const emailRoutingList = async (
 	zone_id: string,
 	per_page = 50,
 ): Promise<TEmailRule[]> => {
-	const rules: EmailRoutingRule[] = [];
+	const rules: Cloudflare.EmailRouting.Rules.EmailRoutingRule[] = [];
 
 	try {
 		let page = 1;
