@@ -1,11 +1,27 @@
 import { Database as BunDatabase, type SQLQueryBindings } from "bun:sqlite";
-import BunStatement from "./statement.ts";
+import BunStatement, { type IStatement } from "./statement.ts";
+
 import type {
-	IDatabaseBase,
+	Database as BetterSqliteDatabase,
 	SerializeOptions,
 	Transaction,
-	VirtualTableOptions,
-} from "./types";
+} from "better-sqlite3";
+
+interface IDatabaseBase
+	extends Omit<
+		BetterSqliteDatabase,
+		"prepare" | "memory" | "readonly" | "name"
+	> {
+	open: boolean;
+
+	prepare<ReturnType, ParamsType extends SQLQueryBindings | SQLQueryBindings[]>(
+		sqlQuery: string,
+		params?: ParamsType,
+	): IStatement<
+		ReturnType,
+		ParamsType extends unknown[] ? ParamsType : [ParamsType]
+	>;
+}
 
 type TOptions = {
 	readonly?: boolean | undefined;
@@ -25,6 +41,7 @@ export default class Database implements IDatabaseBase {
 	readonly = false;
 	open = false;
 
+	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 	prepare<ReturnType = unknown, ParamsType extends SQLQueryBindings[] = any[]>(
 		source: string,
 	): BunStatement<ReturnType, ParamsType> {
@@ -51,34 +68,42 @@ export default class Database implements IDatabaseBase {
 		return this.#db.inTransaction;
 	}
 
-	transaction<F extends (...params: any[]) => unknown>(fn: F): Transaction<F> {
+	transaction<F extends (...params: unknown[]) => unknown>(
+		fn: F,
+	): Transaction<F> {
 		return this.#db.transaction(fn) as Transaction<F>;
 	}
 
+	// @ts-ignore
 	exec(source: string): this {
 		this.#db.exec(source);
 		return this;
 	}
 
-	pragma(source: string, options?: any): this {
+	// @ts-ignore
+	pragma(source: string, options?: unknown): this {
 		return this.exec(`PRAGMA ${source}`);
 	}
 
-	aggregate(...params: any): this {
+	// @ts-ignore
+	aggregate(...params: unknown): this {
 		throw new Error("Method not implemented.");
 	}
 
+	// @ts-ignore
 	loadExtension(path: string): this {
 		this.#db.loadExtension(path);
 		return this;
 	}
 
+	// @ts-ignore
 	close(): this {
 		this.#db.close();
 		this.open = false;
 		return this;
 	}
 
+	// @ts-ignore
 	defaultSafeIntegers(toggleState: boolean | undefined = undefined): this {
 		if (!toggleState) {
 			return this;
@@ -92,14 +117,17 @@ export default class Database implements IDatabaseBase {
 		return this;
 	}
 
-	backup(...params: any) {
+	// @ts-ignore
+	backup(...params: unknown) {
 		throw new Error("Method not implemented.");
 	}
 
-	table(name: string, options: VirtualTableOptions): this {
+	// @ts-ignore
+	table(name: string, options: unknown): this {
 		throw new Error("Method not implemented.");
 	}
 
+	// @ts-ignore
 	unsafeMode(unsafe?: boolean): this {
 		// throw new Error('Method not implemented.');
 
@@ -110,7 +138,8 @@ export default class Database implements IDatabaseBase {
 		return this.#db.serialize(options?.attached);
 	}
 
-	function(...params: any): this {
+	// @ts-ignore
+	function(...params: unknown): this {
 		throw new Error("Method not implemented.");
 	}
 

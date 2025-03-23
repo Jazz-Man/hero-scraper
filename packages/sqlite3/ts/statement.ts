@@ -4,14 +4,23 @@ import type {
 	Changes,
 	SQLQueryBindings,
 } from "bun:sqlite";
-// @ts-ignore
-import type { ColumnDefinition } from "better-sqlite3";
-import type { IStatement } from "./types";
 
-type StatementParams<T extends SQLQueryBindings[]> = T extends any[] ? T : [T];
+import type { ColumnDefinition, Statement } from "better-sqlite3";
+
+export type StatementParams<T extends SQLQueryBindings[]> =
+	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+	T extends any[] ? T : [T];
+
+export interface IStatement<
+	Result = unknown,
+	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+	ParamsType extends SQLQueryBindings[] = any[],
+	// @ts-ignore
+> extends Omit<Statement<ParamsType, Result>, "database"> {}
 
 export default class BunStatement<
-	ReturnType = any,
+	ReturnType = unknown,
+	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 	ParamsType extends SQLQueryBindings[] = any[],
 > implements IStatement
 {
@@ -52,12 +61,10 @@ export default class BunStatement<
 		throw new Error("Method not implemented.");
 	}
 
-	// Виконання запиту з параметрами (run повертає інформацію про виконання)
 	run(...params: StatementParams<ParamsType>): Changes {
 		return this.#statement.run(...this.#prepareParams(params));
 	}
 
-	// Повернення першого результату запиту
 	get(...params: StatementParams<ParamsType>): ReturnType | null {
 		const result = this.#statement.get(...this.#prepareParams(params));
 
@@ -66,7 +73,8 @@ export default class BunStatement<
 		}
 
 		return this.#isPluck
-			? (Object.values(result as any).at(0) as ReturnType)
+			? // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+				(Object.values(result as any).at(0) as ReturnType)
 			: result;
 	}
 
@@ -76,19 +84,16 @@ export default class BunStatement<
 		return this.#params || params;
 	}
 
-	// Повернення всіх рядків запиту
 	all(...params: StatementParams<ParamsType>): ReturnType[] {
-		params = this.#prepareParams(params);
-
 		if (this.#isPluck) {
 			return this.#statement
-				.values(...params)
+				.values(...this.#prepareParams(params))
 				.map((result) => result.at(0)) as ReturnType[];
 		}
 
-		return this.#statement.all(...params);
+		return this.#statement.all(...this.#prepareParams(params));
 	}
-	// Ітерація по результатах запиту
+
 	iterate(
 		...params: StatementParams<ParamsType>
 	): IterableIterator<ReturnType> {
