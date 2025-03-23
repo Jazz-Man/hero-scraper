@@ -1,9 +1,10 @@
 import type { TUsersWithCookies } from "@scraper/prisma";
 import { expose } from "threads/worker";
 import type { TWorkerResult } from "../@types";
-import FreeBitco from "../faucets/FreeBitco.ts";
+import FreeBitco from "../faucets/FreeBitco";
 
 const appSignup = async (user: TUsersWithCookies): Promise<TWorkerResult> => {
+	// biome-ignore lint/suspicious/noAsyncPromiseExecutor: <explanation>
 	return new Promise(async (resolve, reject) => {
 		console.time("FreeBitco");
 
