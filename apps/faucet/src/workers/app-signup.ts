@@ -14,6 +14,9 @@ const appSignup = async (user: TUsersWithCookies): Promise<TWorkerResult> => {
 
       await app.initFaucet();
 
+      await app.login();
+      // await app.signup('54942375');
+
       const cookies = await app.getProfileCookies();
 
       await app.hero.close();

@@ -1,4 +1,7 @@
-import { getUserListWithCookies, updateUserCookies } from '@scraper/prisma';
+import {
+  getUserListWithCookies,
+  updateSignupUserCookies
+} from '@scraper/prisma';
 import { Pool, spawn, Worker } from 'threads';
 import type { TWorkerResult } from './@types';
 import type { TAppSignup } from './workers/app-signup.ts';
@@ -7,7 +10,7 @@ const pool = Pool(() => spawn(new Worker('./workers/app-signup')), {
   name: 'app-signup'
 });
 
-const userList = await getUserListWithCookies(200);
+const userList = await getUserListWithCookies(20);
 
 userList.forEach((user) => {
   const task = pool.queue(
@@ -17,7 +20,7 @@ userList.forEach((user) => {
     .then(async (result: TWorkerResult) => {
       console.log({ username: result.username });
 
-      await updateUserCookies(result.username, result.cookies);
+      await updateSignupUserCookies(result.username, result.cookies);
     })
     .catch((e) => {
       console.error(e.toString());
