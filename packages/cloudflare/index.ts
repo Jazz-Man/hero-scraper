@@ -36,10 +36,25 @@ export const emailRoutingList = async (
 ): Promise<TEmailRule[]> => {
 	const rules: Cloudflare.EmailRouting.Rules.EmailRoutingRule[] = [];
 
-	try {
-		let page = 1;
+	let page = 1;
 
-		let response = await cfClient.emailRouting.rules.list({
+	let response = await cfClient.emailRouting.rules.list({
+		zone_id,
+		enabled: true,
+		per_page,
+		page,
+	});
+
+	rules.push(...response.getPaginatedItems());
+
+	// @ts-ignore
+	const totalCount = response.result_info?.total_count || 0;
+	const totalPages = Math.ceil(totalCount / per_page);
+
+	for (let i = 2; i <= totalPages; i++) {
+		page = i;
+
+		response = await cfClient.emailRouting.rules.list({
 			zone_id,
 			enabled: true,
 			per_page,
@@ -47,25 +62,6 @@ export const emailRoutingList = async (
 		});
 
 		rules.push(...response.getPaginatedItems());
-
-		// @ts-ignore
-		const totalCount = response.result_info?.total_count || 0;
-		const totalPages = Math.ceil(totalCount / per_page);
-
-		for (let i = 2; i <= totalPages; i++) {
-			page = i;
-
-			response = await cfClient.emailRouting.rules.list({
-				zone_id,
-				enabled: true,
-				per_page,
-				page,
-			});
-
-			rules.push(...response.getPaginatedItems());
-		}
-	} catch (error) {
-		throw error;
 	}
 
 	return rules
