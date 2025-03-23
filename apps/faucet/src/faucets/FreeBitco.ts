@@ -1,8 +1,6 @@
 import { URLSearchParams } from "node:url";
 import { safePromise } from "@scraper/safe";
 
-import FaucetBase from "../FaucetBase.ts";
-
 import {
 	needsCsrfToken,
 	needsInit,
@@ -10,6 +8,8 @@ import {
 	needsPageReady,
 } from "@scraper/decorators";
 import getOtp from "@scraper/otp";
+
+import FaucetBase from "../FaucetBase";
 
 type TAjaxRequestParams = Record<string, string> | string | URLSearchParams;
 
