@@ -11,7 +11,7 @@ import HeroApp, {
   type TTab
 } from '@scraper/hero';
 import {
-  updateUserCookies,
+  updateSignupUserCookies,
   type TUserCookies,
   type TUsersWithCookies
 } from '@scraper/prisma';
@@ -88,7 +88,7 @@ export default abstract class FaucetBase implements IFaucet {
 
   async saveProfileCookies() {
     const profileCookies = await this.getProfileCookies();
-    await updateUserCookies(this.user.username, profileCookies);
+    await updateSignupUserCookies(this.user.username, profileCookies);
   }
 
   getIsPageReady(): boolean {
