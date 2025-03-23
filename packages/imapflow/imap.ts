@@ -57,7 +57,7 @@ imap.on("ready", () => {
 
 				f.on("message", (msg, seqno) => {
 					msg.on("body", (stream, info) => {
-						var buffer = "";
+						let buffer = "";
 						stream.on("data", (chunk) => {
 							buffer += chunk.toString("utf8");
 						});
