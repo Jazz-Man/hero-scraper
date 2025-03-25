@@ -16,6 +16,7 @@ for (const user of userList) {
 	const task = pool.queue(
 		async (appSignup: TAppSignup) => await appSignup(user),
 	);
+
 	task
 		.then(async (result: TWorkerResult) => {
 			console.log({ username: result.username });
