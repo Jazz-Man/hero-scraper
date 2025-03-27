@@ -1,0 +1,9 @@
+{
+	"extends": "@utils/tsconfig/tsconfig.json",
+	"display": "imapflow tsconfig",
+	"compilerOptions": {
+		"rootDir": ".",
+		"baseUrl": ".",
+		"noPropertyAccessFromIndexSignature": false
+	}
+}
