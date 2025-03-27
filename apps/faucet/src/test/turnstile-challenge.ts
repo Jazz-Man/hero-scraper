@@ -29,7 +29,7 @@ try {
 	// await app.close();
 } catch (e) {
 	// await app?.close();
-	console.error(e.toString());
+	console.error(e instanceof Error ? e.toString() : String(e));
 }
 
 console.timeLog("FreeBitco");

@@ -1,16 +1,24 @@
 {
 	"name": "@scraper/imapflow",
+	"main": "index.ts",
 	"module": "index.ts",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": {
+			"default": "./index.ts"
+		}
+	},
 	"devDependencies": {
 		"@types/bun": "latest",
 		"@types/imap": "0.8.42",
-		"@types/mailparser": "3.4.5"
+		"@types/mailparser": "3.4.5",
+		"@utils/tsconfig": "workspace:*"
 	},
 	"peerDependencies": {
 		"typescript": "^5"
 	},
-	"private": true,
-	"type": "module",
+
 	"dependencies": {
 		"imap": "0.8.19",
 		"mailparser": "3.7.2"

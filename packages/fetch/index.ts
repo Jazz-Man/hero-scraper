@@ -3,7 +3,7 @@ import { fetch as bunFetch } from "bun";
 
 const fetch = async (
 	url: RequestInfo | URL | string,
-	options?: FetchRequestInit,
+	options?: BunFetchRequestInit,
 ) =>
 	await safePromise<Response>(
 		bunFetch(url, {
@@ -11,7 +11,7 @@ const fetch = async (
 				rejectUnauthorized: false,
 			},
 			...options,
-		} as FetchRequestInit),
+		} as BunFetchRequestInit),
 		{
 			undefinedTest: false,
 			logError: true,

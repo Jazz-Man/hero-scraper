@@ -1,3 +1,5 @@
+/// <reference types="threads" />
+
 import type { TUserCookies } from "@scraper/prisma";
 
 export type TWorkerResult = {

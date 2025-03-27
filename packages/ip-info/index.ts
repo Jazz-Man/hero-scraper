@@ -6,8 +6,8 @@ import ipServices, {
 	type ServiceUrl,
 	oneLineServices,
 	getRandomizedServices,
-} from "./src/ipServices.ts";
-import { getProxyUrl, getRandomUsername } from "./src/proxy.ts";
+} from "./src/ipServices";
+import { getProxyUrl, getRandomUsername } from "./src/proxy";
 
 export type IPInfo = {
 	ip: string;

@@ -3,11 +3,10 @@ import { ProtocolError } from "./ProtocolError.ts";
 import type ProtocolReply from "./ProtocolReply.ts";
 import RouterDescriptor from "./RouterDescriptor.ts";
 
-interface AddrMap {
+interface AddrMap extends Record<string, any> {
 	ADDRESS: string;
 	NEWADDRESS: string;
 	EXPIRY: string;
-	[key: string]: any;
 }
 
 export type TProtocolInfo = {

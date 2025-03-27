@@ -11,7 +11,8 @@
 		}
 	},
 	"devDependencies": {
-		"@types/bun": "latest"
+		"@types/bun": "latest",
+		"@utils/tsconfig": "workspace:*"
 	},
 	"peerDependencies": {
 		"typescript": "^5"

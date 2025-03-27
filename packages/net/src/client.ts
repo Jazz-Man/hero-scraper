@@ -105,6 +105,7 @@ export class TorClient {
 	}
 
 	async authenticate(password?: string): Promise<string> {
+		// biome-ignore lint/suspicious/noAsyncPromiseExecutor: <explanation>
 		return new Promise(async (resolve, reject) => {
 			const buf = await this.sendCommand(`AUTHENTICATE "${password}"`);
 
@@ -119,6 +120,7 @@ export class TorClient {
 	}
 
 	async getProtocolInfo(): Promise<TProtocolInfo> {
+		// biome-ignore lint/suspicious/noAsyncPromiseExecutor: <explanation>
 		return new Promise(async (resolve, reject) => {
 			const response = await this.sendCommand("PROTOCOLINFO 1");
 
@@ -427,6 +429,7 @@ export class TorClient {
 		const response = await this.sendCommand(`GETCONF ${keywords}`);
 		const reply = await this.handleResponse(response, "GETCONF");
 
+		// biome-ignore lint/suspicious/noAsyncPromiseExecutor: <explanation>
 		return new Promise(async (resolve, reject) => {
 			// if (!reply.isPositiveReply()) {
 			//   reject(reply.get(0));
