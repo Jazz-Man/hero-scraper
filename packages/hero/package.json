@@ -25,6 +25,7 @@
 		"fingerprint-generator": "^2.1.62"
 	},
 	"devDependencies": {
-		"@scraper/prisma": "workspace:*"
+		"@scraper/prisma": "workspace:*",
+		"@utils/tsconfig": "workspace:*"
 	}
 }

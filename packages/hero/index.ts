@@ -618,13 +618,12 @@ export default class HeroApp extends DecoratorBaseClass {
 			(cookie) => cookie.name?.length > 0 && cookie.name !== "undefined",
 		);
 
-		// @ts-ignore
 		return cookies?.map((cookie) => ({
 			name: cookie.name,
 			value: cookie.value,
 			domain: cookie.domain as string,
 			path: cookie.path as string,
-			expires: cookie.expires,
+			expires: cookie.expires ? new Date(cookie.expires) : null,
 			secure: cookie.secure as boolean,
 			httpOnly: cookie.httpOnly as boolean,
 			sameSite: cookie.sameSite as TSameSiteCookie,

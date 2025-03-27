@@ -1,10 +1,10 @@
 import { EmailListener, type TParsedMail } from "./src/EmailListener.ts";
 
 const listener = new EmailListener({
-	user: Bun.env.EMAIL_ADDRESS,
-	password: Bun.env.EMAIL_PASSWORD,
+	user: Bun.env.EMAIL_ADDRESS ?? "",
+	password: Bun.env.EMAIL_PASSWORD ?? "",
 	host: Bun.env.IMAP_SERVER,
-	port: Bun.env.IMAP_PORT,
+	port: Number.parseInt(Bun.env.IMAP_PORT as string),
 	searchFilter: [
 		["FROM", "freebitco.in"],
 		["SUBJECT", "Email confirmation"],

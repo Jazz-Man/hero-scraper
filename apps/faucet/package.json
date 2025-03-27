@@ -15,6 +15,7 @@
 		"@scraper/otp": "workspace:*",
 		"@scraper/prisma": "workspace:*",
 		"@scraper/safe": "workspace:*",
+		"@utils/tsconfig": "workspace:*",
 		"threads": "1.7.0"
 	}
 }

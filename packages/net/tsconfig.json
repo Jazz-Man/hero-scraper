@@ -1,0 +1,8 @@
+{
+	"extends": "@utils/tsconfig/tsconfig.json",
+	"display": "net tsconfig",
+	"compilerOptions": {
+		"rootDir": ".",
+		"baseUrl": "."
+	}
+}

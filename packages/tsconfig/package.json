@@ -1,8 +1,8 @@
 {
-	"name": "@scraper/decorators",
+	"name": "@utils/tsconfig",
+	"private": true,
 	"module": "index.ts",
 	"type": "module",
-	"private": true,
 	"devDependencies": {
 		"@types/bun": "latest"
 	},
@@ -10,6 +10,6 @@
 		"typescript": "^5"
 	},
 	"dependencies": {
-		"@utils/tsconfig": "workspace:*"
+		"@tsconfig/bun": "1.0.7"
 	}
 }

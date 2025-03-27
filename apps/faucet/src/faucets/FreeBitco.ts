@@ -141,6 +141,7 @@ export default class FreeBitco extends FaucetBase {
 
 				resolve(res);
 			} catch (error) {
+				// @ts-ignore
 				reject(`Failed to parse response: ${error.message}`);
 			}
 		});

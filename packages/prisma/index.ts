@@ -1,5 +1,5 @@
 import type { $Enums, Prisma } from "./client";
-import db from "./db.ts";
+import db from "./db";
 
 export * from "./client";
 
