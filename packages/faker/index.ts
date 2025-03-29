@@ -1,5 +1,5 @@
-import { Faker as FakerBase, en_US } from "@faker-js/faker";
+import { Faker as FakerBase, base, en, en_US } from "@faker-js/faker";
 
-const faker = new FakerBase({ locale: [en_US] });
+const faker = new FakerBase({ locale: [en_US, en, base] });
 
 export default faker;
