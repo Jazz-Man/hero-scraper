@@ -7,7 +7,7 @@
 		"db:ui": "prisma studio --schema=./prisma/schema.prisma --browser none",
 		"db:migrate:dev": "prisma migrate dev",
 		"db:reset": "prisma migrate reset --skip-seed -f",
-		"postdb:reset": "pnpm db:push && pnpm db:seed",
+		"postdb:reset": "bun db:push && bun db:seed",
 		"db:migrate:deploy": "prisma migrate deploy",
 		"db:migrate:resolve": "prisma migrate resolve",
 		"db:migrate:status": "prisma migrate status",
