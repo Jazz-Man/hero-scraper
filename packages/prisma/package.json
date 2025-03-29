@@ -5,6 +5,7 @@
 	"main": "index.ts",
 	"scripts": {
 		"db:ui": "prisma studio --schema=./prisma/schema.prisma --browser none",
+		"predb:ui": "bun db:migrate:deploy",
 		"db:migrate:dev": "prisma migrate dev",
 		"db:reset": "prisma migrate reset --skip-seed -f",
 		"postdb:reset": "bun db:push && bun db:seed",
