@@ -27,12 +27,14 @@ model EmailRule {
 }
 
 model User {
-  username   String        @id @unique
-  password   String
-  hasAccount Boolean       @default(false)
-  tfa_secret String?
-  email      EmailRule     @relation(fields: [username], references: [email], onDelete: Cascade)
-  cookies    UserCookies[]
+  username      String        @id @unique
+  password      String
+  hasAccount    Boolean       @default(false)
+  hasConfigured Boolean       @default(false)
+  emailVerified Boolean       @default(false)
+  tfa_secret    String?
+  email         EmailRule     @relation(fields: [username], references: [email], onDelete: Cascade)
+  cookies       UserCookies[]
 }
 
 model UserCookies {
