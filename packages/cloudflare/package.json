@@ -6,7 +6,7 @@
 	"type": "module",
 	"scripts": {
 		"delete": "bun run delete.ts",
-		"cf:create": "bun run create.ts"
+		"create": "bun run create.ts"
 	},
 	"exports": {
 		".": {
