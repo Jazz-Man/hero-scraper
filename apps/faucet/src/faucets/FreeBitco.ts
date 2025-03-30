@@ -193,11 +193,10 @@ export default class FreeBitco extends FaucetBase {
 			op: "login_new",
 			btc_address: this.user.username,
 			password: this.user.password,
+			...(typeof this.user.tfa_secret === "string"
+				? { tfa_code: getOtp(this.user.tfa_secret) }
+				: {}),
 		};
-
-		if (this.user.tfa_secret) {
-			params.tfa_code = getOtp(this.user.tfa_secret);
-		}
 
 		const loginStatus = await this.ajaxPostRequest("/", params);
 
