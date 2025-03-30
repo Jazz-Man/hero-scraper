@@ -11,7 +11,7 @@ import getOtp from "@scraper/otp";
 
 import FaucetBase from "../FaucetBase";
 
-type TAjaxRequestParams = Record<string, string> | string | URLSearchParams;
+type TAjaxRequestParams = ConstructorParameters<typeof URLSearchParams>[0];
 
 type TCurrentAddressAndBalance = {
 	profile_withdraw_address: string;
@@ -300,11 +300,11 @@ export default class FreeBitco extends FaucetBase {
 			fingerprint,
 			captcha_type: "77",
 			cf_captcha_response,
-		};
 
-		if (referrer) {
-			params.referrer = referrer;
-		}
+			...(typeof referrer === "string" && referrer.length > 0
+				? { referrer }
+				: {}),
+		};
 
 		const signupStatus = await this.ajaxPostRequest("/", params);
 
@@ -331,6 +331,58 @@ export default class FreeBitco extends FaucetBase {
 		});
 	}
 
+	private async handleCaptcha(rootSelector: string): Promise<void> {
+		const shadowRoot = await this.app.queryElement(`${rootSelector} > div`, {
+			waitForVisible: true,
+		});
+
+		const iframe = await shadowRoot.shadowRoot
+			?.querySelector("iframe")
+			.$waitForVisible();
+
+		if (!iframe) {
+			throw new Error("captcha failed: iframe not found");
+		}
+
+		const iframeEnv = await this.hero.getFrameEnvironment(iframe);
+
+		if (!iframeEnv) {
+			throw new Error("captcha failed: iframe environment not found");
+		}
+
+		const iframeBody = await iframeEnv.document
+			.querySelector("body")
+			.$waitForVisible();
+
+		if (!iframeBody) {
+			throw new Error("captcha failed: iframe body not found");
+		}
+
+		await iframeBody.shadowRoot.normalize();
+
+		// wait for verification
+		await iframeBody.shadowRoot
+			.querySelector("div.main-wrapper #verifying")
+			.$waitForHidden();
+
+		const successBox = iframeBody.shadowRoot.querySelector(
+			"div.main-wrapper #success",
+		);
+
+		const isSuccess = await successBox?.$isVisible;
+
+		if (!isSuccess) {
+			const checkbox = iframeBody.shadowRoot.querySelector(
+				"div.main-wrapper label.cb-lb",
+			);
+
+			if (await checkbox?.$isVisible) {
+				await checkbox?.$click();
+				await this.hero.waitForMillis(1000);
+			}
+		}
+	}
+
 	@needsInit()
 	@needsPageReady()
 	async getTurnstileResponse<T extends string>(type: TCfType): Promise<T> {
@@ -341,13 +393,13 @@ export default class FreeBitco extends FaucetBase {
 				signup_form: "#signup_form_cf_turnstile",
 			};
 
-			if (!selectors.hasOwnProperty(type)) {
+			if (!(type in selectors)) {
 				reject(new Error(`invalid cf type: ${type}`));
 
 				return;
 			}
 
-			await this.handleTurnstileChallenge();
+			await this.handleCaptcha(selectors[type]);
 
 			const value = await this.app.getInputValue<T>(
 				`${selectors[type]} [name='cf-turnstile-response']`,
