@@ -5,7 +5,6 @@ import {
 	needsPageReady,
 } from "@scraper/decorators";
 import HeroApp, {
-	type IMousePositionXY,
 	type THero,
 	type THeroOptions,
 	type TTab,
@@ -119,44 +118,5 @@ export default abstract class FaucetBase implements IFaucet {
 		this.activeTab = this._app.activeTab;
 
 		this.isFaucetReady = true;
-	}
-
-	@needsInit()
-	async handleTurnstileChallenge() {
-		const frames = await this.hero.frameEnvironments;
-
-		for (const frame of frames) {
-			const isMainFrame = await frame.isMainFrame;
-			const url = await frame.url;
-
-			if (isMainFrame) {
-				continue;
-			}
-
-			if (!url.includes("challenges.cloudflare.com")) {
-				continue;
-			}
-
-			await frame.waitForLoad("AllContentLoaded");
-			await frame.waitForPaintingStable();
-
-			const body = frame.document.body;
-
-			const isVisible = await body.$isVisible;
-
-			if (!isVisible) {
-				continue;
-			}
-
-			const checkbox = body.shadowRoot?.querySelector(
-				"div.main-wrapper label.cb-lb",
-			);
-
-			if (await checkbox?.$isVisible) {
-				await checkbox?.click();
-
-				await this.hero.waitForMillis(1000);
-			}
-		}
 	}
 }
