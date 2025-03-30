@@ -10,7 +10,7 @@ const pool = Pool(() => spawn(new Worker("./workers/app-signup")), {
 	name: "app-signup",
 });
 
-const userList = await getUserListWithCookies(20);
+const userList = await getUserListWithCookies(10);
 
 for (const user of userList) {
 	const task = pool.queue(

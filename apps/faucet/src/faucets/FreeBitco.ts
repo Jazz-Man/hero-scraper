@@ -229,7 +229,7 @@ export default class FreeBitco extends FaucetBase {
 			{
 				showChrome: true,
 				showDevtools: true,
-				sessionPersistence: false,
+				// sessionPersistence: false,
 			},
 			this.user.cookies,
 		);
