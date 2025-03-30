@@ -305,6 +305,8 @@ export default class FreeBitco extends FaucetBase {
 				: {}),
 		};
 
+		console.log(params);
+
 		const signupStatus = await this.ajaxPostRequest("/", params);
 
 		const [status, ...signupData] = signupStatus?.split(":");
@@ -330,36 +332,59 @@ export default class FreeBitco extends FaucetBase {
 		});
 	}
 
+	@needsLogin()
+	async configureAccount(): Promise<void> {
+		const response = await this.ajaxGetRequest<string>("/", {
+			op: "toggle_lottery",
+			value: "1",
+		});
+
+		const [status, ...data] = response.split(":");
+
+		if (status !== "s") {
+			throw new Error(data.join(" "));
+		}
+
+		console.log("configureAccount", data.join(" "));
+	}
+
 	private async handleCaptcha(rootSelector: string): Promise<void> {
+		const turnstileResponse = await this.app.waitForExists(
+			`${rootSelector} > div [name="cf-turnstile-response"]`,
+		);
+
+		if (!turnstileResponse) {
+			throw new Error("Turnstile response not found");
+		}
+
 		const shadowRoot = await this.app.queryElement(`${rootSelector} > div`, {
 			waitForVisible: true,
 		});
 
-		const iframe = await shadowRoot.shadowRoot
+		const topFrame = await shadowRoot.shadowRoot
 			?.querySelector("iframe")
 			.$waitForVisible();
 
-		if (!iframe) {
-			throw new Error("captcha failed: iframe not found");
+		if (!topFrame) {
+			throw new Error("Top frame not found");
 		}
 
-		const iframeEnv = await this.hero.getFrameEnvironment(iframe);
+		const topIframeEnv = await this.hero.getFrameEnvironment(topFrame);
 
-		if (!iframeEnv) {
-			throw new Error("captcha failed: iframe environment not found");
+		if (!topIframeEnv) {
+			throw new Error("Top iframe environment not found");
 		}
 
-		const iframeBody = await iframeEnv.document
+		const iframeBody = await topIframeEnv.document
 			.querySelector("body")
 			.$waitForVisible();
 
 		if (!iframeBody) {
-			throw new Error("captcha failed: iframe body not found");
+			throw new Error("Iframe body not found");
 		}
 
 		await iframeBody.shadowRoot.normalize();
 
-		// wait for verification
 		await iframeBody.shadowRoot
 			.querySelector("div.main-wrapper #verifying")
 			.$waitForHidden();
