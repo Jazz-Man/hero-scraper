@@ -510,7 +510,10 @@ export default class HeroApp extends DecoratorBaseClass {
 	}
 
 	@needsInit()
-	async waitForExists(selector: string, options?: IWaitForElementOptions) {
+	async waitForExists(
+		selector: string,
+		options?: IWaitForElementOptions,
+	): Promise<ISuperElement> {
 		return safePromise<ISuperElement>(
 			this.hero.document
 				.querySelector(selector)
