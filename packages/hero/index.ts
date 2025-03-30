@@ -13,6 +13,9 @@ import type ISetCookieOptions from "@ulixee/hero-interfaces/ISetCookieOptions";
 import type IWaitForElementOptions from "@ulixee/hero-interfaces/IWaitForElementOptions";
 import type CookieStorage from "@ulixee/hero/lib/CookieStorage";
 import Hero from "@ulixee/hero/lib/Hero";
+
+const HeroCore = require("@ulixee/hero-core");
+
 import type Resource from "@ulixee/hero/lib/Resource";
 import type ResourceResponse from "@ulixee/hero/lib/ResourceResponse";
 import type { ILocationTrigger } from "@ulixee/unblocked-specification/agent/browser/Location";
@@ -57,6 +60,8 @@ export type THeroAppOptions = {
 
 export type THero = Hero;
 export type TTab = Tab;
+
+HeroCore.use(ExecuteJsPlugin);
 
 export default class HeroApp extends DecoratorBaseClass {
 	private timezone: string | undefined;
