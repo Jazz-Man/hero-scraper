@@ -123,7 +123,7 @@ export default abstract class FaucetBase implements IFaucet {
 
 	@needsInit()
 	async handleTurnstileChallenge() {
-		const frames = await this.activeTab.frameEnvironments;
+		const frames = await this.hero.frameEnvironments;
 
 		for (const frame of frames) {
 			const isMainFrame = await frame.isMainFrame;
@@ -137,6 +137,9 @@ export default abstract class FaucetBase implements IFaucet {
 				continue;
 			}
 
+			await frame.waitForLoad("AllContentLoaded");
+			await frame.waitForPaintingStable();
+
 			const body = frame.document.body;
 
 			const isVisible = await body.$isVisible;
@@ -144,17 +147,6 @@ export default abstract class FaucetBase implements IFaucet {
 			if (!isVisible) {
 				continue;
 			}
-
-			const bodyRect = await body.getBoundingClientRect();
-
-			const mousePosition: IMousePositionXY = [
-				await bodyRect.x,
-				await bodyRect.y,
-			];
-
-			await this.hero.interact({
-				scroll: mousePosition,
-			});
 
 			const checkbox = body.shadowRoot?.querySelector(
 				"div.main-wrapper label.cb-lb",
