@@ -7,6 +7,7 @@ const fetch = async (
 ) =>
 	await safePromise<Response>(
 		bunFetch(url, {
+			verbose: true,
 			tls: {
 				rejectUnauthorized: false,
 			},
