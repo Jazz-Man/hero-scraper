@@ -2,7 +2,7 @@ import { getUserWithCookies } from "@scraper/prisma";
 import FreeBitco from "./faucets/FreeBitco";
 
 try {
-	const username = "brooklyn45@mailcloud.pp.ua";
+	const username = "aaliyah_huels@mailcloud.pp.ua";
 
 	const user = await getUserWithCookies(username);
 
@@ -11,7 +11,7 @@ try {
 	await faucet.initFaucet();
 
 	await faucet.login();
-	// await app.signup();
+	// await faucet.signup();
 
 	await faucet.saveProfileCookies();
 } catch (e) {
