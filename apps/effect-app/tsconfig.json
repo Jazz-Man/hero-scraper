@@ -1,0 +1,9 @@
+{
+	"extends": "@utils/tsconfig/tsconfig.json",
+	"display": "effect-app tsconfig",
+	"compilerOptions": {
+		"rootDir": ".",
+		"baseUrl": ".",
+		"exactOptionalPropertyTypes": true
+	}
+}
