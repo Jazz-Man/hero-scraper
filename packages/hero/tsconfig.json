@@ -1,5 +1,5 @@
 {
-	"extends": "@utils/tsconfig/tsconfig.json",
+	"extends": "@scraper/tsconfig/tsconfig.json",
 	"display": "faucet tsconfig",
 	"compilerOptions": {
 		"rootDir": ".",

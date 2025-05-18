@@ -1,9 +1,14 @@
 {
-	"extends": "@utils/tsconfig/tsconfig.json",
+	"extends": "@scraper/tsconfig/base/application.json",
 	"display": "effect-app tsconfig",
 	"compilerOptions": {
 		"rootDir": ".",
 		"baseUrl": ".",
-		"exactOptionalPropertyTypes": true
-	}
+		"exactOptionalPropertyTypes": true,
+		"paths": {
+			"@/*": ["./*"]
+		}
+	},
+	"include": ["./**/*.ts", "./**/*.tsx"],
+	"exclude": ["node_modules", "dist"]
 }

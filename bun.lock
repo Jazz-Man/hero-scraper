@@ -14,8 +14,8 @@
         "geoip-lite": "1.4.10",
       },
       "devDependencies": {
+        "@scraper/tsconfig": "workspace:*",
         "@types/bun": "latest",
-        "@utils/tsconfig": "workspace:*",
       },
       "peerDependencies": {
         "typescript": "^5",
@@ -29,7 +29,7 @@
         "@scraper/otp": "workspace:*",
         "@scraper/prisma": "workspace:*",
         "@scraper/safe": "workspace:*",
-        "@utils/tsconfig": "workspace:*",
+        "@scraper/tsconfig": "workspace:*",
         "threads": "1.7.0",
       },
       "devDependencies": {
@@ -53,14 +53,14 @@
         "@scraper/faker": "workspace:*",
         "@scraper/fetch": "workspace:^",
         "@scraper/safe": "workspace:^",
-        "@utils/tsconfig": "workspace:*",
+        "@scraper/tsconfig": "workspace:*",
         "cloudflare": "^4.0.0",
       },
     },
     "packages/decorators": {
       "name": "@scraper/decorators",
       "dependencies": {
-        "@utils/tsconfig": "workspace:*",
+        "@scraper/tsconfig": "workspace:*",
       },
       "devDependencies": {
         "@types/bun": "latest",
@@ -75,8 +75,8 @@
         "@faker-js/faker": "9.5.0",
       },
       "devDependencies": {
+        "@scraper/tsconfig": "workspace:*",
         "@types/bun": "latest",
-        "@utils/tsconfig": "workspace:*",
       },
       "peerDependencies": {
         "typescript": "^5",
@@ -86,8 +86,8 @@
       "name": "@scraper/fetch",
       "version": "0.0.0",
       "devDependencies": {
+        "@scraper/tsconfig": "workspace:*",
         "@types/bun": "latest",
-        "@utils/tsconfig": "workspace:*",
       },
       "peerDependencies": {
         "typescript": "^5",
@@ -111,7 +111,7 @@
       },
       "devDependencies": {
         "@scraper/prisma": "workspace:*",
-        "@utils/tsconfig": "workspace:*",
+        "@scraper/tsconfig": "workspace:*",
       },
     },
     "packages/imapflow": {
@@ -121,10 +121,10 @@
         "mailparser": "3.7.2",
       },
       "devDependencies": {
+        "@scraper/tsconfig": "workspace:*",
         "@types/bun": "latest",
         "@types/imap": "0.8.42",
         "@types/mailparser": "3.4.5",
-        "@utils/tsconfig": "workspace:*",
       },
       "peerDependencies": {
         "typescript": "^5",
@@ -139,15 +139,15 @@
         "geoip-lite": "1.4.10",
       },
       "devDependencies": {
+        "@scraper/tsconfig": "workspace:*",
         "@types/geoip-lite": "1.4.4",
-        "@utils/tsconfig": "workspace:*",
       },
     },
     "packages/net": {
       "name": "@scraper/net",
       "version": "0.0.0",
       "devDependencies": {
-        "@utils/tsconfig": "workspace:*",
+        "@scraper/tsconfig": "workspace:*",
       },
     },
     "packages/otp": {
@@ -190,15 +190,11 @@
       },
     },
     "packages/tsconfig": {
-      "name": "@utils/tsconfig",
-      "dependencies": {
-        "@tsconfig/bun": "1.0.7",
-      },
+      "name": "@scraper/tsconfig",
+      "version": "0.1.0",
       "devDependencies": {
-        "@types/bun": "latest",
-      },
-      "peerDependencies": {
-        "typescript": "^5",
+        "@tsconfig/bun": "^1.0.0",
+        "typescript": "^5.0.0",
       },
     },
     "resolutions/utf7": {
@@ -437,6 +433,8 @@
 
     "@scraper/sqlite3": ["@scraper/sqlite3@workspace:packages/sqlite3"],
 
+    "@scraper/tsconfig": ["@scraper/tsconfig@workspace:packages/tsconfig"],
+
     "@scure/base": ["@scure/base@1.2.5", "", {}, "sha512-9rE6EOVeIQzt5TSu4v+K523F8u6DhBsoZWPGKlnCshhlDhy0kJzUX4V+tr2dWmzF1GdekvThABoEQBGBQI7xZw=="],
 
     "@selderee/plugin-htmlparser2": ["@selderee/plugin-htmlparser2@0.11.0", "", { "dependencies": { "domhandler": "^5.0.3", "selderee": "^0.11.0" } }, "sha512-P33hHGdldxGabLFjPPpaTxVolMrzrcegejx+0GxjrIb9Zv48D8yAIA/QTDR2dFl7Uz7urX8aX6+5bCZslr+gWQ=="],
@@ -538,8 +536,6 @@
     "@ulixee/unblocked-agent-mitm-socket": ["@ulixee/unblocked-agent-mitm-socket@2.0.0-alpha.31", "", { "dependencies": { "@ulixee/commons": "2.0.0-alpha.31", "@ulixee/unblocked-specification": "2.0.0-alpha.31", "nanoid": "^3.3.6" } }, "sha512-IQZEeMOPqfB4c+o8Ddhz9o9RW11qRDWjgEci5hbC62GTtDIc/PwDx1BsL8udlHFTBn71JWaf0Rbzi05qIxseXw=="],
 
     "@ulixee/unblocked-specification": ["@ulixee/unblocked-specification@2.0.0-alpha.31", "", { "dependencies": { "@ulixee/js-path": "2.0.0-alpha.31", "devtools-protocol": "^0.0.1137505" } }, "sha512-Nx37nkeiuMqJPUkl88K97gxwOlOckJGI7wlTrwIj+uzGijXIjOcWLxIl+saw1w5r0U1FUGmTUggLamTHfQ56oA=="],
-
-    "@utils/tsconfig": ["@utils/tsconfig@workspace:packages/tsconfig"],
 
     "abort-controller": ["abort-controller@3.0.0", "", { "dependencies": { "event-target-shim": "^5.0.0" } }, "sha512-h8lQ8tacZYnR3vNQTgibj+tODHI5/+l06Au2Pcriv/Gmet0eaj4TwWH41sO9wnHDiQsEj19q0drzdWdeAHtweg=="],
 
@@ -1019,19 +1015,7 @@
 
     "@polkadot/x-fetch/node-fetch": ["node-fetch@3.3.2", "", { "dependencies": { "data-uri-to-buffer": "^4.0.0", "fetch-blob": "^3.1.4", "formdata-polyfill": "^4.0.10" } }, "sha512-dRB78srN/l6gqWulah9SrxeYnxeddIG30+GOqK/9OlLVyLg3HPnr6SqOWTWOXKRwC2eGYCkZ59NNuSgvSrpgOA=="],
 
-    "@types/better-sqlite3/@types/node": ["@types/node@22.15.18", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-v1DKRfUdyW+jJhZNEI1PYy29S2YRxMV5AOO/x/SjKmW0acCIOqmbj6Haf9eHAhsPmrhlHSxEhv/1WszcLWV4cg=="],
-
-    "@types/bn.js/@types/node": ["@types/node@22.15.18", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-v1DKRfUdyW+jJhZNEI1PYy29S2YRxMV5AOO/x/SjKmW0acCIOqmbj6Haf9eHAhsPmrhlHSxEhv/1WszcLWV4cg=="],
-
-    "@types/imap/@types/node": ["@types/node@22.15.18", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-v1DKRfUdyW+jJhZNEI1PYy29S2YRxMV5AOO/x/SjKmW0acCIOqmbj6Haf9eHAhsPmrhlHSxEhv/1WszcLWV4cg=="],
-
-    "@types/mailparser/@types/node": ["@types/node@22.15.18", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-v1DKRfUdyW+jJhZNEI1PYy29S2YRxMV5AOO/x/SjKmW0acCIOqmbj6Haf9eHAhsPmrhlHSxEhv/1WszcLWV4cg=="],
-
-    "@types/node-fetch/@types/node": ["@types/node@22.15.18", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-v1DKRfUdyW+jJhZNEI1PYy29S2YRxMV5AOO/x/SjKmW0acCIOqmbj6Haf9eHAhsPmrhlHSxEhv/1WszcLWV4cg=="],
-
     "bl/readable-stream": ["readable-stream@3.6.2", "", { "dependencies": { "inherits": "^2.0.3", "string_decoder": "^1.1.1", "util-deprecate": "^1.0.1" } }, "sha512-9u/sniCrY3D5WdsERHzHE4G2YCXqoG5FTHUiCC4SIbr6XcLZBY05ya9EKjYek9O5xOAwjGq+1JdGBAS7Q9ScoA=="],
-
-    "bun-types/@types/node": ["@types/node@22.15.18", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-v1DKRfUdyW+jJhZNEI1PYy29S2YRxMV5AOO/x/SjKmW0acCIOqmbj6Haf9eHAhsPmrhlHSxEhv/1WszcLWV4cg=="],
 
     "fetch-blob/web-streams-polyfill": ["web-streams-polyfill@3.3.3", "", {}, "sha512-d2JWLCivmZYTSIoge9MsgFCZrt571BikcWGYkjC1khllbTeDlGqZ2D8vD8E/lJa8WGWbb7Plm8/XJYV7IJHZZw=="],
 
@@ -1045,19 +1029,7 @@
 
     "tar-stream/readable-stream": ["readable-stream@3.6.2", "", { "dependencies": { "inherits": "^2.0.3", "string_decoder": "^1.1.1", "util-deprecate": "^1.0.1" } }, "sha512-9u/sniCrY3D5WdsERHzHE4G2YCXqoG5FTHUiCC4SIbr6XcLZBY05ya9EKjYek9O5xOAwjGq+1JdGBAS7Q9ScoA=="],
 
-    "@types/better-sqlite3/@types/node/undici-types": ["undici-types@6.21.0", "", {}, "sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ=="],
-
-    "@types/bn.js/@types/node/undici-types": ["undici-types@6.21.0", "", {}, "sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ=="],
-
-    "@types/imap/@types/node/undici-types": ["undici-types@6.21.0", "", {}, "sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ=="],
-
-    "@types/mailparser/@types/node/undici-types": ["undici-types@6.21.0", "", {}, "sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ=="],
-
-    "@types/node-fetch/@types/node/undici-types": ["undici-types@6.21.0", "", {}, "sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ=="],
-
     "bl/readable-stream/string_decoder": ["string_decoder@1.3.0", "", { "dependencies": { "safe-buffer": "~5.2.0" } }, "sha512-hkRX8U1WjJFd8LsDJ2yQ/wWWxaopEsABU1XfkM8A+j0+85JAGppt16cr1Whg6KIbb4okU6Mql6BOj+uup/wKeA=="],
-
-    "bun-types/@types/node/undici-types": ["undici-types@6.21.0", "", {}, "sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ=="],
 
     "tar-stream/readable-stream/string_decoder": ["string_decoder@1.3.0", "", { "dependencies": { "safe-buffer": "~5.2.0" } }, "sha512-hkRX8U1WjJFd8LsDJ2yQ/wWWxaopEsABU1XfkM8A+j0+85JAGppt16cr1Whg6KIbb4okU6Mql6BOj+uup/wKeA=="],
   }

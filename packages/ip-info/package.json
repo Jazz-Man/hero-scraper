@@ -16,6 +16,6 @@
 	},
 	"devDependencies": {
 		"@types/geoip-lite": "1.4.4",
-		"@utils/tsconfig": "workspace:*"
+		"@scraper/tsconfig": "workspace:*"
 	}
 }

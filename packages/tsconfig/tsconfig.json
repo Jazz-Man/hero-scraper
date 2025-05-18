@@ -3,17 +3,38 @@
 	"display": "app base tsconfig",
 	"extends": "@tsconfig/bun",
 	"compilerOptions": {
+		// Add DOM and WebWorker support
 		"lib": ["ESNext", "DOM", "WebWorker"],
+		
+		// Module features
 		"resolveJsonModule": true,
 		"preserveSymlinks": true,
+		
+		// Decorator support
 		"experimentalDecorators": true,
 		"emitDecoratorMetadata": true,
 		"strictPropertyInitialization": false,
+		
+		// Types
 		"types": ["bun", "node"],
-
+		
+		// Enhanced strictness
 		"noUncheckedIndexedAccess": true,
-
+		"strictNullChecks": true,
+		
+		// Project references support
 		"composite": true,
-		"declarationMap": true
-	}
+		"declaration": true,
+		"declarationMap": true,
+		
+		// For monorepo structure
+		"paths": {
+			"@scraper/*": ["../*/src"]
+		},
+		
+		// Output configuration
+		"outDir": "dist",
+		"rootDir": "."
+	},
+	"exclude": ["**/node_modules", "**/dist"]
 }
