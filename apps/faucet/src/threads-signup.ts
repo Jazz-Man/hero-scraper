@@ -2,7 +2,8 @@ import {
 	getUserListWithCookies,
 	updateSignupUserCookies,
 } from "@scraper/prisma";
-import { Pool, Worker, spawn } from "threads";
+import Worker from "threads/dist/worker/index";
+// import { Pool, Worker, spawn } from "threads";
 import type { TWorkerResult } from "./@types";
 import type { TAppSignup } from "./workers/app-signup.ts";
 
