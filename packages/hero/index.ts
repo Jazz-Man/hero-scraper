@@ -14,7 +14,6 @@ import type IWaitForElementOptions from "@ulixee/hero-interfaces/IWaitForElement
 import type CookieStorage from "@ulixee/hero/lib/CookieStorage";
 import Hero from "@ulixee/hero/lib/Hero";
 
-
 import type Resource from "@ulixee/hero/lib/Resource";
 import type ResourceResponse from "@ulixee/hero/lib/ResourceResponse";
 import type { ILocationTrigger } from "@ulixee/unblocked-specification/agent/browser/Location";
@@ -24,7 +23,7 @@ import type IGeolocation from "@ulixee/unblocked-specification/plugin/IGeolocati
 import type { IMousePositionXY } from "@ulixee/unblocked-specification/agent/interact/IInteractions";
 
 import { DecoratorBaseClass, needsInit } from "@scraper/decorators";
-import getFingerprint from "./fingerprint.ts";
+import getFingerprint from "./fingerprint";
 
 export type { IMousePositionXY };
 
@@ -59,7 +58,6 @@ export type THeroAppOptions = {
 
 export type THero = Hero;
 export type TTab = Tab;
-
 
 export default class HeroApp extends DecoratorBaseClass {
 	private timezone: string | undefined;
