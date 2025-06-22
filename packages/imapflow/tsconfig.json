@@ -1,9 +1,0 @@
-{
-	"extends": "@scraper/tsconfig/tsconfig.json",
-	"display": "imapflow tsconfig",
-	"compilerOptions": {
-		"rootDir": ".",
-		"baseUrl": ".",
-		"noPropertyAccessFromIndexSignature": false
-	}
-}

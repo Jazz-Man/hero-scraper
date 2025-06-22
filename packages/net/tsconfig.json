@@ -1,8 +1,0 @@
-{
-	"extends": "@scraper/tsconfig/tsconfig.json",
-	"display": "net tsconfig",
-	"compilerOptions": {
-		"rootDir": ".",
-		"baseUrl": "."
-	}
-}

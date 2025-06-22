@@ -1,8 +1,0 @@
-{
-	"extends": "@scraper/tsconfig/tsconfig.json",
-	"display": "ip-info tsconfig",
-	"compilerOptions": {
-		"rootDir": ".",
-		"baseUrl": "."
-	}
-}
