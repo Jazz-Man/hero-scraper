@@ -3,11 +3,8 @@
   "workspaces": {
     "": {
       "name": "scraper",
-    },
-    "apps/effect-app": {
-      "name": "@scraper/effect-app",
-      "peerDependencies": {
-        "typescript": "^5",
+      "devDependencies": {
+        "@types/bun": "1.2.15",
       },
     },
     "apps/faucet": {
@@ -337,8 +334,6 @@
     "@scraper/cloudflare": ["@scraper/cloudflare@workspace:packages/cloudflare"],
 
     "@scraper/decorators": ["@scraper/decorators@workspace:packages/decorators"],
-
-    "@scraper/effect-app": ["@scraper/effect-app@workspace:apps/effect-app"],
 
     "@scraper/faker": ["@scraper/faker@workspace:packages/faker"],
 
