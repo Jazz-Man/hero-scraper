@@ -1,10 +1,16 @@
 Error.stackTraceLimit = Number.POSITIVE_INFINITY;
 
+/**
+ * @deprecated
+ */
 export type TSafeError = {
 	success: false;
 	error: Error;
 };
 
+/**
+ * @deprecated
+ */
 export type Safe<T> =
 	| {
 			success: true;
@@ -12,17 +18,29 @@ export type Safe<T> =
 	  }
 	| TSafeError;
 
+/**
+ * @deprecated
+ */
 export type TSafeOptions = {
 	logError?: boolean;
 	err?: string;
 	stack?: Error;
 };
 
+/**
+ * @deprecated
+ */
 export type TSafePromiseOptions = TSafeOptions & {
 	undefinedTest?: boolean;
 	undefinedError?: string;
 };
 
+/**
+ * @deprecated
+ * @param error
+ * @param options
+ * @returns
+ */
 const getSafeError = (error: any, options?: TSafeOptions): TSafeError => {
 	const message =
 		options?.err !== undefined ? options.err : "Something went wrong";
@@ -34,6 +52,14 @@ const getSafeError = (error: any, options?: TSafeOptions): TSafeError => {
 	return { success: false, error };
 };
 
+/**
+ * @deprecated
+ * @param result
+ * @param resolve
+ * @param reject
+ * @param options
+ * @returns
+ */
 function getSafePromiseResolve<T>(
 	result: Safe<T>,
 	resolve: (value: T | PromiseLike<T>) => void,
@@ -68,12 +94,23 @@ function getSafePromiseResolve<T>(
 	resolve(result.data);
 }
 
+/**
+ * @deprecated
+ * @param promise
+ * @param options
+ */
 export function safe<T>(
 	promise: Promise<T>,
 	options?: TSafeOptions,
 ): Promise<Safe<T>>;
 export function safe<T>(func: () => T, options?: TSafeOptions): Safe<T>;
 
+/**
+ * @deprecated
+ * @param promiseOrFunc
+ * @param options
+ * @returns
+ */
 export function safe<T>(
 	promiseOrFunc: Promise<T> | (() => T),
 	options?: TSafeOptions,
@@ -92,6 +129,12 @@ export function safe<T>(
 	return safeSync(promiseOrFunc, config);
 }
 
+/**
+ * @deprecated
+ * @param promiseOrFunc
+ * @param options
+ * @returns
+ */
 export function safePromise<T>(
 	promiseOrFunc: Promise<T> | (() => T),
 	options?: TSafePromiseOptions,
@@ -110,6 +153,12 @@ export function safePromise<T>(
 	return safeSyncPromise<T>(promiseOrFunc, config);
 }
 
+/**
+ * @deprecated
+ * @param promise
+ * @param options
+ * @returns
+ */
 async function safeAsync<T>(
 	promise: Promise<T>,
 	options?: TSafeOptions,
@@ -122,6 +171,12 @@ async function safeAsync<T>(
 	}
 }
 
+/**
+ * @deprecated
+ * @param func
+ * @param options
+ * @returns
+ */
 function safeSync<T>(func: () => T, options?: TSafeOptions): Safe<T> {
 	try {
 		const data = func();
@@ -131,6 +186,12 @@ function safeSync<T>(func: () => T, options?: TSafeOptions): Safe<T> {
 	}
 }
 
+/**
+ * @deprecated
+ * @param promise
+ * @param options
+ * @returns
+ */
 function safeAsyncPromise<T>(
 	promise: Promise<T>,
 	options?: TSafePromiseOptions,
@@ -147,6 +208,12 @@ function safeAsyncPromise<T>(
 	});
 }
 
+/**
+ * @deprecated
+ * @param func
+ * @param options
+ * @returns
+ */
 function safeSyncPromise<T>(
 	func: () => T,
 	options?: TSafePromiseOptions,
