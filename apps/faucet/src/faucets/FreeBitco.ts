@@ -1,6 +1,4 @@
 import { URLSearchParams } from "node:url";
-import { safePromise } from "@scraper/safe";
-
 import {
 	needsCsrfToken,
 	needsInit,
@@ -8,6 +6,7 @@ import {
 	needsPageReady,
 } from "@scraper/decorators";
 import getOtp from "@scraper/otp";
+import { safePromise } from "@scraper/safe";
 
 import FaucetBase from "../FaucetBase";
 
@@ -220,7 +219,7 @@ export default class FreeBitco extends FaucetBase {
 		});
 	}
 
-	get baseUrl() {
+	get baseUrl(): string {
 		return "https://freebitco.in/?op=home";
 	}
 
