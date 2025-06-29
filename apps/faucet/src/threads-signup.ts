@@ -2,7 +2,8 @@ import {
 	getUserListWithCookies,
 	updateSignupUserCookies,
 } from "@scraper/prisma";
-import { Pool, Worker, spawn } from "threads";
+import Worker from "threads/dist/worker/index";
+// import { Pool, Worker, spawn } from "threads";
 import type { TWorkerResult } from "./@types";
 import type { TAppSignup } from "./workers/app-signup.ts";
 
@@ -10,7 +11,7 @@ const pool = Pool(() => spawn(new Worker("./workers/app-signup")), {
 	name: "app-signup",
 });
 
-const userList = await getUserListWithCookies(20);
+const userList = await getUserListWithCookies(10);
 
 for (const user of userList) {
 	const task = pool.queue(

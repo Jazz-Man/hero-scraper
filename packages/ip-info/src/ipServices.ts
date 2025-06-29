@@ -27,6 +27,10 @@ export type ServiceName = keyof typeof ipServices;
 
 export type ServiceUrl = (typeof ipServices)[keyof typeof ipServices];
 
+/**
+ * Returns an array of service names in a random order.
+ * @returns An array of service names in a random order.
+ */
 export function getRandomizedServices(): ServiceName[] {
 	const services = Object.keys(ipServices) as ServiceName[];
 	return services.sort(() => Math.random() - 0.5); // Випадковий порядок

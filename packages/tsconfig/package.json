@@ -1,15 +1,14 @@
 {
-	"name": "@utils/tsconfig",
-	"private": true,
-	"module": "index.ts",
-	"type": "module",
-	"devDependencies": {
-		"@types/bun": "latest"
-	},
-	"peerDependencies": {
-		"typescript": "^5"
-	},
-	"dependencies": {
-		"@tsconfig/bun": "1.0.7"
-	}
+  "name": "@scraper/tsconfig",
+  "version": "0.1.0",
+  "private": true,
+  "main": "index.js",
+  "files": [
+    "tsconfig.json",
+    "base"
+  ],
+  "devDependencies": {
+    "@tsconfig/bun": "^1.0.0",
+    "typescript": "^5.0.0"
+  }
 }

@@ -8,21 +8,31 @@
 	"private": true,
 	"scripts": {
 		"cloud:start": "bun --filter '@scraper/cloud' start",
-		"cf:delete": "bun --filter '@scraper/cloudflare' run delete.ts",
-		"cf:create": "bun --filter '@scraper/cloudflare' run create.ts",
-		"imap:test": "bun --filter '@scraper/imapflow' run index.ts"
+		"cf:delete": "bun --filter '@scraper/cloudflare' delete",
+		"cf:create": "bun --filter '@scraper/cloudflare' create",
+		"imap:test": "bun --filter '@scraper/imapflow' test:imap"
 	},
-	"workspaces": ["apps/*", "packages/*", "resolutions/*"],
+	"workspaces": [
+		"apps/*",
+		"packages/*",
+		"resolutions/*"
+	],
 	"trustedDependencies": [
+		"@parcel/watcher",
 		"@prisma/client",
 		"@prisma/engines",
 		"@ulixee/chrome-131-0",
 		"@ulixee/unblocked-agent-mitm-socket",
 		"better-sqlite3",
 		"esbuild",
+		"msgpackr-extract",
 		"prisma"
 	],
 	"resolutions": {
 		"utf7": "npm:utf7@workspace:*"
-	}
+	},
+	"devDependencies": {
+		"@types/bun": "1.2.15"
+	},
+	"packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }

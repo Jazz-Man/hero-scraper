@@ -26,6 +26,6 @@
 	},
 	"devDependencies": {
 		"@scraper/prisma": "workspace:*",
-		"@utils/tsconfig": "workspace:*"
+		"@scraper/tsconfig": "workspace:*"
 	}
 }

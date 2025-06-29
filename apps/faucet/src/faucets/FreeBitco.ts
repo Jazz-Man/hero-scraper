@@ -1,6 +1,4 @@
 import { URLSearchParams } from "node:url";
-import { safePromise } from "@scraper/safe";
-
 import {
 	needsCsrfToken,
 	needsInit,
@@ -8,10 +6,11 @@ import {
 	needsPageReady,
 } from "@scraper/decorators";
 import getOtp from "@scraper/otp";
+import { safePromise } from "@scraper/safe";
 
 import FaucetBase from "../FaucetBase";
 
-type TAjaxRequestParams = Record<string, string> | string | URLSearchParams;
+type TAjaxRequestParams = ConstructorParameters<typeof URLSearchParams>[0];
 
 type TCurrentAddressAndBalance = {
 	profile_withdraw_address: string;
@@ -193,11 +192,10 @@ export default class FreeBitco extends FaucetBase {
 			op: "login_new",
 			btc_address: this.user.username,
 			password: this.user.password,
+			...(typeof this.user.tfa_secret === "string"
+				? { tfa_code: getOtp(this.user.tfa_secret) }
+				: {}),
 		};
-
-		if (this.user.tfa_secret) {
-			params.tfa_code = getOtp(this.user.tfa_secret);
-		}
 
 		const loginStatus = await this.ajaxPostRequest("/", params);
 
@@ -221,7 +219,7 @@ export default class FreeBitco extends FaucetBase {
 		});
 	}
 
-	get baseUrl() {
+	get baseUrl(): string {
 		return "https://freebitco.in/?op=home";
 	}
 
@@ -250,9 +248,7 @@ export default class FreeBitco extends FaucetBase {
 			];
 
 			for (const cookie of hideCookiesList) {
-				const name = `hide_${cookie}_msg`;
-
-				await this.app.setCookie(name, "1", {
+				await this.app.setCookie(`hide_${cookie}_msg`, "1", {
 					secure: true,
 				});
 			}
@@ -300,11 +296,13 @@ export default class FreeBitco extends FaucetBase {
 			fingerprint,
 			captcha_type: "77",
 			cf_captcha_response,
+
+			...(typeof referrer === "string" && referrer.length > 0
+				? { referrer }
+				: {}),
 		};
 
-		if (referrer) {
-			params.referrer = referrer;
-		}
+		console.log(params);
 
 		const signupStatus = await this.ajaxPostRequest("/", params);
 
@@ -331,6 +329,81 @@ export default class FreeBitco extends FaucetBase {
 		});
 	}
 
+	@needsLogin()
+	async configureAccount(): Promise<void> {
+		const response = await this.ajaxGetRequest<string>("/", {
+			op: "toggle_lottery",
+			value: "1",
+		});
+
+		const [status, ...data] = response.split(":");
+
+		if (status !== "s") {
+			throw new Error(data.join(" "));
+		}
+
+		console.log("configureAccount", data.join(" "));
+	}
+
+	private async handleCaptcha(rootSelector: string): Promise<void> {
+		const turnstileResponse = await this.app.waitForExists(
+			`${rootSelector} > div [name="cf-turnstile-response"]`,
+		);
+
+		if (!turnstileResponse) {
+			throw new Error("Turnstile response not found");
+		}
+
+		const shadowRoot = await this.app.queryElement(`${rootSelector} > div`, {
+			waitForVisible: true,
+		});
+
+		const topFrame = await shadowRoot.shadowRoot
+			?.querySelector("iframe")
+			.$waitForVisible();
+
+		if (!topFrame) {
+			throw new Error("Top frame not found");
+		}
+
+		const topIframeEnv = await this.hero.getFrameEnvironment(topFrame);
+
+		if (!topIframeEnv) {
+			throw new Error("Top iframe environment not found");
+		}
+
+		const iframeBody = await topIframeEnv.document
+			.querySelector("body")
+			.$waitForVisible();
+
+		if (!iframeBody) {
+			throw new Error("Iframe body not found");
+		}
+
+		await iframeBody.shadowRoot.normalize();
+
+		await iframeBody.shadowRoot
+			.querySelector("div.main-wrapper #verifying")
+			.$waitForHidden();
+
+		const successBox = iframeBody.shadowRoot.querySelector(
+			"div.main-wrapper #success",
+		);
+
+		const isSuccess = await successBox?.$isVisible;
+
+		if (!isSuccess) {
+			const checkbox = iframeBody.shadowRoot.querySelector(
+				"div.main-wrapper label.cb-lb",
+			);
+
+			if (await checkbox?.$isVisible) {
+				await checkbox?.$click();
+				await this.hero.waitForMillis(1000);
+			}
+		}
+	}
+
 	@needsInit()
 	@needsPageReady()
 	async getTurnstileResponse<T extends string>(type: TCfType): Promise<T> {
@@ -341,13 +414,13 @@ export default class FreeBitco extends FaucetBase {
 				signup_form: "#signup_form_cf_turnstile",
 			};
 
-			if (!selectors.hasOwnProperty(type)) {
+			if (!(type in selectors)) {
 				reject(new Error(`invalid cf type: ${type}`));
 
 				return;
 			}
 
-			await this.handleTurnstileChallenge();
+			await this.handleCaptcha(selectors[type]);
 
 			const value = await this.app.getInputValue<T>(
 				`${selectors[type]} [name='cf-turnstile-response']`,

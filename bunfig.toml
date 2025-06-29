@@ -17,6 +17,7 @@ saveTextLockfile = true
 
 [install.lockfile]
 save = true
+print = "yarn"
 
 
 [define]

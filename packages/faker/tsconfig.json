@@ -1,8 +1,0 @@
-{
-	"extends": "@utils/tsconfig/tsconfig.json",
-	"display": "faucet tsconfig",
-	"compilerOptions": {
-		"rootDir": ".",
-		"baseUrl": "."
-	}
-}

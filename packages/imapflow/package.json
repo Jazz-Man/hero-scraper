@@ -13,7 +13,7 @@
 		"@types/bun": "latest",
 		"@types/imap": "0.8.42",
 		"@types/mailparser": "3.4.5",
-		"@utils/tsconfig": "workspace:*"
+		"@scraper/tsconfig": "workspace:*"
 	},
 	"peerDependencies": {
 		"typescript": "^5"
