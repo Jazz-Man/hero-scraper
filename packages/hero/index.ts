@@ -1,6 +1,7 @@
+import { DecoratorBaseClass, needsInit } from "@scraper/decorators";
 import getPublicIP from "@scraper/ip-info";
 import type { TSameSiteCookie, TUserCookies } from "@scraper/prisma";
-import { type TSafePromiseOptions, safe, safePromise } from "@scraper/safe";
+import { safe, safePromise, type TSafePromiseOptions } from "@scraper/safe";
 import type {
 	IRequestInfo,
 	IRequestInit,
@@ -9,20 +10,16 @@ import type Response from "@ulixee/awaited-dom/impl/official-klasses/Response";
 import { OpenDnsAlternate } from "@ulixee/default-browser-emulator/lib/utils/DnsOverTlsProviders";
 import ExecuteJsPlugin from "@ulixee/execute-js-plugin";
 import type { IHeroCreateOptions, ISuperElement, Tab } from "@ulixee/hero";
-import type ISetCookieOptions from "@ulixee/hero-interfaces/ISetCookieOptions";
-import type IWaitForElementOptions from "@ulixee/hero-interfaces/IWaitForElementOptions";
 import type CookieStorage from "@ulixee/hero/lib/CookieStorage";
 import Hero from "@ulixee/hero/lib/Hero";
-
 import type Resource from "@ulixee/hero/lib/Resource";
 import type ResourceResponse from "@ulixee/hero/lib/ResourceResponse";
+import type ISetCookieOptions from "@ulixee/hero-interfaces/ISetCookieOptions";
+import type IWaitForElementOptions from "@ulixee/hero-interfaces/IWaitForElementOptions";
 import type { ILocationTrigger } from "@ulixee/unblocked-specification/agent/browser/Location";
+import type { IMousePositionXY } from "@ulixee/unblocked-specification/agent/interact/IInteractions";
 import type { ICookie } from "@ulixee/unblocked-specification/agent/net/ICookie";
 import type IGeolocation from "@ulixee/unblocked-specification/plugin/IGeolocation";
-
-import type { IMousePositionXY } from "@ulixee/unblocked-specification/agent/interact/IInteractions";
-
-import { DecoratorBaseClass, needsInit } from "@scraper/decorators";
 import getFingerprint from "./fingerprint";
 
 export type { IMousePositionXY };
@@ -137,7 +134,7 @@ export default class HeroApp extends DecoratorBaseClass {
 
 		const locale = intLocale.success ? intLocale.data : undefined;
 
-		let geolocation: Partial<IGeolocation> | undefined = undefined;
+		let geolocation: Partial<IGeolocation> | undefined;
 
 		if (ll) {
 			const latitude: number | undefined = ll.at(0);
@@ -186,6 +183,7 @@ export default class HeroApp extends DecoratorBaseClass {
 			sessionPersistence: false,
 			showChromeInteractions: false,
 			mode: "production",
+
 			...this.createOptions,
 		} as THeroOptions);
 
@@ -397,7 +395,8 @@ export default class HeroApp extends DecoratorBaseClass {
 			await this.hero.close();
 
 			throw e;
-		} else if (statusCode === 403) {
+		}
+		if (statusCode === 403) {
 			const e = new Error("page is not accessible: code 403.");
 
 			const serverInfo = this.pageResponseHeaders.get("server");
@@ -498,11 +497,11 @@ export default class HeroApp extends DecoratorBaseClass {
 
 			if (value?.toString()?.length > 0) {
 				return value;
-			} else if (Date.now() - startTime > timeout) {
-				throw new Error(`Get Input Value timeout: "${selector}"`);
-			} else {
-				setTimeout(async () => await getValue(), 1000);
 			}
+			if (Date.now() - startTime > timeout) {
+				throw new Error(`Get Input Value timeout: "${selector}"`);
+			}
+			setTimeout(async () => await getValue(), 1000);
 		}
 
 		const value = await safePromise<T | undefined>(getValue());
@@ -639,7 +638,7 @@ export default class HeroApp extends DecoratorBaseClass {
 		date?: Date | number | undefined,
 	): Date | undefined => {
 		try {
-			let _date: Date | undefined = undefined;
+			let _date: Date | undefined;
 
 			if (typeof date === "number") {
 				_date = new Date(date);
