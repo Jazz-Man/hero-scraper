@@ -1,19 +1,13 @@
 {
 	"name": "@scraper/fetch",
-	"main": "index.ts",
 	"version": "0.0.0",
+	"main": "index.ts",
 	"module": "index.ts",
-	"type": "module",
-	"private": true,
 	"exports": {
 		".": {
 			"default": "./index.ts"
 		}
 	},
-	"devDependencies": {
-		"@types/bun": "latest"
-	},
-	"peerDependencies": {
-		"typescript": "^5"
-	}
+	"private": true,
+	"type": "module"
 }

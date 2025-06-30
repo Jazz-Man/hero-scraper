@@ -71,12 +71,6 @@
     "packages/fetch": {
       "name": "@scraper/fetch",
       "version": "0.0.0",
-      "devDependencies": {
-        "@types/bun": "latest",
-      },
-      "peerDependencies": {
-        "typescript": "^5",
-      },
     },
     "packages/hero": {
       "name": "@scraper/hero",
