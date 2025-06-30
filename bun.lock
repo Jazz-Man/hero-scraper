@@ -23,6 +23,7 @@
         "@scraper/decorators": "workspace:*",
         "@scraper/fetch": "workspace:*",
         "@scraper/hero": "workspace:*",
+        "@scraper/ip-info": "workspace:*",
         "@scraper/otp": "workspace:*",
         "@scraper/prisma": "workspace:*",
         "@scraper/safe": "workspace:*",
@@ -118,7 +119,6 @@
       "version": "0.0.0",
       "dependencies": {
         "@scraper/fetch": "workspace:*",
-        "@scraper/safe": "workspace:*",
         "geoip-lite": "1.4.10",
       },
       "devDependencies": {

@@ -1,12 +1,25 @@
 import { BunFetchHttpClient, BunHttpClient } from "@scraper/fetch";
-import { Array as A, Effect, Random, Schema } from "effect";
+import { Array as A, Data, Effect, Random, Schema } from "effect";
 import geoIp, { type Lookup } from "geoip-lite";
-import {
-	GeoIpNotFoundError,
-	IpIsUndefinedError,
-	IpServicesNotAvailableError,
-} from "../errors/ip-errors.ts";
-import { IpInfoResponseUnion } from "../schemas/ip-info-schema.ts";
+
+export class GeoIpNotFoundError extends Data.TaggedError(
+	"GeoIpNotFoundError",
+) {}
+
+export class IpServicesNotAvailableError extends Data.TaggedError(
+	"IpServicesNotAvailableError",
+) {}
+
+export class IpServicesFailedError extends Data.TaggedError(
+	"IpServicesFailedError",
+) {}
+
+export class IpIsUndefinedError extends Data.TaggedError("IpIsUndefinedError")<{
+	response: unknown;
+	url: string;
+}> {}
+
+import { IpInfoResponseUnion } from "./Schema";
 
 type IpInfoType = Lookup & {
 	ip: string;
