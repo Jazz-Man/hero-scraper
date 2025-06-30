@@ -4,7 +4,7 @@ const listener = new EmailListener({
 	user: Bun.env.EMAIL_ADDRESS ?? "",
 	password: Bun.env.EMAIL_PASSWORD ?? "",
 	host: Bun.env.IMAP_SERVER,
-	port: Number.parseInt(Bun.env.IMAP_PORT as string),
+	port: Bun.env.IMAP_PORT,
 	searchFilter: [
 		["FROM", "freebitco.in"],
 		["SUBJECT", "Email confirmation"],
@@ -51,7 +51,7 @@ listener.on("mail", (mail: TParsedMail, seqno, attributes) => {
 			const op = url.searchParams.get("op");
 
 			return op !== "email_verify";
-		} catch (error) {
+		} catch (_) {
 			return false;
 		}
 	};
@@ -69,7 +69,9 @@ listener.on("mail", (mail: TParsedMail, seqno, attributes) => {
 		?.at(0);
 
 	if (strings) {
-		const recepient = Array.isArray(mail.to) ? mail.to[0].text : mail.to?.text;
+		const recepient = Array.isArray(mail.to)
+			? mail.to?.at(0)?.text
+			: mail.to?.text;
 
 		console.log({ strings, recepient });
 	}

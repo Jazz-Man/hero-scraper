@@ -1,6 +1,7 @@
 import type { TUsersWithCookies } from "@scraper/prisma";
 import { expose } from "threads/worker";
 import type { TWorkerResult } from "../@types";
+
 import FreeBitco from "../faucets/FreeBitco";
 
 const appSignup = async (user: TUsersWithCookies): Promise<TWorkerResult> => {
@@ -8,7 +9,7 @@ const appSignup = async (user: TUsersWithCookies): Promise<TWorkerResult> => {
 	return new Promise(async (resolve, reject) => {
 		console.time("FreeBitco");
 
-		let app: FreeBitco | undefined = undefined;
+		let app: FreeBitco | undefined;
 
 		try {
 			app = new FreeBitco(user);

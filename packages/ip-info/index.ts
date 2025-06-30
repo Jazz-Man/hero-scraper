@@ -2,10 +2,10 @@ import fetch from "@scraper/fetch";
 
 import geoIp, { type Lookup } from "geoip-lite";
 import ipServices, {
+	getRandomizedServices,
+	oneLineServices,
 	type ServiceName,
 	type ServiceUrl,
-	oneLineServices,
-	getRandomizedServices,
 } from "./src/ipServices";
 import { getProxyUrl, getRandomUsername } from "./src/proxy";
 
@@ -54,7 +54,7 @@ export async function fetchIPInfo(
 
 		let ipInfo: IPInfo | undefined;
 
-		if (Object.prototype.hasOwnProperty.call(oneLineServices, serviceName)) {
+		if (Object.hasOwn(oneLineServices, serviceName)) {
 			ipInfo = { ip: data || data?.ip, ...base };
 		} else {
 			ipInfo = getServiceSpecificIPInfo(serviceName, data, base);

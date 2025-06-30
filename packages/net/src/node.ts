@@ -7,6 +7,7 @@ export class NodeTCPClient extends BaseTCPClient implements ITCPClient {
 
 	constructor() {
 		super();
+
 		this.socket = new Socket();
 
 		this.socket.on("error", (error) => {

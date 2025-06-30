@@ -2,7 +2,7 @@ import HeroApp from "@scraper/hero";
 
 console.time("FreeBitco");
 
-let app: HeroApp | undefined = undefined;
+let app: HeroApp | undefined;
 
 try {
 	app = new HeroApp({

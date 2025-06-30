@@ -2,6 +2,7 @@ import { DecoratorBaseClass, needsInit } from "@scraper/decorators";
 import getPublicIP from "@scraper/ip-info";
 import type { TSameSiteCookie, TUserCookies } from "@scraper/prisma";
 import { safe, safePromise, type TSafePromiseOptions } from "@scraper/safe";
+
 import type {
 	IRequestInfo,
 	IRequestInit,

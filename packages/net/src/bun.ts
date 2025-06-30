@@ -1,4 +1,4 @@
-import { type TCPSocket, connect } from "bun";
+import { connect, type TCPSocket } from "bun";
 import BaseTCPClient from "./base.ts";
 import type { ITCPClient } from "./interface.ts";
 

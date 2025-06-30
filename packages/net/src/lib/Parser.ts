@@ -74,8 +74,8 @@ export default class Parser {
 
 		return {
 			nickname: values[1],
-			fingerprint: this.base64ToHexString(values[2]).substring(0, 40),
-			digest: this.base64ToHexString(values[3]).substring(0, 40),
+			fingerprint: Parser.base64ToHexString(values[2]).substring(0, 40),
+			digest: Parser.base64ToHexString(values[3]).substring(0, 40),
 			published: `${values[4]} ${values[5]}`,
 			ip_address: values[6],
 			or_port: values[7],

@@ -38,7 +38,7 @@ export default class ProtocolReply {
 		const patterns = [
 			{ regex: new RegExp(`^(\\d{3})-${command}=(.*)$`), type: "commandData" },
 			{ regex: new RegExp(`^(\\d{3})\\+${command}=$`), type: "commandStart" },
-			{ regex: /^650[+\-]/, type: "eventNotification" },
+			{ regex: /^650[+-]/, type: "eventNotification" },
 			{ regex: /^(\\d{3})-(.*)$/, type: "dataResponse" },
 			{ regex: /^(25\\d)\\s*(.*)$/, type: "status" },
 			{ regex: /^(25\d)\s*(.*)$/, type: "status" },

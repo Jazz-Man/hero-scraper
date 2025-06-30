@@ -1,4 +1,5 @@
 import type IViewport from "@ulixee/unblocked-specification/agent/browser/IViewport";
+
 import {
 	FingerprintGenerator,
 	type NavigatorFingerprint,

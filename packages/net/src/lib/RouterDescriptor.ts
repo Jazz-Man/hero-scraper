@@ -101,7 +101,7 @@ export default class RouterDescriptor {
 				}
 			} else if (key === "or_address") {
 				this.or_address.push(value);
-			} else if (Object.prototype.hasOwnProperty.call(this, key)) {
+			} else if (Object.hasOwn(this, key)) {
 				(this as any)[key] = value;
 			}
 		}
