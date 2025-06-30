@@ -1,22 +1,17 @@
 {
 	"name": "@scraper/faucet",
 	"module": "src/index.ts",
-	"type": "module",
-	"private": true,
-	"devDependencies": {
-		"@effect/language-service": "0.23.3",
-		"@tsconfig/bun": "1.0.8",
-		"@types/bun": "1.2.17",
-		"@types/geoip-lite": "1.4.4"
-	},
-	"peerDependencies": {
-		"typescript": "5.8.3"
-	},
 	"dependencies": {
+		"@faker-js/faker": "9.8.0",
 		"@scraper/decorators": "workspace:*",
 		"@scraper/hero": "workspace:*",
 		"@scraper/otp": "workspace:*",
 		"@scraper/prisma": "workspace:*",
 		"@scraper/safe": "workspace:*"
-	}
+	},
+	"peerDependencies": {
+		"typescript": "5.8.3"
+	},
+	"private": true,
+	"type": "module"
 }
