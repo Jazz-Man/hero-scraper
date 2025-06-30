@@ -1,47 +1,48 @@
 {
-	"name": "scraper",
-	"devDependencies": {
-		"@effect/language-service": "0.23.3",
-		"@tsconfig/bun": "1.0.8",
-		"@types/bun": "1.2.17",
-		"@types/geoip-lite": "1.4.4"
-	},
-	"engines": {
-		"node": ">=22.0.0",
-		"pnpm": ">=9.0.0",
-		"bun": ">=1.2.18"
-	},
-	"private": true,
-	"resolutions": {
-		"utf7": "npm:utf7@workspace:*"
-	},
-	"scripts": {
-		"cloud:start": "bun --filter '@scraper/cloud' start",
-		"cf:delete": "bun --filter '@scraper/cloudflare' delete",
-		"cf:create": "bun --filter '@scraper/cloudflare' create",
-		"imap:test": "bun --filter '@scraper/imapflow' test:imap"
-	},
-	"trustedDependencies": [
-		"@parcel/watcher",
-		"@prisma/client",
-		"@prisma/engines",
-		"@ulixee/chrome-131-0",
-		"@ulixee/unblocked-agent-mitm-socket",
-		"better-sqlite3",
-		"esbuild",
-		"msgpackr-extract",
-		"prisma"
-	],
-	"workspaces": [
-		"apps/*",
-		"packages/*",
-		"resolutions/*"
-	],
-	"dependencies": {
-		"@effect/platform": "0.87.1",
-		"@effect/platform-bun": "0.72.3",
-		"@effect/schema": "0.75.5",
-		"effect": "3.16.10",
-		"geoip-lite": "1.4.10"
-	}
+  "name": "scraper",
+  "devDependencies": {
+    "@effect/language-service": "0.23.3",
+    "@tsconfig/bun": "1.0.8",
+    "@types/bun": "1.2.17",
+    "@types/geoip-lite": "1.4.4"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=9.0.0",
+    "bun": ">=1.2.18"
+  },
+  "private": true,
+  "resolutions": {
+    "utf7": "npm:utf7@workspace:*"
+  },
+  "scripts": {
+    "cloud:start": "bun --filter '@scraper/cloud' start",
+    "cf:delete": "bun --filter '@scraper/cloudflare' delete",
+    "cf:create": "bun --filter '@scraper/cloudflare' create",
+    "imap:test": "bun --filter '@scraper/imapflow' test:imap"
+  },
+  "trustedDependencies": [
+    "@parcel/watcher",
+    "@prisma/client",
+    "@prisma/engines",
+    "@ulixee/chrome-131-0",
+    "@ulixee/chrome-136-0",
+    "@ulixee/unblocked-agent-mitm-socket",
+    "better-sqlite3",
+    "esbuild",
+    "msgpackr-extract",
+    "prisma"
+  ],
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "resolutions/*"
+  ],
+  "dependencies": {
+    "@effect/platform": "0.87.1",
+    "@effect/platform-bun": "0.72.3",
+    "@effect/schema": "0.75.5",
+    "effect": "3.16.10",
+    "geoip-lite": "1.4.10"
+  }
 }

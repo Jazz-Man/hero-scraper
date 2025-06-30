@@ -8,7 +8,9 @@
 		"@scraper/hero": "workspace:*",
 		"@scraper/otp": "workspace:*",
 		"@scraper/prisma": "workspace:*",
-		"@scraper/safe": "workspace:*"
+		"@scraper/safe": "workspace:*",
+		"@ulixee/unblocked-specification": "2.0.0-alpha.33",
+		"fingerprint-generator": "2.1.68"
 	},
 	"peerDependencies": {
 		"typescript": "5.8.3"
