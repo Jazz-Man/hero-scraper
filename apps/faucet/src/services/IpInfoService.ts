@@ -8,8 +8,12 @@ import {
 } from "../errors/ip-errors.ts";
 import { IpInfoResponseUnion } from "../schemas/ip-info-schema.ts";
 
+type IpInfoType = Lookup & {
+	ip: string;
+};
+
 export type GetIpDataType = Effect.Effect<
-	Lookup,
+	IpInfoType,
 	IpServicesNotAvailableError,
 	never
 >;
@@ -63,7 +67,7 @@ export class IpInfoService extends Effect.Service<IpInfoService>()("IpInfo", {
 								return yield* Effect.fail(new GeoIpNotFoundError());
 							}
 
-							return geoData;
+							return { ...geoData, ip };
 						}),
 					),
 				);
