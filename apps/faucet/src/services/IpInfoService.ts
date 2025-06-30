@@ -1,3 +1,4 @@
+import { BunFetchHttpClient, BunHttpClient } from "@scraper/fetch";
 import { Array as A, Effect, Random, Schema } from "effect";
 import geoIp, { type Lookup } from "geoip-lite";
 import {
@@ -5,9 +6,7 @@ import {
 	IpIsUndefinedError,
 	IpServicesNotAvailableError,
 } from "../errors/ip-errors.ts";
-import { BunFetchHttpClient, BunHttpClient } from "../fetch/index.ts";
 import { IpInfoResponseUnion } from "../schemas/ip-info-schema.ts";
-import ipServices from "../worker/ipServices.ts";
 
 export type GetIpDataType = Effect.Effect<
 	Lookup,
@@ -71,7 +70,33 @@ export class IpInfoService extends Effect.Service<IpInfoService>()("IpInfo", {
 
 		const getIpData = (proxy: string): GetIpDataType =>
 			Effect.gen(function* () {
-				const ipProviders = yield* Random.shuffle(ipServices);
+				const ipProviders = yield* Random.shuffle([
+					"https://wtfismyip.com/text",
+					"https://myip.wtf/text",
+					"https://api.my-ip.io/v2/ip.json",
+					"https://check.torproject.org/api/ip",
+					"https://httpbin.org/ip",
+					"https://ifconfig.pro/ip.host",
+					"https://iphorse.com/json",
+					"https://ipapi.co/json",
+					"https://api.ip2location.io",
+					"https://ifconfig.co",
+					"https://ipaddr.site",
+					"https://checkip.amazonaws.com",
+					"https://ident.me",
+					"https://whatismyip.akamai.com",
+					"https://ipv4.text.wtfismyip.com",
+					"https://api.ipify.org",
+					"https://l2.io/ip",
+					"https://curlmyip.net",
+					"https://ifconfig.io/ip",
+					"https://ifconfig.es",
+					"https://ipaddress.sh",
+					"https://eth0.me",
+					"https://icanhazip.com",
+					"https://ip.liquidweb.com",
+					//  "https://ipaddy.net",
+				]);
 
 				return yield* Effect.firstSuccessOf(
 					A.fromIterable(ipProviders).map((service) => lookup(service, proxy)),

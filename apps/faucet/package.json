@@ -4,6 +4,7 @@
 	"dependencies": {
 		"@faker-js/faker": "9.8.0",
 		"@scraper/decorators": "workspace:*",
+		"@scraper/fetch": "workspace:*",
 		"@scraper/hero": "workspace:*",
 		"@scraper/otp": "workspace:*",
 		"@scraper/prisma": "workspace:*",

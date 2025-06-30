@@ -8,6 +8,7 @@
         "@effect/platform-bun": "0.72.3",
         "@effect/schema": "0.75.5",
         "effect": "3.16.10",
+        "geoip-lite": "1.4.10",
       },
       "devDependencies": {
         "@effect/language-service": "0.23.3",
@@ -21,6 +22,7 @@
       "dependencies": {
         "@faker-js/faker": "9.8.0",
         "@scraper/decorators": "workspace:*",
+        "@scraper/fetch": "workspace:*",
         "@scraper/hero": "workspace:*",
         "@scraper/otp": "workspace:*",
         "@scraper/prisma": "workspace:*",
