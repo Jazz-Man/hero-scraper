@@ -1,5 +1,5 @@
 import { DecoratorBaseClass, needsInit } from "@scraper/decorators";
-import getPublicIP from "@scraper/ip-info";
+import { getPublicIP } from "@scraper/ip-info";
 import type { TSameSiteCookie, TUserCookies } from "@scraper/prisma";
 import { safe, safePromise, type TSafePromiseOptions } from "@scraper/safe";
 
@@ -21,6 +21,7 @@ import type { ILocationTrigger } from "@ulixee/unblocked-specification/agent/bro
 import type { IMousePositionXY } from "@ulixee/unblocked-specification/agent/interact/IInteractions";
 import type { ICookie } from "@ulixee/unblocked-specification/agent/net/ICookie";
 import type IGeolocation from "@ulixee/unblocked-specification/plugin/IGeolocation";
+import type { HeadersInit } from "bun";
 import getFingerprint from "./fingerprint";
 
 export type { IMousePositionXY };
