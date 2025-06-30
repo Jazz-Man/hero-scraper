@@ -17,7 +17,6 @@
 		"@scraper/hero": "workspace:*",
 		"@scraper/otp": "workspace:*",
 		"@scraper/prisma": "workspace:*",
-		"@scraper/safe": "workspace:*",
-		"@scraper/tsconfig": "workspace:*"
+		"@scraper/safe": "workspace:*"
 	}
 }

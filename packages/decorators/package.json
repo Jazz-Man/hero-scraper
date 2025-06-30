@@ -8,8 +8,5 @@
 	},
 	"peerDependencies": {
 		"typescript": "^5"
-	},
-	"dependencies": {
-		"@scraper/tsconfig": "workspace:*"
 	}
 }
