@@ -1,3 +1,6 @@
+/**
+ * @deprecated
+ */
 export const oneLineServices = {
 	"ipaddr.site": "https://ipaddr.site",
 	"checkip.amazonaws.com": "https://checkip.amazonaws.com",
@@ -13,6 +16,9 @@ export const oneLineServices = {
 	"ipaddress.sh": "https://ipaddress.sh",
 } as const;
 
+/**
+ * @deprecated
+ */
 const ipServices = {
 	"wtfismyip.com": "https://wtfismyip.com/json",
 	"myip.wtf": "https://myip.wtf/json",
@@ -23,12 +29,20 @@ const ipServices = {
 	...oneLineServices,
 } as const;
 
+/**
+ * @deprecated
+ */
 export type ServiceName = keyof typeof ipServices;
 
+/**
+ * @deprecated
+ */
 export type ServiceUrl = (typeof ipServices)[keyof typeof ipServices];
 
 /**
  * Returns an array of service names in a random order.
+ *
+ * @deprecated
  * @returns An array of service names in a random order.
  */
 export function getRandomizedServices(): ServiceName[] {

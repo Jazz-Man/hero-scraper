@@ -9,6 +9,9 @@ import ipServices, {
 } from "./src/ipServices";
 import { getProxyUrl, getRandomUsername } from "./src/proxy";
 
+/**
+ * @deprecated
+ */
 export type IPInfo = {
 	ip: string;
 	serviceName?: ServiceName;
@@ -18,8 +21,17 @@ export type IPInfo = {
 	rawResponse?: string | object;
 };
 
+/**
+ * @deprecated
+ */
 export type GeoIPInfo = IPInfo & Partial<Lookup>;
 
+/**
+ * @deprecated
+ * @param serviceName
+ * @param proxyUser
+ * @returns
+ */
 export async function fetchIPInfo(
 	serviceName: ServiceName,
 	proxyUser: string | undefined = getRandomUsername(),
@@ -77,6 +89,14 @@ export async function fetchIPInfo(
 	}
 }
 
+/**
+ * @deprecated
+ * @param serviceName
+ * @param data
+ * @param base
+ * @returns
+ */
+
 function getServiceSpecificIPInfo(
 	serviceName: ServiceName,
 	data: any,
@@ -99,6 +119,11 @@ function getServiceSpecificIPInfo(
 	}
 }
 
+/**
+ * @deprecated
+ * @param proxyUser
+ * @returns
+ */
 export default async function getPublicIP(
 	proxyUser: string = getRandomUsername(),
 ): Promise<GeoIPInfo> {
