@@ -8,6 +8,7 @@ import type IGeolocation from "@ulixee/unblocked-specification/plugin/IGeolocati
 import { Effect } from "effect";
 
 import { FingerprintService } from "./Fingerprint";
+import { HeroConfigService } from "./HeroConfigService";
 
 export type TInputValue = string | number;
 
@@ -46,87 +47,17 @@ export class HeroAppService extends Effect.Service<HeroAppService>()(
 
 			const getHero = (options: THeroAppOptions) =>
 				Effect.gen(function* () {
-					const { country, ll, timezone, ip } =
-						yield* IpInfoService.getIpData(proxy);
+					const config = yield* HeroConfigService;
 
-					const locale = yield* Effect.try({
-						try: () =>
-							new Intl.Locale(country as unknown as string, {
-								region: country as unknown as string,
-							}).toString(),
-						catch: () => undefined,
-					});
+					const heroConfig = yield* config.getConfig();
 
-					const { navigator, viewport } =
-						yield* FingerprintService.getFingerprint();
-
-					const geolocation = yield* Effect.try({
-						try: () => {
-							if (!ll) {
-								return undefined;
-							}
-
-							let location: Partial<IGeolocation> | undefined;
-
-							const latitude: number | undefined = ll.at(0);
-							const longitude: number | undefined = ll.at(1);
-
-							if (latitude && !(Math.abs(latitude) <= 90)) {
-								location = {};
-
-								location.latitude = latitude;
-							}
-
-							if (longitude && !(Math.abs(longitude) <= 180)) {
-								location = location || {};
-								location.longitude = longitude;
-							}
-
-							return location as IGeolocation;
-						},
-						catch: () => undefined,
-					});
-
-					const heroApp = new Hero({
-						connectionToCore: {
-							host: "ws://localhost:1818",
-						},
-						upstreamProxyUrl: proxy,
-						upstreamProxyIpMask: {
-							publicIp: ip,
-							proxyIp: ip,
-						},
-
-						userProfile: {
-							timezoneId: timezone,
-							locale,
-							geolocation,
-							deviceProfile: {
-								deviceMemory: navigator.deviceMemory,
-								hardwareConcurrency: navigator.hardwareConcurrency,
-								viewport,
-							},
-						},
-						viewport,
-						dnsOverTlsProvider: OpenDnsAlternate,
-						locale,
-						geolocation,
-						timezoneId: timezone,
-						sessionKeepAlive: false,
-						sessionPersistence: false,
-						showChromeInteractions: false,
-						mode: "production",
-					} as THeroOptions);
+					const heroApp = new Hero(heroConfig);
 
 					return heroApp;
 				});
 
 			return { getHero } as const;
 		}),
-		dependencies: [
-			FingerprintService.Default,
-			IpInfoService.Default,
-			PrivoxyService.Default,
-		],
+		dependencies: [HeroConfigService.Default],
 	},
 ) {}
