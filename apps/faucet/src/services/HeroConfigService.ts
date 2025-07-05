@@ -1,7 +1,7 @@
 import { IpInfoService, PrivoxyService } from "@scraper/ip-info";
 import { OpenDnsAlternate } from "@ulixee/default-browser-emulator/lib/utils/DnsOverTlsProviders";
 import type { IHeroCreateOptions } from "@ulixee/hero";
-import { Effect, Layer } from "effect";
+import { Effect } from "effect";
 import { HeroError } from "../errors/HeroError";
 import { FingerprintService } from "./Fingerprint";
 
