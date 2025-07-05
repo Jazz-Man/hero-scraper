@@ -1,8 +1,7 @@
 import { IpInfoService, PrivoxyService } from "@scraper/ip-info";
 import { OpenDnsAlternate } from "@ulixee/default-browser-emulator/lib/utils/DnsOverTlsProviders";
 import type { IHeroCreateOptions } from "@ulixee/hero";
-import type IGeolocation from "@ulixee/unblocked-specification/plugin/IGeolocation";
-import { Effect } from "effect";
+import { Effect, Layer } from "effect";
 import { HeroError } from "../errors/HeroError";
 import { FingerprintService } from "./Fingerprint";
 
@@ -17,34 +16,6 @@ const getLocale = (country: string | undefined) =>
 		catch: () => undefined,
 	});
 
-const getGeolocation = (ll: [number, number] | undefined) =>
-	Effect.try({
-		try: () => {
-			if (!ll) {
-				return undefined;
-			}
-
-			let location: Partial<IGeolocation> | undefined;
-
-			const latitude: number | undefined = ll.at(0);
-			const longitude: number | undefined = ll.at(1);
-
-			if (latitude && !(Math.abs(latitude) <= 90)) {
-				location = {};
-
-				location.latitude = latitude;
-			}
-
-			if (longitude && !(Math.abs(longitude) <= 180)) {
-				location = location || {};
-				location.longitude = longitude;
-			}
-
-			return location as IGeolocation;
-		},
-		catch: () => undefined,
-	});
-
 export class HeroConfigService extends Effect.Service<HeroConfigService>()(
 	"HeroConfigService",
 	{
@@ -55,11 +26,10 @@ export class HeroConfigService extends Effect.Service<HeroConfigService>()(
 				Effect.gen(function* () {
 					const proxy = yield* PrivoxyService.getProxyUrl();
 
-					const { country, ll, timezone, ip } =
+					const { country, timezone, ip } =
 						yield* IpInfoService.getIpData(proxy);
 
 					const locale = yield* getLocale(country);
-					const geolocation = yield* getGeolocation(ll);
 
 					const { navigator, viewport } =
 						yield* FingerprintService.getFingerprint();
@@ -76,7 +46,6 @@ export class HeroConfigService extends Effect.Service<HeroConfigService>()(
 						userProfile: {
 							timezoneId: timezone,
 							locale,
-							geolocation,
 							deviceProfile: {
 								deviceMemory: navigator.deviceMemory,
 								hardwareConcurrency: navigator.hardwareConcurrency,
@@ -86,7 +55,6 @@ export class HeroConfigService extends Effect.Service<HeroConfigService>()(
 						viewport,
 						dnsOverTlsProvider: OpenDnsAlternate,
 						locale,
-						geolocation,
 						timezoneId: timezone,
 						sessionKeepAlive: false,
 						sessionPersistence: false,
@@ -125,3 +93,9 @@ export class HeroConfigService extends Effect.Service<HeroConfigService>()(
 		],
 	},
 ) {}
+
+export const HeroConfigServiceLive = HeroConfigService.pipe(
+	Effect.provide(FingerprintService.Default),
+	Effect.provide(IpInfoService.Default),
+	Effect.provide(PrivoxyService.Default),
+);
