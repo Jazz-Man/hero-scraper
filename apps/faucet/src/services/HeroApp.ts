@@ -1,13 +1,9 @@
-import { IpInfoService, PrivoxyService } from "@scraper/ip-info";
 import type { TUserCookies } from "@scraper/prisma";
-import { OpenDnsAlternate } from "@ulixee/default-browser-emulator/lib/utils/DnsOverTlsProviders";
 import type { IHeroCreateOptions } from "@ulixee/hero";
 import Hero from "@ulixee/hero/lib/Hero";
 import type { ICookie } from "@ulixee/unblocked-specification/agent/net/ICookie";
-import type IGeolocation from "@ulixee/unblocked-specification/plugin/IGeolocation";
 import { Effect } from "effect";
 
-import { FingerprintService } from "./Fingerprint";
 import { HeroConfigService } from "./HeroConfigService";
 
 export type TInputValue = string | number;
@@ -43,9 +39,7 @@ export class HeroAppService extends Effect.Service<HeroAppService>()(
 	"HeroAppService",
 	{
 		effect: Effect.gen(function* () {
-			const proxy = yield* PrivoxyService.getProxyUrl();
-
-			const getHero = (options: THeroAppOptions) =>
+			const getHero = (options: THeroAppOptions | undefined = undefined) =>
 				Effect.gen(function* () {
 					const config = yield* HeroConfigService;
 
@@ -61,3 +55,7 @@ export class HeroAppService extends Effect.Service<HeroAppService>()(
 		dependencies: [HeroConfigService.Default],
 	},
 ) {}
+
+export const HeroAppServiceLive = HeroAppService.pipe(
+	Effect.provide(HeroConfigService.Default),
+);
