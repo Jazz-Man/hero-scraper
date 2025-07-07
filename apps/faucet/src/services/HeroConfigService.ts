@@ -1,9 +1,10 @@
 import { IpInfoService, PrivoxyService } from "@scraper/ip-info";
 import { OpenDnsAlternate } from "@ulixee/default-browser-emulator/lib/utils/DnsOverTlsProviders";
 import type { IHeroCreateOptions } from "@ulixee/hero";
+import type IViewport from "@ulixee/unblocked-specification/agent/browser/IViewport";
 import { Effect } from "effect";
+import { FingerprintGenerator } from "fingerprint-generator";
 import { HeroError } from "../errors/HeroError";
-import { FingerprintService } from "./Fingerprint";
 
 export type THeroOptions = IHeroCreateOptions;
 
@@ -14,6 +15,44 @@ const getLocale = (country: string | undefined) =>
 				region: country as unknown as string,
 			}).toString(),
 		catch: () => undefined,
+	});
+
+const getFingerprint = () =>
+	Effect.gen(function* () {
+		const fingerprint = yield* Effect.try({
+			try: () =>
+				new FingerprintGenerator({
+					mockWebRTC: true,
+					browsers: ["chrome"],
+					operatingSystems: ["macos"],
+					devices: ["desktop"],
+					httpVersion: "2",
+				}).getFingerprint().fingerprint,
+
+			catch: (cause) =>
+				new HeroError({
+					module: "HeroConfigService",
+					method: "getFingerprint",
+					description: "Fingerprint Error",
+					cause,
+				}),
+		});
+
+		const { navigator, screen } = fingerprint;
+
+		const viewport: IViewport = {
+			positionX: screen.pageXOffset,
+			positionY: screen.pageYOffset,
+			height: screen.height,
+			width: screen.width,
+			screenWidth: screen.availWidth,
+			screenHeight: screen.availHeight,
+			colorDepth: screen.colorDepth,
+			deviceScaleFactor: screen.devicePixelRatio,
+			isDefault: true,
+		};
+
+		return { navigator, screen, viewport };
 	});
 
 export class HeroConfigService extends Effect.Service<HeroConfigService>()(
@@ -31,8 +70,7 @@ export class HeroConfigService extends Effect.Service<HeroConfigService>()(
 
 					const locale = yield* getLocale(country);
 
-					const { navigator, viewport } =
-						yield* FingerprintService.getFingerprint();
+					const { navigator, viewport } = yield* getFingerprint();
 
 					return {
 						connectionToCore: {
@@ -86,16 +124,11 @@ export class HeroConfigService extends Effect.Service<HeroConfigService>()(
 
 			return { getConfig, getCookiesDomain } as const;
 		}),
-		dependencies: [
-			FingerprintService.Default,
-			IpInfoService.Default,
-			PrivoxyService.Default,
-		],
+		dependencies: [IpInfoService.Default, PrivoxyService.Default],
 	},
 ) {}
 
 export const HeroConfigServiceLive = HeroConfigService.pipe(
-	Effect.provide(FingerprintService.Default),
 	Effect.provide(IpInfoService.Default),
 	Effect.provide(PrivoxyService.Default),
 );
