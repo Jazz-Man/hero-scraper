@@ -1,6 +1,8 @@
 import { BunFetchHttpClient, BunHttpClient } from "@scraper/fetch";
 import { Array as A, Data, Effect, Random, Schema } from "effect";
-import geoIp, { type Lookup } from "geoip-lite";
+import geoIp from "geoip-lite";
+import { getProxyUrl } from "./proxy";
+import { IpInfoResponseUnion } from "./Schema";
 
 export class GeoIpNotFoundError extends Data.TaggedError(
 	"GeoIpNotFoundError",
@@ -18,18 +20,6 @@ export class IpIsUndefinedError extends Data.TaggedError("IpIsUndefinedError")<{
 	response: unknown;
 	url: string;
 }> {}
-
-import { IpInfoResponseUnion } from "./Schema";
-
-type IpInfoType = Lookup & {
-	ip: string;
-};
-
-export type GetIpDataType = Effect.Effect<
-	IpInfoType,
-	IpServicesNotAvailableError,
-	never
->;
 
 export class IpInfoService extends Effect.Service<IpInfoService>()(
 	"IpInfoService",
@@ -82,12 +72,12 @@ export class IpInfoService extends Effect.Service<IpInfoService>()(
 									return yield* Effect.fail(new GeoIpNotFoundError());
 								}
 
-								return { ...geoData, ip };
+								return { ...geoData, ip, proxy };
 							}),
 						),
 					);
 
-			const getIpData = (proxy: string): GetIpDataType =>
+			const getIpData = (proxy: string = getProxyUrl()) =>
 				Effect.gen(function* () {
 					const ipProviders = yield* Random.shuffle([
 						"https://wtfismyip.com/text",

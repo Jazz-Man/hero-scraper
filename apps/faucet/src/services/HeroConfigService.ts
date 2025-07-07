@@ -1,4 +1,4 @@
-import { IpInfoService, PrivoxyService } from "@scraper/ip-info";
+import { IpInfoService } from "@scraper/ip-info";
 import { OpenDnsAlternate } from "@ulixee/default-browser-emulator/lib/utils/DnsOverTlsProviders";
 import type { IHeroCreateOptions } from "@ulixee/hero";
 import type IViewport from "@ulixee/unblocked-specification/agent/browser/IViewport";
@@ -63,10 +63,8 @@ export class HeroConfigService extends Effect.Service<HeroConfigService>()(
 				createOptions: IHeroCreateOptions | undefined = undefined,
 			) =>
 				Effect.gen(function* () {
-					const proxy = yield* PrivoxyService.getProxyUrl();
-
-					const { country, timezone, ip } =
-						yield* IpInfoService.getIpData(proxy);
+					const { country, timezone, ip, proxy } =
+						yield* IpInfoService.getIpData();
 
 					const locale = yield* getLocale(country);
 
@@ -124,11 +122,10 @@ export class HeroConfigService extends Effect.Service<HeroConfigService>()(
 
 			return { getConfig, getCookiesDomain } as const;
 		}),
-		dependencies: [IpInfoService.Default, PrivoxyService.Default],
+		dependencies: [IpInfoService.Default],
 	},
 ) {}
 
 export const HeroConfigServiceLive = HeroConfigService.pipe(
 	Effect.provide(IpInfoService.Default),
-	Effect.provide(PrivoxyService.Default),
 );
