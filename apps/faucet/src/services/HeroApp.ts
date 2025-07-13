@@ -1,10 +1,13 @@
+import { IpInfoService } from "@scraper/ip-info";
 import type { TUserCookies } from "@scraper/prisma";
+import { OpenDnsAlternate } from "@ulixee/default-browser-emulator/lib/utils/DnsOverTlsProviders";
 import type { IHeroCreateOptions } from "@ulixee/hero";
 import Hero from "@ulixee/hero/lib/Hero";
+import type IViewport from "@ulixee/unblocked-specification/agent/browser/IViewport";
 import type { ICookie } from "@ulixee/unblocked-specification/agent/net/ICookie";
 import { Effect } from "effect";
-
-import { HeroConfigService } from "./HeroConfigService";
+import { FingerprintGenerator } from "fingerprint-generator";
+import { HeroError } from "../errors/HeroError";
 
 export type TInputValue = string | number;
 
@@ -35,27 +38,103 @@ export type THeroAppOptions = {
 	waitForContentLoadedMs?: number; // default: this.timeoutMs
 };
 
+const getLocale = (country: string | undefined) =>
+	Effect.try({
+		try: () =>
+			new Intl.Locale(country as unknown as string, {
+				region: country as unknown as string,
+			}).toString(),
+		catch: () => undefined,
+	});
+
+const getFingerprint = () =>
+	Effect.gen(function* () {
+		const fingerprint = yield* Effect.try({
+			try: () =>
+				new FingerprintGenerator({
+					mockWebRTC: true,
+					browsers: ["chrome"],
+					operatingSystems: ["macos"],
+					devices: ["desktop"],
+					httpVersion: "2",
+				}).getFingerprint().fingerprint,
+
+			catch: (cause) =>
+				new HeroError({
+					module: "HeroConfigService",
+					method: "getFingerprint",
+					description: "Fingerprint Error",
+					cause,
+				}),
+		});
+
+		const { navigator, screen } = fingerprint;
+
+		const viewport: IViewport = {
+			positionX: screen.pageXOffset,
+			positionY: screen.pageYOffset,
+			height: screen.height,
+			width: screen.width,
+			screenWidth: screen.availWidth,
+			screenHeight: screen.availHeight,
+			colorDepth: screen.colorDepth,
+			deviceScaleFactor: screen.devicePixelRatio,
+			isDefault: true,
+		};
+
+		return { navigator, screen, viewport };
+	});
+
 export class HeroAppService extends Effect.Service<HeroAppService>()(
 	"HeroAppService",
 	{
 		effect: Effect.gen(function* () {
-			const getHero = (options: THeroAppOptions | undefined = undefined) =>
-				Effect.gen(function* () {
-					const config = yield* HeroConfigService;
+			const { country, timezone, ip, proxy } = yield* IpInfoService.getIpData();
 
-					const heroConfig = yield* config.getConfig();
+			const locale = yield* getLocale(country);
 
-					const heroApp = new Hero(heroConfig);
+			const { navigator, viewport } = yield* getFingerprint();
 
-					return heroApp;
-				});
+			const hero = yield* Effect.try({
+				try: () =>
+					new Hero({
+						connectionToCore: {
+							host: "ws://localhost:1818",
+						},
+						upstreamProxyUrl: proxy,
+						upstreamProxyIpMask: {
+							publicIp: ip,
+							proxyIp: ip,
+						},
+						userProfile: {
+							timezoneId: timezone,
+							locale,
+							deviceProfile: {
+								deviceMemory: navigator.deviceMemory,
+								hardwareConcurrency: navigator.hardwareConcurrency,
+								viewport,
+							},
+						},
+						viewport,
+						dnsOverTlsProvider: OpenDnsAlternate,
+						locale,
+						timezoneId: timezone,
+						sessionKeepAlive: false,
+						sessionPersistence: false,
+						showChromeInteractions: false,
+						mode: "production",
+					} as IHeroCreateOptions),
+				catch: (cause) =>
+					new HeroError({
+						module: "HeroAppService",
+						method: "init",
+						description: "Hero init Error",
+						cause,
+					}),
+			});
 
-			return { getHero } as const;
+			return { hero } as const;
 		}),
-		dependencies: [HeroConfigService.Default],
+		dependencies: [IpInfoService.Default],
 	},
 ) {}
-
-export const HeroAppServiceLive = HeroAppService.pipe(
-	Effect.provide(HeroConfigService.Default),
-);
