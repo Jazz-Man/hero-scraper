@@ -88,7 +88,7 @@ const getFingerprint = () =>
 export class HeroAppService extends Effect.Service<HeroAppService>()(
 	"HeroAppService",
 	{
-		effect: Effect.gen(function* () {
+		effect: Effect.gen(function* (_) {
 			const { country, timezone, ip, proxy } = yield* IpInfoService.getIpData();
 
 			const locale = yield* getLocale(country);
