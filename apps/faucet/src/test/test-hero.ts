@@ -1,8 +1,12 @@
 import type { THeroAppOptions } from "@scraper/hero";
+import type {
+	IRequestInfo,
+	IRequestInit,
+} from "@ulixee/awaited-dom/base/interfaces/official";
 import ExecuteJsPlugin from "@ulixee/execute-js-plugin";
 import Hero from "@ulixee/hero";
-
-import { Context, Effect, Layer } from "effect";
+import type { ILocationTrigger } from "@ulixee/unblocked-specification/agent/browser/Location";
+import { Context, Effect, Layer, Ref } from "effect";
 import { HeroError } from "../errors/HeroError";
 
 type UnwrapPromise<T> = T extends Promise<infer U>
@@ -25,11 +29,9 @@ type ClassProperties<Class> = {
 
 type HeroProps = ClassProperties<Hero>;
 
-type Test<T extends keyof HeroProps> = Pick<HeroProps, T>;
+type AllProps = keyof HeroProps;
 
-type FooReturnType<T extends keyof HeroProps> = ReturnType<Test[T]>;
-
-type TestGoto = ReturnType<Test<"goto">["goto"]>;
+type ParametersType<T extends AllProps> = Pick<HeroProps, T>[T];
 
 class HeroAppService extends Context.Tag("HeroAppService")<
 	HeroAppService,
@@ -42,10 +44,7 @@ export const HeroAppServiceLive = (opts: THeroAppOptions) =>
 		Effect.gen(function* ($) {
 			const hero = yield* $(
 				Effect.try({
-					try: () =>
-						new Hero({
-							/* всі opts.* тут, включно з cookies */
-						}),
+					try: () => new Hero(opts.createOptions),
 					catch: (cause) =>
 						new HeroError({
 							module: "HeroAppService",
@@ -57,21 +56,26 @@ export const HeroAppServiceLive = (opts: THeroAppOptions) =>
 
 			hero.use(ExecuteJsPlugin);
 
-			// const activeTab =
+			const tryPromise = <A>(
+				fn: (signal: AbortSignal) => PromiseLike<A>,
+				method: AllProps,
+			): Effect.Effect<A, HeroError> =>
+				Effect.tryPromise({
+					try: (signal) => fn(signal),
+					catch: (cause) =>
+						new HeroError({
+							module: "HeroAppService",
+							method,
+							cause,
+						}),
+				});
+
+			const goto = (...params: Parameters<ParametersType<"goto">>) =>
+				tryPromise(() => hero.goto(...params), "goto");
 
 			return {
-				// Navigation methods
-				goto: (href, options) =>
-					Effect.tryPromise({
-						try: () => hero.goto(href, options),
-						catch: (cause) =>
-							new HeroError({
-								module: "HeroAppService",
-								method: "goto",
-								cause,
-							}),
-					}),
-				waitForMillis: (millis) =>
+				goto,
+				waitForMillis: (millis = 1000) =>
 					Effect.tryPromise({
 						try: () => hero.waitForMillis(millis),
 						catch: (cause) =>
@@ -88,6 +92,95 @@ export const HeroAppServiceLive = (opts: THeroAppOptions) =>
 							new HeroError({
 								module: "HeroAppService",
 								method: "goto",
+								cause,
+							}),
+					}),
+
+				waitForNavigation: (
+					trigger: ILocationTrigger = "change",
+					setPageReady = true,
+				) =>
+					Effect.tryPromise({
+						try: async () => {
+							if (setPageReady) {
+								// this.isPageReady = false;
+							}
+
+							await hero.waitForLocation(trigger, {
+								// timeoutMs: this.timeoutMs,
+							});
+
+							return "";
+						},
+						catch: (cause) =>
+							new HeroError({
+								module: "HeroAppService",
+								method: "getAllCookies",
+								cause,
+							}),
+					}),
+
+				getAllCookies: () =>
+					Effect.tryPromise({
+						try: () => hero.activeTab.cookieStorage.getItems(),
+						catch: (cause) =>
+							new HeroError({
+								module: "HeroAppService",
+								method: "getAllCookies",
+								cause,
+							}),
+					}),
+
+				getCookie: (key: string) =>
+					Effect.tryPromise({
+						try: () => hero.activeTab.cookieStorage.getItem(key),
+						catch: (cause) =>
+							new HeroError({
+								module: "HeroAppService",
+								method: "getCookie",
+								cause,
+							}),
+					}),
+
+				deleteCookie: (key: string) =>
+					Effect.tryPromise({
+						try: () => hero.activeTab.cookieStorage.removeItem(key),
+						catch: (cause) =>
+							new HeroError({
+								module: "HeroAppService",
+								method: "deleteCookie",
+								cause,
+							}),
+					}),
+
+				setCookie: (name: string, value: string) =>
+					Effect.tryPromise({
+						try: () => hero.activeTab.cookieStorage.setItem(name, value),
+						catch: (cause) =>
+							new HeroError({
+								module: "HeroAppService",
+								method: "getCookie",
+								cause,
+							}),
+					}),
+
+				fetch: (input: IRequestInfo, init?: IRequestInit) =>
+					Effect.tryPromise({
+						try: () => {
+							const request = new hero.Request(input, {
+								credentials: "include",
+								mode: "cors",
+								referrerPolicy: "strict-origin-when-cross-origin",
+								redirect: "follow",
+								...init,
+							});
+
+							return hero.fetch(request);
+						},
+						catch: (cause) =>
+							new HeroError({
+								module: "HeroAppService",
+								method: "fetch",
 								cause,
 							}),
 					}),
