@@ -8,7 +8,7 @@ import { HeroError } from "../errors/HeroError";
 
 export type THeroOptions = IHeroCreateOptions;
 
-const getLocale = (country: string | undefined) =>
+export const getLocale = (country: string | undefined) =>
 	Effect.try({
 		try: () =>
 			new Intl.Locale(country as unknown as string, {
@@ -17,7 +17,7 @@ const getLocale = (country: string | undefined) =>
 		catch: () => undefined,
 	});
 
-const getFingerprint = () =>
+export const getFingerprint = () =>
 	Effect.gen(function* () {
 		const fingerprint = yield* Effect.try({
 			try: () =>
@@ -100,31 +100,31 @@ export class HeroConfigService extends Effect.Service<HeroConfigService>()(
 					} as IHeroCreateOptions;
 				});
 
-			const getCookiesDomain = (siteUrl: string) =>
-				Effect.try({
-					try: () => {
-						const baseUrl = new URL(siteUrl);
-
-						const hostname = baseUrl.hostname;
-
-						return hostname.startsWith("www.")
-							? `.${hostname.replace(/^www\./, "")}`
-							: hostname;
-					},
-					catch: (cause) =>
-						new HeroError({
-							module: "HeroConfigService",
-							method: "getCookiesDomain",
-							description: "Invalid URL",
-							cause,
-						}),
-				});
-
-			return { getConfig, getCookiesDomain } as const;
+			return { getConfig } as const;
 		}),
 		dependencies: [IpInfoService.Default],
 	},
-) {}
+) {
+	static getCookiesDomain = (siteUrl: string) =>
+		Effect.try({
+			try: () => {
+				const baseUrl = new URL(siteUrl);
+
+				const hostname = baseUrl.hostname;
+
+				return hostname.startsWith("www.")
+					? `.${hostname.replace(/^www\./, "")}`
+					: hostname;
+			},
+			catch: (cause) =>
+				new HeroError({
+					module: "HeroConfigService",
+					method: "getCookiesDomain",
+					description: "Invalid URL",
+					cause,
+				}),
+		});
+}
 
 export const HeroConfigServiceLive = HeroConfigService.pipe(
 	Effect.provide(IpInfoService.Default),
