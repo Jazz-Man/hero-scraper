@@ -1,7 +1,5 @@
-import { DecoratorBaseClass, needsInit } from "@scraper/decorators";
 import { getPublicIP } from "@scraper/ip-info";
 import type { TSameSiteCookie, TUserCookies } from "@scraper/prisma";
-import { safe, safePromise, type TSafePromiseOptions } from "@scraper/safe";
 
 import type {
 	IRequestInfo,
@@ -13,7 +11,6 @@ import ExecuteJsPlugin from "@ulixee/execute-js-plugin";
 import type { IHeroCreateOptions, ISuperElement, Tab } from "@ulixee/hero";
 import type CookieStorage from "@ulixee/hero/lib/CookieStorage";
 import Hero from "@ulixee/hero/lib/Hero";
-import type Resource from "@ulixee/hero/lib/Resource";
 import type ResourceResponse from "@ulixee/hero/lib/ResourceResponse";
 import type ISetCookieOptions from "@ulixee/hero-interfaces/ISetCookieOptions";
 import type IWaitForElementOptions from "@ulixee/hero-interfaces/IWaitForElementOptions";
@@ -58,7 +55,10 @@ export type THeroAppOptions = {
 export type THero = Hero;
 export type TTab = Tab;
 
-export default class HeroApp extends DecoratorBaseClass {
+export default class HeroApp {
+	protected isPageReady: boolean;
+	protected isInitialised: boolean;
+
 	private timezone: string | undefined;
 	private readonly oneYearFromNow: Date;
 	private readonly cookiesDomain: string;
@@ -76,8 +76,15 @@ export default class HeroApp extends DecoratorBaseClass {
 	private pageResponse: ResourceResponse;
 	private pageResponseHeaders: Headers;
 
+	getIsPageReady(): boolean {
+		return this.isPageReady;
+	}
+
+	getIsInitialised(): boolean {
+		return this.isInitialised;
+	}
+
 	constructor(private options: THeroAppOptions) {
-		super();
 		this.timeoutMs = this.options.timeoutMs || 30000;
 		this.waitExistsTimeoutMs =
 			this.options.waitExistsTimeoutMs || this.timeoutMs;
@@ -106,16 +113,12 @@ export default class HeroApp extends DecoratorBaseClass {
 		this.oneYearFromNow.setFullYear(this.oneYearFromNow.getFullYear() + 1);
 	}
 
-	private _activeTab: TTab;
-
 	get activeTab(): TTab {
-		return this._activeTab;
+		return this.hero.activeTab;
 	}
 
-	private _cookieStorage: CookieStorage;
-
 	get cookieStorage(): CookieStorage {
-		return this._cookieStorage;
+		return this.activeTab.cookieStorage;
 	}
 
 	static async init(options: THeroAppOptions) {
@@ -128,13 +131,20 @@ export default class HeroApp extends DecoratorBaseClass {
 
 		this.timezone = timezone;
 
-		const intLocale = safe<string>(() =>
-			new Intl.Locale(country as unknown as string, {
-				region: country as unknown as string,
-			}).toString(),
-		);
+		const intLocaleNew = (): Promise<string | unknown> =>
+			new Promise((resolve, reject) => {
+				try {
+					const locale = new Intl.Locale(country as unknown as string, {
+						region: country as unknown as string,
+					}).toString();
 
-		const locale = intLocale.success ? intLocale.data : undefined;
+					resolve(locale);
+				} catch (_) {
+					reject(undefined);
+				}
+			});
+
+		const locale = await intLocaleNew();
 
 		let geolocation: Partial<IGeolocation> | undefined;
 
@@ -191,19 +201,15 @@ export default class HeroApp extends DecoratorBaseClass {
 
 		this.hero.use(ExecuteJsPlugin);
 
-		this._activeTab = this.hero.activeTab;
-		this._cookieStorage = this._activeTab.cookieStorage;
-
 		this.isInitialised = true;
 
 		return this.hero;
 	}
 
 	async waitForMillis(ms = 1000) {
-		await safe(this.hero.waitForMillis(ms));
+		await this.hero.waitForMillis(ms);
 	}
 
-	@needsInit()
 	private async handleTurnstileChallenge() {
 		await this.waitForContentLoaded(false);
 
@@ -344,7 +350,6 @@ export default class HeroApp extends DecoratorBaseClass {
 		}
 	}
 
-	@needsInit()
 	async goto(
 		href: string,
 		options: TTGotoOptions = {
@@ -359,9 +364,7 @@ export default class HeroApp extends DecoratorBaseClass {
 
 		this.isPageReady = false;
 
-		const goto = await safePromise<Resource>(
-			this.hero.goto(url.toString(), options),
-		);
+		const goto = await this.hero.goto(url.toString(), options);
 
 		this.pageResponse = goto.response;
 
@@ -420,14 +423,12 @@ export default class HeroApp extends DecoratorBaseClass {
 		await this.waitForContentLoaded();
 	}
 
-	@needsInit()
-	async getJsValue<T>(path: string, options?: TSafePromiseOptions): Promise<T> {
-		return safePromise<T>(this.hero.getJsValue<T>(path), options);
+	async getJsValue<T>(path: string): Promise<T> {
+		return this.hero.getJsValue<T>(path);
 	}
 
-	@needsInit()
 	async querySelector(selector: string): Promise<ISuperElement> {
-		return safePromise<ISuperElement>(() => this.hero.querySelector(selector));
+		return this.hero.querySelector(selector);
 	}
 
 	async isVisible(selector: string): Promise<boolean> {
@@ -436,7 +437,6 @@ export default class HeroApp extends DecoratorBaseClass {
 		return element ? element.$isVisible : false;
 	}
 
-	@needsInit()
 	async reload() {
 		this.isPageReady = false;
 		await this.activeTab.reload({
@@ -445,7 +445,6 @@ export default class HeroApp extends DecoratorBaseClass {
 		await this.waitForContentLoaded();
 	}
 
-	@needsInit()
 	async waitForContentLoaded(setPageReady = true) {
 		const isContentLoaded = await this.hero.activeTab.isAllContentLoaded;
 
@@ -476,12 +475,10 @@ export default class HeroApp extends DecoratorBaseClass {
 	): Promise<ISuperElement> {
 		const element = await this.querySelector(selector);
 
-		return safePromise<ISuperElement>(
-			this.activeTab.waitForElement(element, {
-				timeoutMs: this.waitExistsTimeoutMs,
-				...options,
-			}),
-		);
+		return this.activeTab.waitForElement(element, {
+			timeoutMs: this.waitExistsTimeoutMs,
+			...options,
+		});
 	}
 
 	async getInputValue<T extends TInputValue = string>(
@@ -506,33 +503,25 @@ export default class HeroApp extends DecoratorBaseClass {
 			setTimeout(async () => await getValue(), 1000);
 		}
 
-		const value = await safePromise<T | undefined>(getValue());
+		const value = await getValue();
 
 		return value as T;
 	}
 
-	@needsInit()
 	async waitForExists(
 		selector: string,
 		options?: IWaitForElementOptions,
 	): Promise<ISuperElement> {
-		return safePromise<ISuperElement>(
-			this.hero.document
-				.querySelector(selector)
-				.$waitForExists({ timeoutMs: this.waitExistsTimeoutMs, ...options }),
-			{
-				err: `Wait for exists: "${selector}"`,
-			},
-		);
+		return this.hero.document
+			.querySelector(selector)
+			.$waitForExists({ timeoutMs: this.waitExistsTimeoutMs, ...options });
 	}
 
 	async clickElement(selector: string, queryOptions?: IWaitForElementOptions) {
 		const element = await this.queryElement(selector, queryOptions);
-		await safe(
-			this.hero.interact({
-				click: { element, verification: "exactElement" },
-			}),
-		);
+		await this.hero.interact({
+			click: { element, verification: "exactElement" },
+		});
 	}
 
 	async typeInput(
@@ -541,12 +530,10 @@ export default class HeroApp extends DecoratorBaseClass {
 		queryOptions?: IWaitForElementOptions,
 	) {
 		const element = await this.queryElement(selector, queryOptions);
-		await safe(
-			this.hero.interact({
-				click: { element, verification: "exactElement" },
-				type: content,
-			}),
-		);
+		await this.hero.interact({
+			click: { element, verification: "exactElement" },
+			type: content,
+		});
 	}
 
 	/**
@@ -555,7 +542,6 @@ export default class HeroApp extends DecoratorBaseClass {
 	 * @param trigger The waitForLocation trigger
 	 * @param setPageReady
 	 */
-	@needsInit()
 	async waitForNavigation(
 		trigger: ILocationTrigger = "change",
 		setPageReady = true,
@@ -570,7 +556,6 @@ export default class HeroApp extends DecoratorBaseClass {
 		await this.waitForContentLoaded(setPageReady);
 	}
 
-	@needsInit()
 	async fetch(_input: IRequestInfo, _init?: IRequestInit): Promise<Response> {
 		const request = new this.hero.Request(_input, {
 			credentials: "include",
@@ -580,12 +565,9 @@ export default class HeroApp extends DecoratorBaseClass {
 			..._init,
 		});
 
-		return safePromise(this.hero.fetch(request), {
-			logError: true,
-		});
+		return this.hero.fetch(request);
 	}
 
-	@needsInit()
 	async setCookie(
 		name: string,
 		value: string,
@@ -600,22 +582,18 @@ export default class HeroApp extends DecoratorBaseClass {
 		);
 	}
 
-	@needsInit()
 	async getCookie(key: string): Promise<ICookie> {
 		return await this.cookieStorage.getItem(key);
 	}
 
-	@needsInit()
 	async deleteCookie(key: string): Promise<boolean> {
 		return await this.cookieStorage.removeItem(key);
 	}
 
-	@needsInit()
 	async getAllCookies(): Promise<ICookie[]> {
 		return await this.cookieStorage.getItems();
 	}
 
-	@needsInit()
 	async exportCookies(): Promise<TUserCookies | undefined> {
 		const profile = await this.hero.exportUserProfile();
 
