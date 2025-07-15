@@ -37,9 +37,7 @@ export default class FreeBitco extends FaucetBase {
 	}
 
 	public getFingerprintMd5 = async (): Promise<string> =>
-		await this.app.getJsValue<string>("$.fingerprint()", {
-			err: '"$.fingerprint()" fingerprint not found',
-		});
+		await this.app.getJsValue<string>("$.fingerprint()");
 
 	public getFingerprintT = async (): Promise<string> =>
 		await safePromise<string>(
