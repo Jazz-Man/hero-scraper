@@ -34,7 +34,7 @@ export class IpInfoService extends Effect.Service<IpInfoService>()(
 				client
 					.get(url, {
 						proxy,
-						// verbose: true,
+						verbose: true,
 						headers: {
 							"User-Agent": "curl/8.7.1",
 						},
