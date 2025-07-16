@@ -10,6 +10,7 @@
 	"author": "",
 	"license": "ISC",
 	"dependencies": {
-		"@ulixee/cloud": "2.0.0-alpha.33"
+		"@ulixee/cloud": "2.0.0-alpha.33",
+		"@ulixee/hero-core": "2.0.0-alpha.33"
 	}
 }
