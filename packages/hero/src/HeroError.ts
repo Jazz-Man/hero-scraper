@@ -24,7 +24,7 @@ export class HeroError extends Schema.TaggedError<HeroError>(
 	 */
 	readonly [TypeId]: TypeId = TypeId;
 
-	get message(): string {
+	override get message(): string {
 		return `${this.module}.${this.method}: ${this.description}`;
 	}
 }
