@@ -22,6 +22,7 @@
 		"@ulixee/chrome-137-0": "7151.120.11",
 		"@ulixee/chrome-138-0": "7204.101.11",
 		"@ulixee/commons": "2.0.0-alpha.33",
+		"@ulixee/default-browser-emulator": "2.0.0-alpha.33",
 		"@ulixee/execute-js-plugin": "2.0.0-alpha.33",
 		"@ulixee/hero": "2.0.0-alpha.33",
 		"@ulixee/hero-interfaces": "2.0.0-alpha.33",
