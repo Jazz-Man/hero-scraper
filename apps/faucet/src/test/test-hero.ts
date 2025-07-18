@@ -1,16 +1,20 @@
 import { BunContext, BunRuntime } from "@effect/platform-bun";
 
-import { HeroAppService, HeroAppServiceLive } from "@scraper/hero";
+import {
+	HeroAppService,
+	HeroAppServiceLive,
+	HeroError,
+	type THeroAppOptions,
+} from "@scraper/hero";
 import { getUserWithCookies } from "@scraper/prisma";
 import type {
 	IRequestInfo,
 	IRequestInit,
 } from "@ulixee/awaited-dom/base/interfaces/official";
 
-import type Hero from "@ulixee/hero/lib/Hero";
+import Hero from "@ulixee/hero/lib/Hero";
 import type { ILocationTrigger } from "@ulixee/unblocked-specification/agent/browser/Location";
 import { Console, Context, Effect, Layer, Ref } from "effect";
-import type { HeroError } from "../errors/HeroError";
 
 type UnwrapPromise<T> = T extends Promise<infer U>
 	? U
@@ -36,160 +40,158 @@ type AllProps = keyof HeroProps;
 
 type ParametersType<T extends AllProps> = Pick<HeroProps, T>[T];
 
-// class HeroAppService extends Context.Tag("HeroAppService")<
-// 	HeroAppService,
-// 	Pick<HeroProps, "goto" | "querySelector" | "waitForMillis">
-// >() {}
+class HeroAppServiceTest extends Context.Tag("HeroAppServiceTest")<
+	HeroAppServiceTest,
+	Pick<HeroProps, "goto" | "querySelector" | "waitForMillis">
+>() {}
 
-// export const HeroAppServiceLive = (opts: THeroAppOptions) =>
-// 	Layer.effect(
-// 		HeroAppService,
-// 		Effect.gen(function* ($) {
-// 			const hero = yield* $(
-// 				Effect.try({
-// 					try: () => new Hero(opts.createOptions),
-// 					catch: (cause) =>
-// 						new HeroError({
-// 							module: "HeroAppService",
-// 							method: "init",
-// 							cause,
-// 						}),
-// 				}),
-// 			);
+export const HeroAppServiceTestLive = (opts: THeroAppOptions) =>
+	Layer.effect(
+		HeroAppServiceTest,
+		Effect.gen(function* ($) {
+			const hero = yield* $(
+				Effect.try({
+					try: () => new Hero(opts.createOptions),
+					catch: (cause) =>
+						new HeroError({
+							module: "HeroAppService",
+							method: "init",
+							cause,
+						}),
+				}),
+			);
 
-// 			hero.use(ExecuteJsPlugin);
+			const tryPromise = <A>(
+				fn: (signal: AbortSignal) => PromiseLike<A>,
+				method: AllProps,
+			): Effect.Effect<A, HeroError> =>
+				Effect.tryPromise({
+					try: (signal) => fn(signal),
+					catch: (cause) =>
+						new HeroError({
+							module: "HeroAppService",
+							method,
+							cause,
+						}),
+				});
 
-// 			const tryPromise = <A>(
-// 				fn: (signal: AbortSignal) => PromiseLike<A>,
-// 				method: AllProps,
-// 			): Effect.Effect<A, HeroError> =>
-// 				Effect.tryPromise({
-// 					try: (signal) => fn(signal),
-// 					catch: (cause) =>
-// 						new HeroError({
-// 							module: "HeroAppService",
-// 							method,
-// 							cause,
-// 						}),
-// 				});
+			const goto = (...params: Parameters<ParametersType<"goto">>) =>
+				tryPromise(() => hero.goto(...params), "goto");
 
-// 			const goto = (...params: Parameters<ParametersType<"goto">>) =>
-// 				tryPromise(() => hero.goto(...params), "goto");
+			return {
+				goto,
+				waitForMillis: (millis = 1000) =>
+					Effect.tryPromise({
+						try: () => hero.waitForMillis(millis),
+						catch: (cause) =>
+							new HeroError({
+								module: "HeroAppService",
+								method: "waitForMillis",
+								cause,
+							}),
+					}),
+				querySelector: (selector) =>
+					Effect.try({
+						try: () => hero.querySelector(selector),
+						catch: (cause) =>
+							new HeroError({
+								module: "HeroAppService",
+								method: "goto",
+								cause,
+							}),
+					}),
 
-// 			return {
-// 				goto,
-// 				waitForMillis: (millis = 1000) =>
-// 					Effect.tryPromise({
-// 						try: () => hero.waitForMillis(millis),
-// 						catch: (cause) =>
-// 							new HeroError({
-// 								module: "HeroAppService",
-// 								method: "waitForMillis",
-// 								cause,
-// 							}),
-// 					}),
-// 				querySelector: (selector) =>
-// 					Effect.try({
-// 						try: () => hero.querySelector(selector),
-// 						catch: (cause) =>
-// 							new HeroError({
-// 								module: "HeroAppService",
-// 								method: "goto",
-// 								cause,
-// 							}),
-// 					}),
+				waitForNavigation: (
+					trigger: ILocationTrigger = "change",
+					setPageReady = true,
+				) =>
+					Effect.tryPromise({
+						try: async () => {
+							if (setPageReady) {
+								// this.isPageReady = false;
+							}
 
-// 				waitForNavigation: (
-// 					trigger: ILocationTrigger = "change",
-// 					setPageReady = true,
-// 				) =>
-// 					Effect.tryPromise({
-// 						try: async () => {
-// 							if (setPageReady) {
-// 								// this.isPageReady = false;
-// 							}
+							await hero.waitForLocation(trigger, {
+								// timeoutMs: this.timeoutMs,
+							});
 
-// 							await hero.waitForLocation(trigger, {
-// 								// timeoutMs: this.timeoutMs,
-// 							});
+							return "";
+						},
+						catch: (cause) =>
+							new HeroError({
+								module: "HeroAppService",
+								method: "getAllCookies",
+								cause,
+							}),
+					}),
 
-// 							return "";
-// 						},
-// 						catch: (cause) =>
-// 							new HeroError({
-// 								module: "HeroAppService",
-// 								method: "getAllCookies",
-// 								cause,
-// 							}),
-// 					}),
+				getAllCookies: () =>
+					Effect.tryPromise({
+						try: () => hero.activeTab.cookieStorage.getItems(),
+						catch: (cause) =>
+							new HeroError({
+								module: "HeroAppService",
+								method: "getAllCookies",
+								cause,
+							}),
+					}),
 
-// 				getAllCookies: () =>
-// 					Effect.tryPromise({
-// 						try: () => hero.activeTab.cookieStorage.getItems(),
-// 						catch: (cause) =>
-// 							new HeroError({
-// 								module: "HeroAppService",
-// 								method: "getAllCookies",
-// 								cause,
-// 							}),
-// 					}),
+				getCookie: (key: string) =>
+					Effect.tryPromise({
+						try: () => hero.activeTab.cookieStorage.getItem(key),
+						catch: (cause) =>
+							new HeroError({
+								module: "HeroAppService",
+								method: "getCookie",
+								cause,
+							}),
+					}),
 
-// 				getCookie: (key: string) =>
-// 					Effect.tryPromise({
-// 						try: () => hero.activeTab.cookieStorage.getItem(key),
-// 						catch: (cause) =>
-// 							new HeroError({
-// 								module: "HeroAppService",
-// 								method: "getCookie",
-// 								cause,
-// 							}),
-// 					}),
+				deleteCookie: (key: string) =>
+					Effect.tryPromise({
+						try: () => hero.activeTab.cookieStorage.removeItem(key),
+						catch: (cause) =>
+							new HeroError({
+								module: "HeroAppService",
+								method: "deleteCookie",
+								cause,
+							}),
+					}),
 
-// 				deleteCookie: (key: string) =>
-// 					Effect.tryPromise({
-// 						try: () => hero.activeTab.cookieStorage.removeItem(key),
-// 						catch: (cause) =>
-// 							new HeroError({
-// 								module: "HeroAppService",
-// 								method: "deleteCookie",
-// 								cause,
-// 							}),
-// 					}),
+				setCookie: (name: string, value: string) =>
+					Effect.tryPromise({
+						try: () => hero.activeTab.cookieStorage.setItem(name, value),
+						catch: (cause) =>
+							new HeroError({
+								module: "HeroAppService",
+								method: "getCookie",
+								cause,
+							}),
+					}),
 
-// 				setCookie: (name: string, value: string) =>
-// 					Effect.tryPromise({
-// 						try: () => hero.activeTab.cookieStorage.setItem(name, value),
-// 						catch: (cause) =>
-// 							new HeroError({
-// 								module: "HeroAppService",
-// 								method: "getCookie",
-// 								cause,
-// 							}),
-// 					}),
+				fetch: (input: IRequestInfo, init?: IRequestInit) =>
+					Effect.tryPromise({
+						try: () => {
+							const request = new hero.Request(input, {
+								credentials: "include",
+								mode: "cors",
+								referrerPolicy: "strict-origin-when-cross-origin",
+								redirect: "follow",
+								...init,
+							});
 
-// 				fetch: (input: IRequestInfo, init?: IRequestInit) =>
-// 					Effect.tryPromise({
-// 						try: () => {
-// 							const request = new hero.Request(input, {
-// 								credentials: "include",
-// 								mode: "cors",
-// 								referrerPolicy: "strict-origin-when-cross-origin",
-// 								redirect: "follow",
-// 								...init,
-// 							});
-
-// 							return hero.fetch(request);
-// 						},
-// 						catch: (cause) =>
-// 							new HeroError({
-// 								module: "HeroAppService",
-// 								method: "fetch",
-// 								cause,
-// 							}),
-// 					}),
-// 			};
-// 		}),
-// 	);
+							return hero.fetch(request);
+						},
+						catch: (cause) =>
+							new HeroError({
+								module: "HeroAppService",
+								method: "fetch",
+								cause,
+							}),
+					}),
+			};
+		}),
+	);
 
 // Users array should be defined somewhere
 declare const users: Array<{

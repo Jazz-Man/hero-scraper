@@ -1,11 +1,65 @@
-import { Effect } from "effect";
-import { HeroAppService } from "./HeroAppService";
+import type Hero from "@ulixee/hero/lib/Hero";
+import type IWaitForElementOptions from "@ulixee/hero-interfaces/IWaitForElementOptions";
+import { Effect, Ref } from "effect";
+import { cause } from "effect/Effect";
+import type { LazyArg } from "effect/Function";
+import {
+	type AllHeroPropsList,
+	HeroAppService,
+	type HeroClassProperties,
+	type HeroParametersType,
+} from "./HeroAppService";
+import { HeroError } from "./HeroError";
+
+const useValidURL = (url: string): boolean | URL => {
+	try {
+		return new URL(url);
+	} catch (_) {
+		return false;
+	}
+};
+
+const tryPromiseWrapp = <A>(
+	fn: (signal: AbortSignal) => PromiseLike<A>,
+	method: AllHeroPropsList | string,
+): Effect.Effect<A, HeroError> =>
+	Effect.tryPromise({
+		try: (signal) => fn(signal),
+		catch: (cause) =>
+			new HeroError({
+				module: "HeroAppService",
+				method,
+				cause,
+			}),
+	});
+
+const tryWrapp = <A>(
+	fn: LazyArg<A>,
+	method: AllHeroPropsList | string,
+): Effect.Effect<A, HeroError> =>
+	Effect.try({
+		try: () => fn(),
+		catch: (cause) =>
+			new HeroError({
+				module: "HeroAppService",
+				method,
+				cause,
+			}),
+	});
+
+export type HeroPropsTest = HeroClassProperties<
+	typeof Hero.prototype.activeTab.cookieStorage
+>;
 
 export class HeroClientService extends Effect.Service<HeroClientService>()(
 	"HeroClientService",
 	{
 		effect: Effect.gen(function* (_) {
+			const isPageReady = yield* _(Ref.make<boolean>(false));
+
 			const app = yield* _(HeroAppService);
+
+			const waitExistsTimeoutMs = 6000;
 
 			const hero = yield* _(
 				app.getHero({
@@ -14,9 +68,198 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 				}),
 			);
 
-			const test = () => "";
+			const isAllContentLoaded = () =>
+				tryPromiseWrapp(() => hero.isAllContentLoaded, "isAllContentLoaded");
 
-			return { test } as const;
+			const isPaintingStable = () =>
+				tryPromiseWrapp(() => hero.isPaintingStable, "isPaintingStable");
+
+			const url = () => tryPromiseWrapp(() => hero.url, "url");
+
+			const waitForLoad = (
+				...params: Parameters<HeroParametersType<"waitForLoad">>
+			) => tryPromiseWrapp(() => hero.waitForLoad(...params), "waitForLoad");
+
+			const goto = (...params: Parameters<HeroParametersType<"goto">>) =>
+				tryPromiseWrapp(() => hero.goto(...params), "goto");
+
+			const waitForMillis = (
+				...params: Parameters<HeroParametersType<"waitForMillis">>
+			) =>
+				tryPromiseWrapp(() => hero.waitForMillis(...params), "waitForMillis");
+
+			const querySelector = (
+				...params: Parameters<HeroParametersType<"querySelector">>
+			) => tryWrapp(() => hero.querySelector(...params), "querySelector");
+
+			const getAllCookies = () =>
+				tryPromiseWrapp(
+					() => hero.activeTab.cookieStorage.getItems(),
+					"getAllCookies",
+				);
+
+			const getCookie = (key: string) =>
+				tryPromiseWrapp(
+					() => hero.activeTab.cookieStorage.getItem(key),
+					"getCookie",
+				);
+
+			const queryElement = (
+				selector: string,
+				options?: IWaitForElementOptions,
+			) =>
+				Effect.gen(function* (_) {
+					const element = yield* _(querySelector(selector));
+
+					return yield* _(
+						tryPromiseWrapp(
+							() =>
+								hero.activeTab.waitForElement(element, {
+									timeoutMs: waitExistsTimeoutMs,
+									...options,
+								}),
+							"queryElement",
+						),
+					);
+				});
+
+			const waitForExists = (
+				selector: string,
+				options?: IWaitForElementOptions,
+			) =>
+				tryPromiseWrapp(
+					() =>
+						hero.document.querySelector(selector).$waitForExists({
+							timeoutMs: waitExistsTimeoutMs,
+							...options,
+						}),
+					"waitForExists",
+				);
+
+			const isVisible = (selector: string) =>
+				Effect.gen(function* (_) {
+					const element = yield* _(querySelector(selector));
+
+					return yield* _(
+						tryPromiseWrapp(
+							async () => (element ? await element.$isVisible : false),
+							"isVisible",
+						),
+					);
+				});
+
+			const waitForContentLoaded = (setPageReady = true) =>
+				Effect.gen(function* (_) {
+					const isContentLoaded = yield* _(isAllContentLoaded());
+
+					if (!isContentLoaded) {
+						yield* _(
+							tryPromiseWrapp(
+								() =>
+									hero.activeTab.waitForLoad("AllContentLoaded", {
+										timeoutMs: waitExistsTimeoutMs,
+									}),
+								"waitForLoad",
+							),
+						);
+					}
+
+					const isPaintingStable = yield* _(
+						tryPromiseWrapp(
+							() => hero.activeTab.isPaintingStable,
+							"isPaintingStable",
+						),
+					);
+
+					if (!isPaintingStable) {
+						yield* _(
+							tryPromiseWrapp(
+								() =>
+									hero.activeTab.waitForPaintingStable({
+										timeoutMs: waitExistsTimeoutMs,
+									}),
+								"waitForPaintingStable",
+							),
+						);
+					}
+
+					if (setPageReady) {
+						const currentUrl = yield* _(url());
+
+						yield* _(
+							Ref.set(isPageReady, useValidURL(currentUrl) instanceof URL),
+						);
+					}
+				});
+
+			const reload = () =>
+				Effect.gen(function* (_) {
+					yield* _(Ref.set(isPageReady, false));
+
+					yield* _(
+						tryPromiseWrapp(
+							() =>
+								hero.reload({
+									timeoutMs: waitExistsTimeoutMs,
+								}),
+							"reload",
+						),
+					);
+
+					yield* _(waitForContentLoaded());
+				});
+
+			const clickElement = (
+				selector: string,
+				queryOptions?: IWaitForElementOptions,
+			) =>
+				Effect.gen(function* (_) {
+					const element = yield* _(queryElement(selector, queryOptions));
+
+					return yield* _(
+						tryPromiseWrapp(
+							() =>
+								hero.interact({
+									click: { element, verification: "exactElement" },
+								}),
+							"interact",
+						),
+					);
+				});
+
+			const typeInput = (
+				selector: string,
+				content: string,
+				queryOptions?: IWaitForElementOptions,
+			) =>
+				Effect.gen(function* (_) {
+					const element = yield* _(queryElement(selector, queryOptions));
+
+					return yield* _(
+						tryPromiseWrapp(
+							() =>
+								hero.interact({
+									click: { element, verification: "exactElement" },
+									type: content,
+								}),
+							"interact",
+						),
+					);
+				});
+
+			return {
+				goto,
+				waitForMillis,
+				querySelector,
+				getAllCookies,
+				queryElement,
+				waitForExists,
+				isVisible,
+				clickElement,
+				typeInput,
+				waitForContentLoaded,
+				reload,
+			} as const;
 		}),
 		dependencies: [HeroAppService.Default],
 	},

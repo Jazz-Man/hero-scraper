@@ -21,6 +21,7 @@ import type IGeolocation from "@ulixee/unblocked-specification/plugin/IGeolocati
 import type { HeadersInit } from "bun";
 import getFingerprint from "./fingerprint";
 import { HeroAppService, HeroAppServiceLive } from "./src/HeroAppService";
+import { HeroError } from "./src/HeroError";
 
 export type { IMousePositionXY };
 
@@ -676,4 +677,4 @@ export default class HeroApp {
 	}
 }
 
-export { HeroAppService, HeroAppServiceLive };
+export { HeroAppService, HeroAppServiceLive, HeroError };

@@ -34,7 +34,7 @@ export class FingerprintGeneratorError extends Data.TaggedError(
 	cause: unknown;
 }> {}
 
-type HeroClassProperties<Class> = {
+export type HeroClassProperties<Class> = {
 	[Prop in keyof Class as Prop extends symbol
 		? never
 		: Prop]: Class[Prop] extends (...args: any[]) => any
@@ -46,12 +46,18 @@ type HeroClassProperties<Class> = {
 
 export type HeroProps = HeroClassProperties<Hero>;
 
+export type CookieStorageProps = HeroClassProperties<
+	typeof Hero.prototype.activeTab.cookieStorage
+>;
+
 export type AllHeroPropsList = keyof HeroProps;
 
 export type HeroParametersType<T extends AllHeroPropsList> = Pick<
 	HeroProps,
 	T
 >[T];
+
+type Test = HeroProps["isAllContentLoaded"];
 
 /**
  * @deprecated
