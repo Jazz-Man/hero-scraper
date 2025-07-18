@@ -8,6 +8,15 @@ import type IViewport from "@ulixee/unblocked-specification/agent/browser/IViewp
 import type { ICookie } from "@ulixee/unblocked-specification/agent/net/ICookie";
 import { Data, DateTime, Effect, Layer, Ref } from "effect";
 import { FingerprintGenerator } from "fingerprint-generator";
+import { HeroError } from "./HeroError";
+
+type UnwrapPromise<T> = T extends Promise<infer U>
+	? U
+	: T extends (...args: any) => Promise<infer U>
+		? U
+		: T extends (...args: any) => infer U
+			? U
+			: T;
 
 export type TInputValue = string | number;
 
@@ -25,9 +34,24 @@ export class FingerprintGeneratorError extends Data.TaggedError(
 	cause: unknown;
 }> {}
 
-export class HeroAppError extends Data.TaggedError("HeroAppError")<{
-	cause: unknown;
-}> {}
+type HeroClassProperties<Class> = {
+	[Prop in keyof Class as Prop extends symbol
+		? never
+		: Prop]: Class[Prop] extends (...args: any[]) => any
+		? (
+				...args: Parameters<Class[Prop]>
+			) => Effect.Effect<UnwrapPromise<ReturnType<Class[Prop]>>, HeroError>
+		: Effect.Effect<UnwrapPromise<Class[Prop]>, HeroError>;
+};
+
+export type HeroProps = HeroClassProperties<Hero>;
+
+export type AllHeroPropsList = keyof HeroProps;
+
+export type HeroParametersType<T extends AllHeroPropsList> = Pick<
+	HeroProps,
+	T
+>[T];
 
 /**
  * @deprecated
@@ -210,7 +234,9 @@ export class HeroAppService extends Effect.Service<HeroAppService>()(
 							return hero;
 						},
 						catch: (cause) =>
-							new HeroAppError({
+							new HeroError({
+								module: "HeroAppService",
+								method: "init",
 								cause,
 							}),
 					});
@@ -220,7 +246,9 @@ export class HeroAppService extends Effect.Service<HeroAppService>()(
 						Effect.tryPromise({
 							try: () => hero.meta,
 							catch: (cause) =>
-								new HeroAppError({
+								new HeroError({
+									module: "HeroAppService",
+									method: "test meta",
 									cause,
 								}),
 						}),
