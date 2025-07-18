@@ -20,6 +20,7 @@ import type { ICookie } from "@ulixee/unblocked-specification/agent/net/ICookie"
 import type IGeolocation from "@ulixee/unblocked-specification/plugin/IGeolocation";
 import type { HeadersInit } from "bun";
 import getFingerprint from "./fingerprint";
+import { HeroAppService, HeroAppServiceLive } from "./src/HeroAppService";
 
 export type { IMousePositionXY };
 
@@ -55,6 +56,9 @@ export type THeroAppOptions = {
 export type THero = Hero;
 export type TTab = Tab;
 
+/**
+ * @deprecated
+ */
 export default class HeroApp {
 	protected isPageReady: boolean;
 	protected isInitialised: boolean;
@@ -168,7 +172,8 @@ export default class HeroApp {
 
 		this.hero = new Hero({
 			connectionToCore: {
-				host: "ws://localhost:1818",
+				host: "ws://localhost:1819",
+				// host: "ws://localhost:1818",
 			},
 			upstreamProxyUrl: proxy,
 			upstreamProxyIpMask: {
@@ -670,3 +675,5 @@ export default class HeroApp {
 		await this.close();
 	}
 }
+
+export { HeroAppService, HeroAppServiceLive };

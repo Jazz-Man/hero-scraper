@@ -1,7 +1,8 @@
 import { getUserWithCookies } from "@scraper/prisma";
 import { DateTime, Effect } from "effect";
 
-const timeZone = "Europe/Kyiv";
+const timeZone = "UTC";
+// const timeZone = "Europe/Kyiv";
 
 const username = "abbey74@vsokolyk.pp.ua";
 
