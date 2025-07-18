@@ -1,23 +1,23 @@
-import type { HttpClientError, HttpClientRequest } from "@effect/platform";
-import { Context, type Stream } from "effect";
+import { Effect } from "effect";
+import { HeroAppService } from "./HeroAppService";
 
-export class HeroClient extends Context.Tag("@scraper/hero/HeroClient")<
-	HeroClient,
-	HeroClient.Service
->() {}
+export class HeroClientService extends Effect.Service<HeroClientService>()(
+	"HeroClientService",
+	{
+		effect: Effect.gen(function* (_) {
+			const app = yield* _(HeroAppService);
 
-export declare namespace HeroClient {
-	/**
-	 * @since 1.0.0
-	 * @category Models
-	 */
-	export interface Service {
-		readonly client: Generated.Client;
-		readonly streamRequest: <A>(
-			request: HttpClientRequest.HttpClientRequest,
-		) => Stream.Stream<A, HttpClientError.HttpClientError>;
-		readonly stream: (
-			request: StreamCompletionRequest,
-		) => Stream.Stream<AiResponse.AiResponse, HttpClientError.HttpClientError>;
-	}
-}
+			const hero = yield* _(
+				app.getHero({
+					showChrome: true,
+					showDevtools: true,
+				}),
+			);
+
+			const test = () => "";
+
+			return { test } as const;
+		}),
+		dependencies: [HeroAppService.Default],
+	},
+) {}
