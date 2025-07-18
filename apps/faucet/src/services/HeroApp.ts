@@ -1,31 +1,33 @@
 import { IpInfoService } from "@scraper/ip-info";
 import type { TUserCookies } from "@scraper/prisma";
 import { OpenDnsAlternate } from "@ulixee/default-browser-emulator/lib/utils/DnsOverTlsProviders";
+import ExecuteJsPlugin from "@ulixee/execute-js-plugin";
 import type { IHeroCreateOptions } from "@ulixee/hero";
 import Hero from "@ulixee/hero/lib/Hero";
 import type IViewport from "@ulixee/unblocked-specification/agent/browser/IViewport";
 import type { ICookie } from "@ulixee/unblocked-specification/agent/net/ICookie";
-import { Effect } from "effect";
+import { Data, DateTime, Effect, Layer, Ref } from "effect";
 import { FingerprintGenerator } from "fingerprint-generator";
-import { HeroError } from "../errors/HeroError";
 
 export type TInputValue = string | number;
 
 export type THeroOptions = IHeroCreateOptions;
-
-type TTimeoutMsOptions = {
-	timeoutMs?: number;
-};
-
-type TTGotoOptions = {
-	referrer?: string;
-} & TTimeoutMsOptions;
 
 export interface IInitProfileCookies extends Omit<ICookie, "expires"> {
 	expires?: Date | null;
 }
 
 export type TProfileCookiesSet = Omit<IInitProfileCookies, "name" | "value">;
+
+export class FingerprintGeneratorError extends Data.TaggedError(
+	"FingerprintGeneratorError",
+)<{
+	cause: unknown;
+}> {}
+
+export class HeroAppError extends Data.TaggedError("HeroAppError")<{
+	cause: unknown;
+}> {}
 
 export type THeroAppOptions = {
 	baseUrl: string;
@@ -60,10 +62,7 @@ const getFingerprint = () =>
 				}).getFingerprint().fingerprint,
 
 			catch: (cause) =>
-				new HeroError({
-					module: "HeroConfigService",
-					method: "getFingerprint",
-					description: "Fingerprint Error",
+				new FingerprintGeneratorError({
 					cause,
 				}),
 		});
@@ -89,52 +88,150 @@ export class HeroAppService extends Effect.Service<HeroAppService>()(
 	"HeroAppService",
 	{
 		effect: Effect.gen(function* (_) {
-			const { country, timezone, ip, proxy } = yield* IpInfoService.getIpData();
+			const tZoneRef = yield* _(
+				Ref.make<DateTime.TimeZone.Named | undefined>(undefined),
+			);
 
-			const locale = yield* getLocale(country);
+			const cookiesDomainRef = yield* _(
+				Ref.make<string | undefined>(undefined),
+			);
 
-			const { navigator, viewport } = yield* getFingerprint();
+			const now = yield* _(DateTime.now);
 
-			const hero = yield* Effect.try({
-				try: () =>
-					new Hero({
-						connectionToCore: {
-							host: "ws://localhost:1818",
-						},
-						upstreamProxyUrl: proxy,
-						upstreamProxyIpMask: {
-							publicIp: ip,
-							proxyIp: ip,
-						},
-						userProfile: {
-							timezoneId: timezone,
-							locale,
-							deviceProfile: {
-								deviceMemory: navigator.deviceMemory,
-								hardwareConcurrency: navigator.hardwareConcurrency,
+			const nowDate = DateTime.toDate(now);
+
+			const prepareProfileCookies = (profileCookies?: TUserCookies) =>
+				Effect.gen(function* (_) {
+					if (profileCookies?.length === 0) {
+						return undefined;
+					}
+
+					const tZone = yield* _(Ref.get(tZoneRef));
+					const cookiesDomain = yield* _(Ref.get(cookiesDomainRef));
+
+					if (!tZone) {
+						return undefined;
+					}
+
+					const cookies = profileCookies?.map((cookie) => {
+						const expires = cookie.expires
+							? DateTime.unsafeMake(cookie.expires)
+							: now;
+
+						const expiresNow = DateTime.setParts(expires, {
+							year: nowDate.getUTCFullYear(),
+						});
+
+						const utc = DateTime.add(expiresNow, { years: 1 });
+
+						const zoned = DateTime.setZone(utc, tZone);
+
+						cookie.expires = DateTime.toDate(zoned);
+
+						cookie.domain = cookie.domain || (cookiesDomain as string);
+
+						cookie.path = cookie.path || "/";
+
+						return cookie;
+					});
+
+					return cookies;
+				});
+
+			const getHero = (
+				options?: IHeroCreateOptions,
+				profileCookies?: TUserCookies,
+				baseUrl?: URL,
+			) =>
+				Effect.gen(function* (_) {
+					const { country, timezone, ip, proxy } = yield* _(
+						IpInfoService.getIpData(),
+					);
+
+					yield* _(Ref.set(tZoneRef, DateTime.zoneUnsafeMakeNamed(timezone)));
+
+					if (baseUrl instanceof URL) {
+						const hostname = baseUrl.hostname;
+
+						yield* _(
+							Ref.set(
+								cookiesDomainRef,
+								hostname.startsWith("www.")
+									? `.${hostname.replace(/^www\./, "")}`
+									: hostname,
+							),
+						);
+					}
+
+					const locale = yield* _(getLocale(country));
+
+					const { navigator, viewport } = yield* _(getFingerprint());
+
+					const cookies = yield* _(prepareProfileCookies(profileCookies));
+
+					const hero = yield* Effect.try({
+						try: () => {
+							const hero = new Hero({
+								userAgent: "~ chrome >= 136 && mac",
+								connectionToCore: {
+									host: "ws://localhost:1818",
+								},
+								upstreamProxyUrl: proxy,
+								upstreamProxyIpMask: {
+									publicIp: ip,
+									proxyIp: ip,
+								},
+								userProfile: {
+									cookies,
+									timezoneId: timezone,
+									locale,
+									deviceProfile: {
+										deviceMemory: navigator.deviceMemory,
+										hardwareConcurrency: navigator.hardwareConcurrency,
+										viewport,
+									},
+								},
 								viewport,
-							},
-						},
-						viewport,
-						dnsOverTlsProvider: OpenDnsAlternate,
-						locale,
-						timezoneId: timezone,
-						sessionKeepAlive: false,
-						sessionPersistence: false,
-						showChromeInteractions: false,
-						mode: "production",
-					} as IHeroCreateOptions),
-				catch: (cause) =>
-					new HeroError({
-						module: "HeroAppService",
-						method: "init",
-						description: "Hero init Error",
-						cause,
-					}),
-			});
+								dnsOverTlsProvider: OpenDnsAlternate,
+								locale,
+								timezoneId: timezone,
+								sessionKeepAlive: false,
+								sessionPersistence: false,
+								showChromeInteractions: false,
+								mode: "production",
+								...options,
+							} as IHeroCreateOptions);
 
-			return { hero } as const;
+							hero.use(ExecuteJsPlugin);
+
+							return hero;
+						},
+						catch: (cause) =>
+							new HeroAppError({
+								cause,
+							}),
+					});
+
+					yield* _(
+						Effect.tryPromise({
+							try: () => hero.meta,
+							catch: (cause) =>
+								new HeroAppError({
+									cause,
+								}),
+						}),
+					);
+
+					return hero;
+				});
+
+			return { getHero } as const;
 		}),
 		dependencies: [IpInfoService.Default],
 	},
 ) {}
+
+export const HeroAppServiceLive = Layer.merge(
+	HeroAppService.Default,
+	IpInfoService.Default,
+);
