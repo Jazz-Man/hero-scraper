@@ -1,5 +1,4 @@
-import * as Predicate from "effect/Predicate";
-import * as Schema from "effect/Schema";
+import { Data, Predicate, Schema } from "effect";
 
 export const TypeId: unique symbol = Symbol.for("@scraper/app/HeroError");
 
@@ -23,8 +22,23 @@ export class HeroError extends Schema.TaggedError<HeroError>(
 	 * @since 1.0.0
 	 */
 	readonly [TypeId]: TypeId = TypeId;
-
-	override get message(): string {
-		return `${this.module}.${this.method}: ${this.description}`;
-	}
 }
+
+export class HeroHttpError extends Data.TaggedError("HeroHttpError")<{
+	status?: number;
+	isCloudflare?: boolean;
+}> {}
+
+export class HeroHttpNetworcFailure extends Data.TaggedError(
+	"HeroHttpNetworcFailure",
+)<{
+	name: string;
+	message: string;
+}> {}
+
+export class HeroCloudFlareChallengeError extends Data.TaggedError(
+	"HeroCloudFlareChallengeError",
+)<{
+	status: number;
+	isCloudflare: boolean;
+}> {}

@@ -1,15 +1,21 @@
 import type Hero from "@ulixee/hero/lib/Hero";
 import type IWaitForElementOptions from "@ulixee/hero-interfaces/IWaitForElementOptions";
-import { Effect, Ref } from "effect";
-import { cause } from "effect/Effect";
+import type { HeadersInit } from "bun";
+import { Effect, Layer, Ref, Schedule } from "effect";
 import type { LazyArg } from "effect/Function";
 import {
 	type AllHeroPropsList,
 	HeroAppService,
+	HeroAppServiceLive,
 	type HeroClassProperties,
 	type HeroParametersType,
 } from "./HeroAppService";
-import { HeroError } from "./HeroError";
+import {
+	HeroCloudFlareChallengeError,
+	HeroError,
+	HeroHttpError,
+	HeroHttpNetworcFailure,
+} from "./HeroError";
 
 const useValidURL = (url: string): boolean | URL => {
 	try {
@@ -51,6 +57,17 @@ export type HeroPropsTest = HeroClassProperties<
 	typeof Hero.prototype.activeTab.cookieStorage
 >;
 
+const hasStatusProperty = (
+	error: unknown,
+): error is { status: number; isCloudflare?: boolean } => {
+	return (
+		typeof error === "object" &&
+		error !== null &&
+		"status" in error &&
+		typeof (error as any).status === "number"
+	);
+};
+
 export class HeroClientService extends Effect.Service<HeroClientService>()(
 	"HeroClientService",
 	{
@@ -61,18 +78,28 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 
 			const waitExistsTimeoutMs = 6000;
 
-			const hero = yield* _(
-				app.getHero({
-					showChrome: true,
-					showDevtools: true,
-				}),
+			const heroRef = yield* _(
+				Ref.make(
+					yield* app.getHero({
+						showChrome: true,
+						showDevtools: true,
+					}),
+				),
 			);
 
+			const hero = yield* _(Ref.get(heroRef));
+
 			const isAllContentLoaded = () =>
-				tryPromiseWrapp(() => hero.isAllContentLoaded, "isAllContentLoaded");
+				tryPromiseWrapp(
+					() => hero.activeTab.isAllContentLoaded,
+					"isAllContentLoaded",
+				);
 
 			const isPaintingStable = () =>
-				tryPromiseWrapp(() => hero.isPaintingStable, "isPaintingStable");
+				tryPromiseWrapp(
+					() => hero.activeTab.isPaintingStable,
+					"isPaintingStable",
+				);
 
 			const url = () => tryPromiseWrapp(() => hero.url, "url");
 
@@ -80,8 +107,205 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 				...params: Parameters<HeroParametersType<"waitForLoad">>
 			) => tryPromiseWrapp(() => hero.waitForLoad(...params), "waitForLoad");
 
+			const gotoBase = (...params: Parameters<HeroParametersType<"goto">>) =>
+				Effect.tryPromise({
+					try: async () => {
+						const goto = await hero.goto(...params);
+
+						const httpResponse = goto.response;
+
+						const httpHeaders = new Headers(
+							httpResponse.headers as HeadersInit,
+						);
+
+						const serverInfo = httpHeaders.get("server");
+
+						const isCloudflare =
+							serverInfo?.toLocaleLowerCase() === "cloudflare";
+
+						if (httpResponse.statusCode === 403 && isCloudflare) {
+							throw new HeroCloudFlareChallengeError({
+								status: httpResponse.statusCode,
+								isCloudflare,
+							});
+						}
+						if (httpResponse.statusCode >= 400) {
+							throw new HeroHttpError({
+								status: httpResponse.statusCode,
+								isCloudflare: false,
+							});
+						}
+
+						return goto;
+					},
+					catch: (cause) => {
+						if (hasStatusProperty(cause)) {
+							if (cause.isCloudflare) {
+								return new HeroCloudFlareChallengeError({
+									status: cause.status,
+									isCloudflare: cause.isCloudflare,
+								});
+							}
+
+							return new HeroHttpError({
+								status: cause.status,
+								isCloudflare: false,
+							});
+						}
+
+						if (cause instanceof Error && cause.message.includes("net::")) {
+							return new HeroHttpNetworcFailure({
+								name: cause.name,
+								message: cause.message,
+							});
+						}
+						return new HeroError({
+							module: "HeroAppService",
+							method: "gotoBase",
+							cause,
+						});
+					},
+				}).pipe(
+					Effect.retry({
+						times: 3,
+						schedule: Schedule.exponential(100).pipe(Schedule.jittered),
+						while: (err) =>
+							Effect.gen(function* (_) {
+								console.info("reinit", err);
+
+								let reinit = false;
+
+								if (err instanceof HeroHttpError) {
+									if (!err.status) {
+										reinit = false;
+									} else if (err.status < 500) {
+										reinit = false;
+									} else {
+										reinit = true;
+									}
+								} else if (err instanceof HeroHttpNetworcFailure) {
+									reinit = true;
+								}
+
+								if (reinit) {
+									console.info("close");
+									yield* _(close());
+
+									const heroNew = yield* app.getHero({
+										showChrome: true,
+										showDevtools: true,
+									});
+
+									console.info("getHero");
+									yield* _(Ref.set(heroRef, heroNew));
+								}
+
+								return reinit;
+							}),
+					}),
+				);
+
 			const goto = (...params: Parameters<HeroParametersType<"goto">>) =>
-				tryPromiseWrapp(() => hero.goto(...params), "goto");
+				Effect.gen(function* () {
+					const hero = yield* _(Ref.get(heroRef));
+
+					return yield* Effect.tryPromise({
+						try: async () => {
+							const goto = await hero.goto(...params);
+
+							const httpResponse = goto.response;
+
+							const httpHeaders = new Headers(
+								httpResponse.headers as HeadersInit,
+							);
+
+							const serverInfo = httpHeaders.get("server");
+
+							const isCloudflare =
+								serverInfo?.toLocaleLowerCase() === "cloudflare";
+
+							if (httpResponse.statusCode === 403 && isCloudflare) {
+								throw new HeroCloudFlareChallengeError({
+									status: httpResponse.statusCode,
+									isCloudflare,
+								});
+							}
+							if (httpResponse.statusCode >= 400) {
+								throw new HeroHttpError({
+									status: httpResponse.statusCode,
+									isCloudflare: false,
+								});
+							}
+
+							return goto;
+						},
+						catch: (cause) => {
+							if (hasStatusProperty(cause)) {
+								if (cause.isCloudflare) {
+									return new HeroCloudFlareChallengeError({
+										status: cause.status,
+										isCloudflare: cause.isCloudflare,
+									});
+								}
+
+								return new HeroHttpError({
+									status: cause.status,
+									isCloudflare: false,
+								});
+							}
+
+							if (cause instanceof Error && cause.message.includes("net::")) {
+								return new HeroHttpNetworcFailure({
+									name: cause.name,
+									message: cause.message,
+								});
+							}
+							return new HeroError({
+								module: "HeroAppService",
+								method: "gotoBase",
+								cause,
+							});
+						},
+					}).pipe(
+						Effect.retry({
+							times: 3,
+							schedule: Schedule.exponential(100).pipe(Schedule.jittered),
+							while: (err) =>
+								Effect.gen(function* (_) {
+									console.info("reinit", err);
+
+									let reinit = false;
+
+									if (err instanceof HeroHttpError) {
+										if (!err.status) {
+											reinit = false;
+										} else if (err.status < 500) {
+											reinit = false;
+										} else {
+											reinit = true;
+										}
+									} else if (err instanceof HeroHttpNetworcFailure) {
+										reinit = true;
+									}
+
+									if (reinit) {
+										console.info("close");
+										yield* _(tryPromiseWrapp(() => hero.close(), "close"));
+
+										// const heroNew = yield* app.getHero({
+										// 	showChrome: true,
+										// 	showDevtools: true,
+										// });
+
+										// console.info("getHero");
+										// yield* _(Ref.set(heroRef, heroNew));
+									}
+
+									return reinit;
+								}),
+						}),
+					);
+				});
 
 			const waitForMillis = (
 				...params: Parameters<HeroParametersType<"waitForMillis">>
@@ -247,8 +471,11 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 					);
 				});
 
+			const close = () => tryPromiseWrapp(() => hero.close(), "close");
+
 			return {
 				goto,
+				// goto: gotoBase,
 				waitForMillis,
 				querySelector,
 				getAllCookies,
@@ -259,8 +486,14 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 				typeInput,
 				waitForContentLoaded,
 				reload,
+				close,
 			} as const;
 		}),
 		dependencies: [HeroAppService.Default],
 	},
 ) {}
+
+export const HeroClientServiceLive = Layer.merge(
+	HeroClientService.Default,
+	HeroAppServiceLive,
+);
