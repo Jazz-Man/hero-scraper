@@ -289,10 +289,9 @@ export default class HeroApp {
 
 		await this.waitForNavigation("change", false);
 
-		const url = await this.hero.url;
 		const cfCookie = await this.cookieStorage.getItem("cf_chl_rc_m");
 
-		console.log({ cfCookie, url });
+		console.log({ cfCookie });
 
 		if (cfCookie?.value === "1") {
 			await this.waitForContentLoaded(false);
