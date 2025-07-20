@@ -140,9 +140,11 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 
 					yield* _(waitForNavigation("change", false));
 
-					const cfCookie = yield* _(getCookie("cf_chl_rc_m"));
+					const isCookieSet = yield* getCookie("cf_chl_rc_m").pipe(
+						Effect.map((cookie) => cookie.value === "1"),
+					);
 
-					if (cfCookie?.value === "1") {
+					if (isCookieSet) {
 						yield* _(waitForContentLoaded(false));
 
 						const spinner = yield* _(
@@ -157,12 +159,12 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 							spinner.$waitForHidden({ timeoutMs: waitExistsTimeoutMs }),
 						);
 
-						const shadowRoot = yield* queryElement(`#${prevDiv} > div > div`, {
+						const iframe = yield* queryElement(`#${prevDiv} > div > div`, {
 							waitForVisible: true,
-						});
-
-						const iframe = yield* _promise(() =>
-							shadowRoot.shadowRoot?.querySelector("iframe").$waitForExists(),
+						}).pipe(
+							_tryMapPromise((shadowRoot) =>
+								shadowRoot.shadowRoot?.querySelector("iframe").$waitForExists(),
+							),
 						);
 
 						const iframeEnv = yield* getFrameEnvironment(iframe);
