@@ -1,8 +1,9 @@
 import type Hero from "@ulixee/hero/lib/Hero";
 import type IWaitForElementOptions from "@ulixee/hero-interfaces/IWaitForElementOptions";
-import type { HeadersInit } from "bun";
+import type { ILocationTrigger } from "@ulixee/unblocked-specification/agent/browser/Location";
 import { Effect, Layer, Ref, Schedule } from "effect";
 import type { LazyArg } from "effect/Function";
+import { element } from "effect/Schema";
 import {
 	type AllHeroPropsList,
 	HeroAppService,
@@ -13,7 +14,6 @@ import {
 import {
 	HeroCloudFlareChallengeError,
 	HeroError,
-	HeroHttpError,
 	HeroHttpNetworcFailure,
 } from "./HeroError";
 
@@ -25,30 +25,44 @@ const useValidURL = (url: string): boolean | URL => {
 	}
 };
 
-const tryPromiseWrapp = <A>(
-	fn: (signal: AbortSignal) => PromiseLike<A>,
-	method: AllHeroPropsList | string,
-): Effect.Effect<A, HeroError> =>
-	Effect.tryPromise({
-		try: (signal) => fn(signal),
+const _tryMapPromise = <A, B, E1>(
+	fn: (a: A, signal: AbortSignal) => PromiseLike<B>,
+	method?: AllHeroPropsList | string,
+) =>
+	Effect.tryMapPromise({
+		try: (a: A, signal) => fn(a, signal),
 		catch: (cause) =>
 			new HeroError({
 				module: "HeroAppService",
-				method,
+				method: method ? method : fn.toString(),
 				cause,
 			}),
 	});
 
-const tryWrapp = <A>(
+const _promise = <A>(
+	fn: (signal: AbortSignal) => PromiseLike<A>,
+	method?: AllHeroPropsList | string,
+): Effect.Effect<A, HeroError> =>
+	Effect.tryPromise({
+		try: (signal) => fn(signal),
+		catch: (cause: unknown) =>
+			new HeroError({
+				module: "HeroAppService",
+				method: method ? method : fn.toString(),
+				cause,
+			}),
+	});
+
+const _try = <A>(
 	fn: LazyArg<A>,
-	method: AllHeroPropsList | string,
+	method?: AllHeroPropsList | string,
 ): Effect.Effect<A, HeroError> =>
 	Effect.try({
 		try: () => fn(),
-		catch: (cause) =>
+		catch: (cause: unknown) =>
 			new HeroError({
 				module: "HeroAppService",
-				method,
+				method: method ? method : fn.toString(),
 				cause,
 			}),
 	});
@@ -78,15 +92,7 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 			const app = yield* _(HeroAppService);
 
 			const waitExistsTimeoutMs = 6000;
-
-			const heroRef = yield* _(
-				Ref.make(
-					yield* app.getHero({
-						showChrome: true,
-						showDevtools: true,
-					}),
-				),
-			);
+			const timeoutMs = 3000;
 
 			const hero = yield* _(
 				app.getHero({
@@ -95,25 +101,117 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 				}),
 			);
 
-			const activeTab = () => tryWrapp(() => hero.activeTab, "activeTab");
+			const setPageReady = (value: boolean) => _(Ref.set(isPageReady, value));
+
+			const activeTab = () => _try(() => hero.activeTab, "activeTab");
+
+			const getFrameEnvironment = (
+				...params: Parameters<HeroParametersType<"getFrameEnvironment">>
+			) =>
+				Effect.tryPromise({
+					try: async () => {
+						const iframeEnv = await hero.getFrameEnvironment(...params);
+
+						if (!iframeEnv) {
+							throw new Error(
+								`Frame environment not found with params: ${JSON.stringify(params)}`,
+							);
+						}
+
+						await iframeEnv.waitForLoad("AllContentLoaded");
+
+						await iframeEnv.waitForPaintingStable();
+
+						return iframeEnv;
+					},
+					catch: (cause) =>
+						new HeroError({
+							module: "HeroAppService",
+							method: "getFrameEnvironment",
+							cause,
+						}),
+				});
+
+			const handleTurnstileChallenge = () =>
+				Effect.gen(function* () {
+					yield* _(waitForContentLoaded(false));
+
+					/// this.hero.flowCommand
+
+					yield* _(waitForNavigation("change", false));
+
+					const cfCookie = yield* _(getCookie("cf_chl_rc_m"));
+
+					if (cfCookie?.value === "1") {
+						yield* _(waitForContentLoaded(false));
+
+						const spinner = yield* _(
+							waitForExists(".main-wrapper .main-content .loading-spinner"),
+						);
+
+						const prevDiv = yield* _(
+							_promise(() => spinner.previousSibling?.id),
+						);
+
+						yield* _promise(() =>
+							spinner.$waitForHidden({ timeoutMs: waitExistsTimeoutMs }),
+						);
+
+						const shadowRoot = yield* queryElement(`#${prevDiv} > div > div`, {
+							waitForVisible: true,
+						});
+
+						const iframe = yield* _promise(() =>
+							shadowRoot.shadowRoot?.querySelector("iframe").$waitForExists(),
+						);
+
+						const iframeEnv = yield* getFrameEnvironment(iframe);
+
+						const iframeBody = yield* _promise(() =>
+							iframeEnv?.document?.querySelector("body")?.$waitForVisible(),
+						).pipe(
+							Effect.tap((body) => _promise(() => body.shadowRoot.normalize())),
+						);
+
+						if (iframe) {
+							yield* _promise(() =>
+								hero.interact({
+									move: iframe,
+								}),
+							);
+						}
+
+						yield* _promise(() =>
+							iframeEnv.document.scrollingElement?.scrollIntoView({
+								block: "center",
+								inline: "center",
+							}),
+						);
+
+						const checkbox = yield* _promise(() =>
+							iframeBody.shadowRoot
+								.querySelector("div.main-wrapper .cb-c label.cb-lb")
+								?.$waitForVisible(),
+						).pipe(_tryMapPromise((checkbox) => checkbox.$waitForClickable()));
+
+						yield* waitForMillis(1000);
+						yield* _promise(() => checkbox.click());
+
+						yield* _(waitForContentLoaded(false));
+					}
+				});
 
 			const isAllContentLoaded = () =>
-				tryPromiseWrapp(
-					() => hero.activeTab.isAllContentLoaded,
-					"isAllContentLoaded",
-				);
+				_promise(() => hero.activeTab.isAllContentLoaded);
 
 			const isPaintingStable = () =>
-				tryPromiseWrapp(
-					() => hero.activeTab.isPaintingStable,
-					"isPaintingStable",
-				);
+				_promise(() => hero.activeTab.isPaintingStable);
 
-			const url = () => tryPromiseWrapp(() => hero.url, "url");
+			const url = () => _promise(() => hero.url, "url");
 
 			const waitForLoad = (
 				...params: Parameters<HeroParametersType<"waitForLoad">>
-			) => tryPromiseWrapp(() => hero.waitForLoad(...params), "waitForLoad");
+			) => _promise(() => hero.waitForLoad(...params), "waitForLoad");
 
 			const goto = (...params: Parameters<HeroParametersType<"goto">>) =>
 				Effect.tryPromise({
@@ -177,115 +275,118 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 						schedule: Schedule.exponential(100).pipe(Schedule.jittered),
 						while: (err) => err instanceof HeroHttpNetworcFailure,
 					}),
+					Effect.catchIf(
+						(error) => error._tag === "HeroCloudFlareChallengeError",
+						() =>
+							Effect.gen(function* () {
+								yield* _(waitForContentLoaded(false));
+
+								return true;
+							}),
+					),
 				);
 
 			const waitForMillis = (
 				...params: Parameters<HeroParametersType<"waitForMillis">>
-			) =>
-				tryPromiseWrapp(() => hero.waitForMillis(...params), "waitForMillis");
+			) => _promise(() => hero.waitForMillis(...params), "waitForMillis");
 
 			const querySelector = (
 				...params: Parameters<HeroParametersType<"querySelector">>
-			) => tryWrapp(() => hero.querySelector(...params), "querySelector");
+			) => _try(() => hero.querySelector(...params));
 
 			const getAllCookies = () =>
-				tryPromiseWrapp(
+				_promise(
 					() => hero.activeTab.cookieStorage.getItems(),
 					"getAllCookies",
 				);
 
 			const getCookie = (key: string) =>
-				tryPromiseWrapp(
-					() => hero.activeTab.cookieStorage.getItem(key),
-					"getCookie",
-				);
+				_promise(() => hero.activeTab.cookieStorage.getItem(key), "getCookie");
 
 			const queryElement = (
 				selector: string,
 				options?: IWaitForElementOptions,
 			) =>
-				Effect.gen(function* (_) {
-					const element = yield* _(querySelector(selector));
-
-					return yield* _(
-						tryPromiseWrapp(
-							() =>
-								hero.activeTab.waitForElement(element, {
-									timeoutMs: waitExistsTimeoutMs,
-									...options,
-								}),
-							"queryElement",
-						),
-					);
-				});
+				querySelector(selector).pipe(
+					_tryMapPromise((element) =>
+						hero.activeTab.waitForElement(element, {
+							timeoutMs: waitExistsTimeoutMs,
+							...options,
+						}),
+					),
+				);
 
 			const waitForExists = (
 				selector: string,
 				options?: IWaitForElementOptions,
 			) =>
-				tryPromiseWrapp(
-					() =>
-						hero.document.querySelector(selector).$waitForExists({
-							timeoutMs: waitExistsTimeoutMs,
-							...options,
-						}),
-					"waitForExists",
+				_promise(() =>
+					hero.document.querySelector(selector).$waitForExists({
+						timeoutMs: waitExistsTimeoutMs,
+						...options,
+					}),
 				);
 
-			const isVisible = (selector: string) =>
-				Effect.gen(function* (_) {
-					const element = yield* _(querySelector(selector));
+			const isVisible = (
+				...params: Parameters<HeroParametersType<"querySelector">>
+			) =>
+				querySelector(...params).pipe(
+					_tryMapPromise((element) => element.$isVisible),
+				);
 
-					return yield* _(
-						tryPromiseWrapp(
-							async () => (element ? await element.$isVisible : false),
-							"isVisible",
-						),
-					);
-				});
-
-			const waitForContentLoaded = (setPageReady = true) =>
+			const waitForContentLoaded = (isPageReady = true) =>
 				Effect.gen(function* (_) {
 					const isContentLoaded = yield* _(isAllContentLoaded());
 
 					if (!isContentLoaded) {
 						yield* _(
-							tryPromiseWrapp(
-								() =>
-									hero.activeTab.waitForLoad("AllContentLoaded", {
-										timeoutMs: waitExistsTimeoutMs,
-									}),
-								"waitForLoad",
+							_promise(() =>
+								hero.activeTab.waitForLoad("AllContentLoaded", {
+									timeoutMs: waitExistsTimeoutMs,
+								}),
 							),
 						);
 					}
 
 					const isPaintingStable = yield* _(
-						tryPromiseWrapp(
-							() => hero.activeTab.isPaintingStable,
-							"isPaintingStable",
-						),
+						_promise(() => hero.activeTab.isPaintingStable),
 					);
 
 					if (!isPaintingStable) {
 						yield* _(
-							tryPromiseWrapp(
-								() =>
-									hero.activeTab.waitForPaintingStable({
-										timeoutMs: waitExistsTimeoutMs,
-									}),
-								"waitForPaintingStable",
+							_promise(() =>
+								hero.activeTab.waitForPaintingStable({
+									timeoutMs: waitExistsTimeoutMs,
+								}),
 							),
 						);
 					}
 
-					if (setPageReady) {
+					if (isPageReady) {
 						const currentUrl = yield* _(url());
 
-						yield* _(
-							Ref.set(isPageReady, useValidURL(currentUrl) instanceof URL),
-						);
+						yield* _(setPageReady(useValidURL(currentUrl) instanceof URL));
 					}
+				});
+
+			const waitForNavigation = (
+				trigger: ILocationTrigger = "change",
+				isPageReady = true,
+			) =>
+				Effect.gen(function* () {
+					if (isPageReady) {
+						yield* _(setPageReady(isPageReady));
+					}
+
+					yield* _(
+						_promise(() =>
+							hero.waitForLocation(trigger, {
+								timeoutMs: timeoutMs,
+							}),
+						),
+					);
+
+					yield* _(waitForContentLoaded(isPageReady));
 				});
 
 			const reload = () =>
@@ -293,12 +394,10 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 					yield* _(Ref.set(isPageReady, false));
 
 					yield* _(
-						tryPromiseWrapp(
-							() =>
-								hero.reload({
-									timeoutMs: waitExistsTimeoutMs,
-								}),
-							"reload",
+						_promise(() =>
+							hero.reload({
+								timeoutMs: waitExistsTimeoutMs,
+							}),
 						),
 					);
 
@@ -309,45 +408,32 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 				selector: string,
 				queryOptions?: IWaitForElementOptions,
 			) =>
-				Effect.gen(function* (_) {
-					const element = yield* _(queryElement(selector, queryOptions));
-
-					return yield* _(
-						tryPromiseWrapp(
-							() =>
-								hero.interact({
-									click: { element, verification: "exactElement" },
-								}),
-							"interact",
-						),
-					);
-				});
+				queryElement(selector, queryOptions).pipe(
+					_tryMapPromise((element) =>
+						hero.interact({
+							click: { element, verification: "exactElement" },
+						}),
+					),
+				);
 
 			const typeInput = (
 				selector: string,
 				content: string,
 				queryOptions?: IWaitForElementOptions,
 			) =>
-				Effect.gen(function* (_) {
-					const element = yield* _(queryElement(selector, queryOptions));
+				queryElement(selector, queryOptions).pipe(
+					_tryMapPromise((element) =>
+						hero.interact({
+							click: { element, verification: "exactElement" },
+							type: content,
+						}),
+					),
+				);
 
-					return yield* _(
-						tryPromiseWrapp(
-							() =>
-								hero.interact({
-									click: { element, verification: "exactElement" },
-									type: content,
-								}),
-							"interact",
-						),
-					);
-				});
-
-			const close = () => tryPromiseWrapp(() => hero.close(), "close");
+			const close = () => _promise(() => hero.close(), "close");
 
 			return {
 				goto,
-				// goto: gotoBase,
 				waitForMillis,
 				querySelector,
 				getAllCookies,
