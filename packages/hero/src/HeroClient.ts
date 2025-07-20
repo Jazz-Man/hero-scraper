@@ -57,15 +57,16 @@ export type HeroPropsTest = HeroClassProperties<
 	typeof Hero.prototype.activeTab.cookieStorage
 >;
 
-const hasStatusProperty = (
+const isCfMitigated = (
 	error: unknown,
-): error is { status: number; isCloudflare?: boolean } => {
-	return (
-		typeof error === "object" &&
-		error !== null &&
-		"status" in error &&
-		typeof (error as any).status === "number"
-	);
+): error is { status: number; isCloudflare: boolean } => {
+	if (typeof error !== "object" || error === null) {
+		return false;
+	}
+
+	const err = error as Record<string, unknown>;
+
+	return typeof err?.status === "number" && Boolean(err?.isCloudflare);
 };
 
 export class HeroClientService extends Effect.Service<HeroClientService>()(
@@ -88,6 +89,8 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 			);
 
 			const hero = yield* _(Ref.get(heroRef));
+
+			const activeTab = () => tryWrapp(() => hero.activeTab, "activeTab");
 
 			const isAllContentLoaded = () =>
 				tryPromiseWrapp(
@@ -139,7 +142,7 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 						return goto;
 					},
 					catch: (cause) => {
-						if (hasStatusProperty(cause)) {
+						if (isCfMitigated(cause)) {
 							if (cause.isCloudflare) {
 								return new HeroCloudFlareChallengeError({
 									status: cause.status,
@@ -215,42 +218,42 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 
 							const httpResponse = goto.response;
 
-							const httpHeaders = new Headers(
-								httpResponse.headers as HeadersInit,
-							);
+							let httpHeaders: Headers | Map<string, string> | undefined;
 
-							const serverInfo = httpHeaders.get("server");
+							try {
+								httpHeaders = new Headers(httpResponse.headers);
+							} catch (_e) {
+								httpHeaders = new Map(
+									Object.entries(
+										httpResponse.headers as Record<string, string>,
+									),
+								);
+							}
 
 							const isCloudflare =
-								serverInfo?.toLocaleLowerCase() === "cloudflare";
+								httpHeaders.get("server")?.toLowerCase() === "cloudflare";
 
-							if (httpResponse.statusCode === 403 && isCloudflare) {
+							const isCfMitigated =
+								httpHeaders.get("cf-mitigated")?.toLowerCase() === "challenge";
+
+							if (
+								httpResponse.statusCode === 403 &&
+								isCloudflare &&
+								isCfMitigated
+							) {
 								throw new HeroCloudFlareChallengeError({
 									status: httpResponse.statusCode,
 									isCloudflare,
-								});
-							}
-							if (httpResponse.statusCode >= 400) {
-								throw new HeroHttpError({
-									status: httpResponse.statusCode,
-									isCloudflare: false,
 								});
 							}
 
 							return goto;
 						},
 						catch: (cause) => {
-							if (hasStatusProperty(cause)) {
-								if (cause.isCloudflare) {
-									return new HeroCloudFlareChallengeError({
-										status: cause.status,
-										isCloudflare: cause.isCloudflare,
-									});
-								}
-
-								return new HeroHttpError({
+							if (isCfMitigated(cause)) {
+								return new HeroCloudFlareChallengeError({
 									status: cause.status,
-									isCloudflare: false,
+									isCloudflare: cause.isCloudflare,
 								});
 							}
 
@@ -270,39 +273,7 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 						Effect.retry({
 							times: 3,
 							schedule: Schedule.exponential(100).pipe(Schedule.jittered),
-							while: (err) =>
-								Effect.gen(function* (_) {
-									console.info("reinit", err);
-
-									let reinit = false;
-
-									if (err instanceof HeroHttpError) {
-										if (!err.status) {
-											reinit = false;
-										} else if (err.status < 500) {
-											reinit = false;
-										} else {
-											reinit = true;
-										}
-									} else if (err instanceof HeroHttpNetworcFailure) {
-										reinit = true;
-									}
-
-									if (reinit) {
-										console.info("close");
-										yield* _(tryPromiseWrapp(() => hero.close(), "close"));
-
-										// const heroNew = yield* app.getHero({
-										// 	showChrome: true,
-										// 	showDevtools: true,
-										// });
-
-										// console.info("getHero");
-										// yield* _(Ref.set(heroRef, heroNew));
-									}
-
-									return reinit;
-								}),
+							while: (err) => err instanceof HeroHttpNetworcFailure,
 						}),
 					);
 				});

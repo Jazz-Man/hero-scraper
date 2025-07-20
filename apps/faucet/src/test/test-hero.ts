@@ -25,8 +25,9 @@ const user = await getUserWithCookies(username);
 export const program = Effect.gen(function* ($) {
 	const app = yield* $(HeroClientService);
 
-	yield* app.goto("https://httpbin.org/status/503");
-	yield* app.reload();
+	// yield* app.goto("https://httpbin.org/status/403");
+	yield* app.goto("https://bun.vsokolyk.pp.ua");
+	// yield* app.reload();
 
 	// const hero = yield* $(
 	// 	app.getHero(
@@ -67,6 +68,16 @@ Effect.runFork(
 
 // const res = await hero.goto(url);
 
-// console.log(res.response.headers);
+// let pageResponseHeaders: Headers | Map<string, string> | undefined;
 
-// // await hero.close();
+// try {
+// 	pageResponseHeaders = new Headers(res.response.headers);
+// } catch (e) {
+// 	pageResponseHeaders = new Map(
+// 		Object.entries(res.response.headers as Record<string, string>),
+// 	);
+// }
+
+// console.log(pageResponseHeaders.get("server"));
+
+// await hero.close();
