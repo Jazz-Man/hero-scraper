@@ -1,9 +1,8 @@
 import type Hero from "@ulixee/hero/lib/Hero";
 import type IWaitForElementOptions from "@ulixee/hero-interfaces/IWaitForElementOptions";
 import type { ILocationTrigger } from "@ulixee/unblocked-specification/agent/browser/Location";
-import { Effect, Layer, Ref, Schedule } from "effect";
+import { Array as A, Effect, Layer, Option, Ref, Schedule } from "effect";
 import type { LazyArg } from "effect/Function";
-import { element } from "effect/Schema";
 import {
 	type AllHeroPropsList,
 	HeroAppService,
@@ -136,7 +135,80 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 				Effect.gen(function* () {
 					yield* _(waitForContentLoaded(false));
 
-					/// this.hero.flowCommand
+					const handle = Effect.gen(function* () {
+						const frames = yield* _promise(
+							() => hero.activeTab.frameEnvironments,
+						);
+
+						for (const frame of frames) {
+							const isMainFrame = yield* _promise(() => frame.isMainFrame);
+							const frameUrl = yield* _promise(() => frame.url).pipe(
+								Effect.map(useValidURL),
+							);
+
+							if (isMainFrame) {
+								continue;
+							}
+
+							if (!(frameUrl instanceof URL)) {
+								continue;
+							}
+
+							if (frameUrl.protocol !== "https:") {
+								continue;
+							}
+
+							if (frameUrl.hostname !== "challenges.cloudflare.com") {
+								continue;
+							}
+
+							yield* _promise(() => frame.waitForLoad("AllContentLoaded"));
+							yield* _promise(() => frame.waitForPaintingStable());
+
+							const body = frame.document.body;
+
+							if (!body) {
+								continue;
+							}
+
+							const isVisible = yield* _promise(() => body.$isVisible);
+
+							if (!isVisible) {
+								continue;
+							}
+
+							yield* _promise(() => body.shadowRoot.normalize());
+
+							yield* _promise(() =>
+								frame.document.scrollingElement?.scrollIntoView({
+									block: "center",
+									inline: "center",
+								}),
+							);
+
+							yield* _promise(() =>
+								body.shadowRoot
+									?.querySelector("div.main-wrapper .cb-c label.cb-lb")
+									?.$waitForVisible(),
+							).pipe(
+								_tryMapPromise((checkbox) => checkbox.$waitForClickable()),
+								_tryMapPromise((checkbox) => checkbox.click()),
+							);
+						}
+					});
+
+					yield* _promise(() =>
+						hero.flowCommand(
+							async () => {
+								await Effect.runPromise(handle);
+							},
+							(assert) =>
+								assert(
+									hero.activeTab.querySelector('[name="cf-turnstile-response"]')
+										.$exists,
+								),
+						),
+					);
 
 					yield* _(waitForNavigation("change", false));
 
@@ -447,6 +519,7 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 				waitForContentLoaded,
 				reload,
 				close,
+				handleTurnstileChallenge,
 			} as const;
 		}),
 		dependencies: [HeroAppService.Default],
