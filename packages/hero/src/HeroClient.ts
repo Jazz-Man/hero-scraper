@@ -88,7 +88,12 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 				),
 			);
 
-			const hero = yield* _(Ref.get(heroRef));
+			const hero = yield* _(
+				app.getHero({
+					showChrome: true,
+					showDevtools: true,
+				}),
+			);
 
 			const activeTab = () => tryWrapp(() => hero.activeTab, "activeTab");
 
@@ -111,74 +116,68 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 			) => tryPromiseWrapp(() => hero.waitForLoad(...params), "waitForLoad");
 
 			const goto = (...params: Parameters<HeroParametersType<"goto">>) =>
-				Effect.gen(function* () {
-					const hero = yield* _(Ref.get(heroRef));
+				Effect.tryPromise({
+					try: async () => {
+						const goto = await hero.goto(...params);
 
-					return yield* Effect.tryPromise({
-						try: async () => {
-							const goto = await hero.goto(...params);
+						const httpResponse = goto.response;
 
-							const httpResponse = goto.response;
+						let httpHeaders: Headers | Map<string, string> | undefined;
 
-							let httpHeaders: Headers | Map<string, string> | undefined;
+						try {
+							httpHeaders = new Headers(httpResponse.headers);
+						} catch (_e) {
+							httpHeaders = new Map(
+								Object.entries(httpResponse.headers as Record<string, string>),
+							);
+						}
 
-							try {
-								httpHeaders = new Headers(httpResponse.headers);
-							} catch (_e) {
-								httpHeaders = new Map(
-									Object.entries(
-										httpResponse.headers as Record<string, string>,
-									),
-								);
-							}
+						const isCloudflare =
+							httpHeaders.get("server")?.toLowerCase() === "cloudflare";
 
-							const isCloudflare =
-								httpHeaders.get("server")?.toLowerCase() === "cloudflare";
+						const isCfMitigated =
+							httpHeaders.get("cf-mitigated")?.toLowerCase() === "challenge";
 
-							const isCfMitigated =
-								httpHeaders.get("cf-mitigated")?.toLowerCase() === "challenge";
-
-							if (
-								httpResponse.statusCode === 403 &&
-								isCloudflare &&
-								isCfMitigated
-							) {
-								throw new HeroCloudFlareChallengeError({
-									status: httpResponse.statusCode,
-									isCloudflare,
-								});
-							}
-
-							return goto;
-						},
-						catch: (cause) => {
-							if (isCfMitigated(cause)) {
-								return new HeroCloudFlareChallengeError({
-									status: cause.status,
-									isCloudflare: cause.isCloudflare,
-								});
-							}
-
-							if (cause instanceof Error && cause.message.includes("net::")) {
-								return new HeroHttpNetworcFailure({
-									name: cause.name,
-									message: cause.message,
-								});
-							}
-							return new HeroError({
-								module: "HeroAppService",
-								method: "gotoBase",
-								cause,
+						if (
+							httpResponse.statusCode === 403 &&
+							isCloudflare &&
+							isCfMitigated
+						) {
+							throw new HeroCloudFlareChallengeError({
+								status: httpResponse.statusCode,
+								isCloudflare,
 							});
-						},
-					}).pipe(
-						Effect.retry({
-							times: 3,
-							schedule: Schedule.exponential(100).pipe(Schedule.jittered),
-							while: (err) => err instanceof HeroHttpNetworcFailure,
-						}),
-					);
-				});
+						}
+
+						return goto;
+					},
+					catch: (cause) => {
+						if (isCfMitigated(cause)) {
+							return new HeroCloudFlareChallengeError({
+								status: cause.status,
+								isCloudflare: cause.isCloudflare,
+							});
+						}
+
+						if (cause instanceof Error && cause.message.includes("net::")) {
+							return new HeroHttpNetworcFailure({
+								name: cause.name,
+								message: cause.message,
+							});
+						}
+						return new HeroError({
+							module: "HeroAppService",
+							method: "gotoBase",
+							cause,
+						});
+					},
+				}).pipe(
+					Effect.retry({
+						times: 3,
+						schedule: Schedule.exponential(100).pipe(Schedule.jittered),
+						while: (err) => err instanceof HeroHttpNetworcFailure,
+					}),
+				);
 
 			const waitForMillis = (
 				...params: Parameters<HeroParametersType<"waitForMillis">>
