@@ -27,6 +27,7 @@ export const program = Effect.gen(function* ($) {
 
 	// yield* app.goto("https://httpbin.org/status/403");
 	yield* app.goto("https://bun.vsokolyk.pp.ua");
+	yield* app.handleTurnstileChallenge();
 	// yield* app.reload();
 
 	// const hero = yield* $(
@@ -81,3 +82,28 @@ Effect.runFork(
 // console.log(pageResponseHeaders.get("server"));
 
 // await hero.close();
+
+// const task1 = Effect.gen(function* () {
+// 	// console.log("Executing task1...");
+// 	yield* Effect.sleep("100 millis");
+// 	// console.log("task1 done");
+// 	return 1;
+// });
+
+// const task2 = Effect.gen(function* () {
+// 	console.log("Executing task2...");
+// 	yield* Effect.sleep("200 millis");
+// 	console.log("task2 done");
+// 	return yield* Effect.fail("Uh oh!");
+// });
+
+// const task3 = Effect.gen(function* () {
+// 	console.log("Executing task3...");
+// 	yield* Effect.sleep("300 millis");
+// 	console.log("task3 done");
+// 	return 3;
+// });
+
+// const res = await Effect.runPromise(task2).catch(Console.error);
+
+// console.log({ res });
