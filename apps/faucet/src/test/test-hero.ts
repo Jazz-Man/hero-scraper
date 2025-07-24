@@ -1,11 +1,11 @@
+import { STATUS_CODES } from "node:http";
 import { HeroAppService } from "@scraper/hero";
 import { IpInfoService } from "@scraper/ip-info";
 import { getUserWithCookies } from "@scraper/prisma";
-
 import Hero from "@ulixee/hero/lib/Hero";
 import type Resource from "@ulixee/hero/lib/Resource";
-import { Console, Effect } from "effect";
-
+import { Console, Data, Effect } from "effect";
+import type { HeroParametersType } from "../../../../packages/hero/src/HeroAppService";
 import {
 	HeroClientService,
 	HeroClientServiceLive,
@@ -25,28 +25,13 @@ const user = await getUserWithCookies(username);
 export const program = Effect.gen(function* ($) {
 	const app = yield* $(HeroClientService);
 
+	const url = new URL("https://bun.vsokolyk.pp.ua/test-errors.php");
+
+	url.searchParams.set("error", "403");
+
 	// yield* app.goto("https://httpbin.org/status/403");
-	yield* app.goto("https://bun.vsokolyk.pp.ua");
-	yield* app.handleTurnstileChallenge();
-	// yield* app.reload();
-
-	// const hero = yield* $(
-	// 	app.getHero(
-	// 		{
-	// 			showChrome: true,
-	// 			showDevtools: true,
-	// 		},
-	// 		user.cookies,
-	// 		new URL("https://freebitco.in/"),
-	// 	),
-	// );
-
-	// return yield* $(
-	// 	Effect.tryPromise({
-	// 		try: () => hero.goto("https://freebitco.in/?op=home"),
-	// 		catch: (res) => new Error(`Goto error: ${res}`),
-	// 	}),
-	// );
+	yield* app.goto(url.toString());
+	// yield* app.handleTurnstileChallenge();
 }).pipe(Effect.catchAll(Console.error));
 
 Effect.runFork(
@@ -63,11 +48,12 @@ Effect.runFork(
 // 		host: "ws://localhost:1818",
 // 	},
 // 	showChrome: true,
+// 	showDevtools: true,
 // });
 
-// const url = "https://bun.vsokolyk.pp.ua";
+// const url = "https://bun.vsokolyk.pp.ua/test-errors.php?error=403";
 
-// const res = await hero.goto(url);
+// const res = await hero.goto(url.toString());
 
 // let pageResponseHeaders: Headers | Map<string, string> | undefined;
 
@@ -79,31 +65,27 @@ Effect.runFork(
 // 	);
 // }
 
-// console.log(pageResponseHeaders.get("server"));
+// console.log(pageResponseHeaders);
 
 // await hero.close();
 
-// const task1 = Effect.gen(function* () {
-// 	// console.log("Executing task1...");
-// 	yield* Effect.sleep("100 millis");
-// 	// console.log("task1 done");
-// 	return 1;
-// });
+// declare const userDetails: Effect.Effect<
+// 	never,
+// 	NegativeAgeError | UnderageError | NameError,
+// 	{ age: number; name: string }
+// >;
 
-// const task2 = Effect.gen(function* () {
-// 	console.log("Executing task2...");
-// 	yield* Effect.sleep("200 millis");
-// 	console.log("task2 done");
-// 	return yield* Effect.fail("Uh oh!");
-// });
+// const handled = userDetails.pipe(
+// 	Effect.match({
+// 		onFailure: () => ({ age: 0, name: "Anonymous" }),
+// 		onSuccess: (x) => x,
+// 	}),
+// ); // :: Effect<never, never, { age: number, name: string }>
 
-// const task3 = Effect.gen(function* () {
-// 	console.log("Executing task3...");
-// 	yield* Effect.sleep("300 millis");
-// 	console.log("task3 done");
-// 	return 3;
-// });
-
-// const res = await Effect.runPromise(task2).catch(Console.error);
-
-// console.log({ res });
+// // equivalent to:
+// const handled2 = userDetails.pipe(
+// 	Effect.matchEffect({
+// 		onFailure: () => Effect.succeed({ age: 0, name: "Anonymous" }),
+// 		onSuccess: Effect.succeed,
+// 	}),
+// );

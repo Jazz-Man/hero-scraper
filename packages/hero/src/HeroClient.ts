@@ -1,7 +1,8 @@
+import TimeoutError from "@ulixee/commons/interfaces/TimeoutError";
 import type Hero from "@ulixee/hero/lib/Hero";
 import type IWaitForElementOptions from "@ulixee/hero-interfaces/IWaitForElementOptions";
 import type { ILocationTrigger } from "@ulixee/unblocked-specification/agent/browser/Location";
-import { Array as A, Effect, Layer, Option, Ref, Schedule } from "effect";
+import { Effect, Layer, Ref, Schedule } from "effect";
 import type { LazyArg } from "effect/Function";
 import {
 	type AllHeroPropsList,
@@ -10,11 +11,7 @@ import {
 	type HeroClassProperties,
 	type HeroParametersType,
 } from "./HeroAppService";
-import {
-	HeroCloudFlareChallengeError,
-	HeroError,
-	HeroHttpNetworcFailure,
-} from "./HeroError";
+import { HeroError, HeroHttpError, HeroHttpNetworcFailure } from "./HeroError";
 
 const useValidURL = (url: string): boolean | URL => {
 	try {
@@ -24,63 +21,56 @@ const useValidURL = (url: string): boolean | URL => {
 	}
 };
 
+const _prepareError = (
+	fn: Function,
+	cause: unknown,
+	method?: AllHeroPropsList | string,
+) => {
+	if (cause instanceof TimeoutError) {
+		return cause;
+	}
+	if (cause instanceof Error && cause.message.includes("net::")) {
+		return new HeroHttpNetworcFailure({
+			name: cause.name,
+			message: cause.message,
+			cause,
+		});
+	}
+
+	return new HeroError({
+		module: "HeroAppService",
+		method: method ? method : fn.toString(),
+		cause,
+	});
+};
+
 const _tryMapPromise = <A, B, E1>(
 	fn: (a: A, signal: AbortSignal) => PromiseLike<B>,
 	method?: AllHeroPropsList | string,
 ) =>
 	Effect.tryMapPromise({
 		try: (a: A, signal) => fn(a, signal),
-		catch: (cause) =>
-			new HeroError({
-				module: "HeroAppService",
-				method: method ? method : fn.toString(),
-				cause,
-			}),
+		catch: (cause) => _prepareError(fn, cause, method),
 	});
 
 const _promise = <A>(
 	fn: (signal: AbortSignal) => PromiseLike<A>,
 	method?: AllHeroPropsList | string,
-): Effect.Effect<A, HeroError> =>
+) =>
 	Effect.tryPromise({
 		try: (signal) => fn(signal),
-		catch: (cause: unknown) =>
-			new HeroError({
-				module: "HeroAppService",
-				method: method ? method : fn.toString(),
-				cause,
-			}),
+		catch: (cause: unknown) => _prepareError(fn, cause, method),
 	});
 
-const _try = <A>(
-	fn: LazyArg<A>,
-	method?: AllHeroPropsList | string,
-): Effect.Effect<A, HeroError> =>
+const _try = <A>(fn: LazyArg<A>, method?: AllHeroPropsList | string) =>
 	Effect.try({
 		try: () => fn(),
-		catch: (cause: unknown) =>
-			new HeroError({
-				module: "HeroAppService",
-				method: method ? method : fn.toString(),
-				cause,
-			}),
+		catch: (cause: unknown) => _prepareError(fn, cause, method),
 	});
 
 export type HeroPropsTest = HeroClassProperties<
 	typeof Hero.prototype.activeTab.cookieStorage
 >;
-
-const isCfMitigated = (
-	error: unknown,
-): error is { status: number; isCloudflare: boolean } => {
-	if (typeof error !== "object" || error === null) {
-		return false;
-	}
-
-	const err = error as Record<string, unknown>;
-
-	return typeof err?.status === "number" && Boolean(err?.isCloudflare);
-};
 
 export class HeroClientService extends Effect.Service<HeroClientService>()(
 	"HeroClientService",
@@ -97,6 +87,7 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 				app.getHero({
 					showChrome: true,
 					showDevtools: true,
+					showChromeInteractions: true,
 				}),
 			);
 
@@ -197,82 +188,82 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 						}
 					});
 
-					yield* _promise(() =>
-						hero.flowCommand(
-							async () => {
-								await Effect.runPromise(handle);
-							},
-							(assert) =>
-								assert(
-									hero.activeTab.querySelector('[name="cf-turnstile-response"]')
-										.$exists,
-								),
-						),
-					);
+					// yield* _promise(() =>
+					// 	hero.flowCommand(
+					// 		async () => {
+					// 			await Effect.runPromise(handle);
+					// 		},
+					// 		(assert) =>
+					// 			assert(
+					// 				hero.activeTab.querySelector('[name="cf-turnstile-response"]')
+					// 					.$exists,
+					// 			),
+					// 	),
+					// );
 
-					yield* _(waitForNavigation("change", false));
+					// yield* _(waitForNavigation("change", false));
 
-					const isCookieSet = yield* getCookie("cf_chl_rc_m").pipe(
-						Effect.map((cookie) => cookie.value === "1"),
-					);
+					// const isCookieSet = yield* getCookie("cf_chl_rc_m").pipe(
+					// 	Effect.map((cookie) => cookie.value === "1"),
+					// );
 
-					if (isCookieSet) {
-						yield* _(waitForContentLoaded(false));
+					// if (isCookieSet) {
+					// 	yield* _(waitForContentLoaded(false));
 
-						const spinner = yield* _(
-							waitForExists(".main-wrapper .main-content .loading-spinner"),
-						);
+					// 	const spinner = yield* _(
+					// 		waitForExists(".main-wrapper .main-content .loading-spinner"),
+					// 	);
 
-						const prevDiv = yield* _(
-							_promise(() => spinner.previousSibling?.id),
-						);
+					// 	const prevDiv = yield* _(
+					// 		_promise(() => spinner.previousSibling?.id),
+					// 	);
 
-						yield* _promise(() =>
-							spinner.$waitForHidden({ timeoutMs: waitExistsTimeoutMs }),
-						);
+					// 	yield* _promise(() =>
+					// 		spinner.$waitForHidden({ timeoutMs: waitExistsTimeoutMs }),
+					// 	);
 
-						const iframe = yield* queryElement(`#${prevDiv} > div > div`, {
-							waitForVisible: true,
-						}).pipe(
-							_tryMapPromise((shadowRoot) =>
-								shadowRoot.shadowRoot?.querySelector("iframe").$waitForExists(),
-							),
-						);
+					// 	const iframe = yield* queryElement(`#${prevDiv} > div > div`, {
+					// 		waitForVisible: true,
+					// 	}).pipe(
+					// 		_tryMapPromise((shadowRoot) =>
+					// 			shadowRoot.shadowRoot?.querySelector("iframe").$waitForExists(),
+					// 		),
+					// 	);
 
-						const iframeEnv = yield* getFrameEnvironment(iframe);
+					// 	const iframeEnv = yield* getFrameEnvironment(iframe);
 
-						const iframeBody = yield* _promise(() =>
-							iframeEnv?.document?.querySelector("body")?.$waitForVisible(),
-						).pipe(
-							Effect.tap((body) => _promise(() => body.shadowRoot.normalize())),
-						);
+					// 	const iframeBody = yield* _promise(() =>
+					// 		iframeEnv?.document?.querySelector("body")?.$waitForVisible(),
+					// 	).pipe(
+					// 		Effect.tap((body) => _promise(() => body.shadowRoot.normalize())),
+					// 	);
 
-						if (iframe) {
-							yield* _promise(() =>
-								hero.interact({
-									move: iframe,
-								}),
-							);
-						}
+					// 	if (iframe) {
+					// 		yield* _promise(() =>
+					// 			hero.interact({
+					// 				move: iframe,
+					// 			}),
+					// 		);
+					// 	}
 
-						yield* _promise(() =>
-							iframeEnv.document.scrollingElement?.scrollIntoView({
-								block: "center",
-								inline: "center",
-							}),
-						);
+					// 	yield* _promise(() =>
+					// 		iframeEnv.document.scrollingElement?.scrollIntoView({
+					// 			block: "center",
+					// 			inline: "center",
+					// 		}),
+					// 	);
 
-						const checkbox = yield* _promise(() =>
-							iframeBody.shadowRoot
-								.querySelector("div.main-wrapper .cb-c label.cb-lb")
-								?.$waitForVisible(),
-						).pipe(_tryMapPromise((checkbox) => checkbox.$waitForClickable()));
+					// 	const checkbox = yield* _promise(() =>
+					// 		iframeBody.shadowRoot
+					// 			.querySelector("div.main-wrapper .cb-c label.cb-lb")
+					// 			?.$waitForVisible(),
+					// 	).pipe(_tryMapPromise((checkbox) => checkbox.$waitForClickable()));
 
-						yield* waitForMillis(1000);
-						yield* _promise(() => checkbox.click());
+					// 	yield* waitForMillis(1000);
+					// 	yield* _promise(() => checkbox.click());
 
-						yield* _(waitForContentLoaded(false));
-					}
+					// 	yield* _(waitForContentLoaded(false));
+					// }
 				});
 
 			const isAllContentLoaded = () =>
@@ -288,76 +279,57 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 			) => _promise(() => hero.waitForLoad(...params), "waitForLoad");
 
 			const goto = (...params: Parameters<HeroParametersType<"goto">>) =>
-				Effect.tryPromise({
-					try: async () => {
-						const goto = await hero.goto(...params);
+				_promise(() => hero.goto(...params)).pipe(
+					Effect.tap(console.log),
+					Effect.flatMap((result) =>
+						Effect.gen(function* () {
+							const httpResponse = result.response;
 
-						const httpResponse = goto.response;
+							if (httpResponse.statusCode !== 200) {
+								let httpHeaders: Headers | Map<string, string> | undefined;
 
-						let httpHeaders: Headers | Map<string, string> | undefined;
+								try {
+									httpHeaders = new Headers(httpResponse.headers);
+								} catch (_e) {
+									httpHeaders = new Map(
+										Object.entries(
+											httpResponse.headers as Record<string, string>,
+										),
+									);
+								}
 
-						try {
-							httpHeaders = new Headers(httpResponse.headers);
-						} catch (_e) {
-							httpHeaders = new Map(
-								Object.entries(httpResponse.headers as Record<string, string>),
-							);
-						}
+								const retryAfter = httpHeaders.has("retry-after")
+									? (httpHeaders.get("retry-after") as string)
+									: undefined;
 
-						const isCloudflare =
-							httpHeaders.get("server")?.toLowerCase() === "cloudflare";
+								const isCfMitigated =
+									httpHeaders.get("cf-mitigated")?.toLowerCase() ===
+									"challenge";
 
-						const isCfMitigated =
-							httpHeaders.get("cf-mitigated")?.toLowerCase() === "challenge";
+								return yield* Effect.fail(
+									new HeroHttpError({
+										status: httpResponse.statusCode,
+										isCloudflare: isCfMitigated,
+										retryAfter,
+									}),
+								);
+							}
 
-						if (
-							httpResponse.statusCode === 403 &&
-							isCloudflare &&
-							isCfMitigated
-						) {
-							throw new HeroCloudFlareChallengeError({
-								status: httpResponse.statusCode,
-								isCloudflare,
-							});
-						}
-
-						return goto;
-					},
-					catch: (cause) => {
-						if (isCfMitigated(cause)) {
-							return new HeroCloudFlareChallengeError({
-								status: cause.status,
-								isCloudflare: cause.isCloudflare,
-							});
-						}
-
-						if (cause instanceof Error && cause.message.includes("net::")) {
-							return new HeroHttpNetworcFailure({
-								name: cause.name,
-								message: cause.message,
-							});
-						}
-						return new HeroError({
-							module: "HeroAppService",
-							method: "gotoBase",
-							cause,
-						});
-					},
-				}).pipe(
+							return result;
+						}),
+					),
 					Effect.retry({
 						times: 3,
-						schedule: Schedule.exponential(100).pipe(Schedule.jittered),
+						schedule: Schedule.exponential(1000).pipe(
+							Schedule.jittered,
+							Schedule.onDecision((_out, decision) =>
+								decision._tag === "Continue"
+									? Effect.logInfo("Retry after HeroHttpNetworcFailure")
+									: Effect.void,
+							),
+						),
 						while: (err) => err instanceof HeroHttpNetworcFailure,
 					}),
-					Effect.catchIf(
-						(error) => error._tag === "HeroCloudFlareChallengeError",
-						() =>
-							Effect.gen(function* () {
-								yield* _(waitForContentLoaded(false));
-
-								return true;
-							}),
-					),
 				);
 
 			const waitForMillis = (
@@ -507,7 +479,8 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 			const close = () => _promise(() => hero.close(), "close");
 
 			return {
-				goto,
+				goto: goto,
+				// goto,
 				waitForMillis,
 				querySelector,
 				getAllCookies,
