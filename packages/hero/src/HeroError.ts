@@ -8,6 +8,8 @@ export class HeroError extends Schema.TaggedError<HeroError>(
 )("HeroError", {
 	module: Schema.String,
 	method: Schema.String,
+	name: Schema.optional(Schema.String),
+	message: Schema.optional(Schema.String),
 	description: Schema.optional(Schema.String),
 	cause: Schema.optional(Schema.Defect),
 }) {}
