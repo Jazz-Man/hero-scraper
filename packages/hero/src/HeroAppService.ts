@@ -5,7 +5,6 @@ import { OpenDnsAlternate } from "@ulixee/default-browser-emulator/lib/utils/Dns
 import ExecuteJsPlugin from "@ulixee/execute-js-plugin";
 import type { IHeroCreateOptions } from "@ulixee/hero";
 import Hero from "@ulixee/hero/lib/Hero";
-import HeroCore from "@ulixee/hero-core";
 import type IViewport from "@ulixee/unblocked-specification/agent/browser/IViewport";
 import type { ICookie } from "@ulixee/unblocked-specification/agent/net/ICookie";
 import { Data, DateTime, Effect, Layer, Ref } from "effect";

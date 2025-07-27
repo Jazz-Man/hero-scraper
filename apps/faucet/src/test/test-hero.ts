@@ -1,4 +1,4 @@
-import { HeroAppService } from "@scraper/hero";
+import { HeroAppService, HeroClientService } from "@scraper/hero";
 import { IpInfoService } from "@scraper/ip-info";
 import { getUserWithCookies } from "@scraper/prisma";
 import ExecuteJsPlugin from "@ulixee/execute-js-plugin";
@@ -8,7 +8,6 @@ import type Resource from "@ulixee/hero/lib/Resource";
 // const HeroCore = require("@ulixee/hero-core");
 
 import { Console, Effect } from "effect";
-import { HeroClientService } from "../../../../packages/hero/src/HeroClient";
 
 // Users array should be defined somewhere
 declare const users: Array<{
@@ -25,9 +24,9 @@ export const program = Effect.gen(function* ($) {
 	const app = yield* $(HeroClientService);
 
 	// const url = new URL("https://bun.vsokolyk.pp.ua");
-	const url = new URL("https://bun.vsokolyk.pp.ua/test-errors.php");
+	const url = new URL("https://freebitco.in/");
 
-	url.searchParams.set("error", "429");
+	// url.searchParams.set("op", "home");
 
 	yield* app.goto(url.toString());
 	// yield* app.handleTurnstileChallenge();
