@@ -1,17 +1,18 @@
-import TimeoutError from "@ulixee/commons/interfaces/TimeoutError";
+import type { Resource, WebsocketResource } from "@ulixee/hero";
 import type Hero from "@ulixee/hero/lib/Hero";
 import type IWaitForElementOptions from "@ulixee/hero-interfaces/IWaitForElementOptions";
 import type { ILocationTrigger } from "@ulixee/unblocked-specification/agent/browser/Location";
 import { Effect, Layer, Ref, Schedule } from "effect";
-import type { LazyArg } from "effect/Function";
 import {
-	type AllHeroPropsList,
+	_promise,
+	_try,
+	_tryMapPromise,
 	HeroAppService,
 	HeroAppServiceLive,
 	type HeroClassProperties,
 	type HeroParametersType,
 } from "./HeroAppService";
-import { HeroError, HeroHttpError, HeroHttpNetworcFailure } from "./HeroError";
+import { HeroHttpError, HeroHttpNetworcFailure } from "./HeroError";
 
 const useValidURL = (url: string): boolean | URL => {
 	try {
@@ -21,110 +22,64 @@ const useValidURL = (url: string): boolean | URL => {
 	}
 };
 
-const _prepareError = (
-	fn: Function,
-	cause: unknown,
-	method?: AllHeroPropsList | string,
-) => {
-	if (cause instanceof TimeoutError) {
-		return cause;
-	}
-	if (cause instanceof Error && cause.message.includes("net::")) {
-		return new HeroHttpNetworcFailure({
-			name: cause.name,
-			message: cause.message,
-			cause,
-		});
-	}
-
-	return new HeroError({
-		module: "HeroAppService",
-		method: method ? method : fn.toString(),
-		cause,
-	});
-};
-
-const _tryMapPromise = <A, B, E1>(
-	fn: (a: A, signal: AbortSignal) => PromiseLike<B>,
-	method?: AllHeroPropsList | string,
-) =>
-	Effect.tryMapPromise({
-		try: (a: A, signal) => fn(a, signal),
-		catch: (cause) => _prepareError(fn, cause, method),
-	});
-
-const _promise = <A>(
-	fn: (signal: AbortSignal) => PromiseLike<A>,
-	method?: AllHeroPropsList | string,
-) =>
-	Effect.tryPromise({
-		try: (signal) => fn(signal),
-		catch: (cause: unknown) => _prepareError(fn, cause, method),
-	});
-
-const _try = <A>(fn: LazyArg<A>, method?: AllHeroPropsList | string) =>
-	Effect.try({
-		try: () => fn(),
-		catch: (cause: unknown) => _prepareError(fn, cause, method),
-	});
-
 export type HeroPropsTest = HeroClassProperties<
 	typeof Hero.prototype.activeTab.cookieStorage
 >;
 
+const policy = Schedule.exponential(1000).pipe(
+	Schedule.jittered,
+	Schedule.onDecision((_out, decision) =>
+		decision._tag === "Continue"
+			? Effect.logInfo("Retry after HeroHttpNetworcFailure")
+			: Effect.void,
+	),
+);
+
 export class HeroClientService extends Effect.Service<HeroClientService>()(
 	"HeroClientService",
 	{
-		effect: Effect.gen(function* (_) {
-			const isPageReady = yield* _(Ref.make<boolean>(false));
+		effect: Effect.gen(function* ($) {
+			const isPageReady = yield* $(Ref.make<boolean>(false));
 
-			const app = yield* _(HeroAppService);
+			const app = yield* $(HeroAppService);
 
 			const waitExistsTimeoutMs = 6000;
 			const timeoutMs = 3000;
 
-			const hero = yield* _(
+			const hero = yield* $(
 				app.getHero({
 					showChrome: true,
 					showDevtools: true,
 					showChromeInteractions: true,
+					sessionPersistence: true,
 				}),
 			);
 
-			const setPageReady = (value: boolean) => _(Ref.set(isPageReady, value));
+			const setPageReady = (value: boolean) => $(Ref.set(isPageReady, value));
 
 			const activeTab = () => _try(() => hero.activeTab, "activeTab");
 
 			const getFrameEnvironment = (
 				...params: Parameters<HeroParametersType<"getFrameEnvironment">>
 			) =>
-				Effect.tryPromise({
-					try: async () => {
-						const iframeEnv = await hero.getFrameEnvironment(...params);
+				_promise(async () => {
+					const iframeEnv = await hero.getFrameEnvironment(...params);
+					if (!iframeEnv) {
+						throw new Error(
+							`Frame environment not found with params: ${JSON.stringify(params)}`,
+						);
+					}
 
-						if (!iframeEnv) {
-							throw new Error(
-								`Frame environment not found with params: ${JSON.stringify(params)}`,
-							);
-						}
+					await iframeEnv.waitForLoad("AllContentLoaded");
 
-						await iframeEnv.waitForLoad("AllContentLoaded");
+					await iframeEnv.waitForPaintingStable();
 
-						await iframeEnv.waitForPaintingStable();
-
-						return iframeEnv;
-					},
-					catch: (cause) =>
-						new HeroError({
-							module: "HeroAppService",
-							method: "getFrameEnvironment",
-							cause,
-						}),
+					return iframeEnv;
 				});
 
 			const handleTurnstileChallenge = () =>
 				Effect.gen(function* () {
-					yield* _(waitForContentLoaded(false));
+					yield* $(waitForContentLoaded(false));
 
 					const handle = Effect.gen(function* () {
 						const frames = yield* _promise(
@@ -203,9 +158,9 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 
 					// yield* _(waitForNavigation("change", false));
 
-					// const isCookieSet = yield* getCookie("cf_chl_rc_m").pipe(
-					// 	Effect.map((cookie) => cookie.value === "1"),
-					// );
+					const isCookieSet = yield* getCookie("cf_chl_rc_m").pipe(
+						Effect.map((cookie) => cookie.value === "1"),
+					);
 
 					// if (isCookieSet) {
 					// 	yield* _(waitForContentLoaded(false));
@@ -280,24 +235,23 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 
 			const goto = (...params: Parameters<HeroParametersType<"goto">>) =>
 				_promise(() => hero.goto(...params)).pipe(
-					Effect.tap(console.log),
 					Effect.flatMap((result) =>
 						Effect.gen(function* () {
 							const httpResponse = result.response;
 
+							let httpHeaders: Headers | Map<string, string> | undefined;
+
+							try {
+								httpHeaders = new Headers(httpResponse.headers);
+							} catch (_e) {
+								httpHeaders = new Map(
+									Object.entries(
+										httpResponse.headers as Record<string, string>,
+									),
+								);
+							}
+
 							if (httpResponse.statusCode !== 200) {
-								let httpHeaders: Headers | Map<string, string> | undefined;
-
-								try {
-									httpHeaders = new Headers(httpResponse.headers);
-								} catch (_e) {
-									httpHeaders = new Map(
-										Object.entries(
-											httpResponse.headers as Record<string, string>,
-										),
-									);
-								}
-
 								const retryAfter = httpHeaders.has("retry-after")
 									? (httpHeaders.get("retry-after") as string)
 									: undefined;
@@ -315,19 +269,15 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 								);
 							}
 
+							yield* $(waitForContentLoaded());
+
 							return result;
 						}),
 					),
+					Effect.tap(console.log),
 					Effect.retry({
 						times: 3,
-						schedule: Schedule.exponential(1000).pipe(
-							Schedule.jittered,
-							Schedule.onDecision((_out, decision) =>
-								decision._tag === "Continue"
-									? Effect.logInfo("Retry after HeroHttpNetworcFailure")
-									: Effect.void,
-							),
-						),
+						schedule: policy,
 						while: (err) => err instanceof HeroHttpNetworcFailure,
 					}),
 				);
@@ -421,10 +371,10 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 			) =>
 				Effect.gen(function* () {
 					if (isPageReady) {
-						yield* _(setPageReady(isPageReady));
+						yield* $(setPageReady(isPageReady));
 					}
 
-					yield* _(
+					yield* $(
 						_promise(() =>
 							hero.waitForLocation(trigger, {
 								timeoutMs: timeoutMs,
@@ -432,7 +382,7 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 						),
 					);
 
-					yield* _(waitForContentLoaded(isPageReady));
+					yield* $(waitForContentLoaded(isPageReady));
 				});
 
 			const reload = () =>

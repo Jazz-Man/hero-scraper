@@ -1,15 +1,14 @@
-import { STATUS_CODES } from "node:http";
 import { HeroAppService } from "@scraper/hero";
 import { IpInfoService } from "@scraper/ip-info";
 import { getUserWithCookies } from "@scraper/prisma";
+import ExecuteJsPlugin from "@ulixee/execute-js-plugin";
 import Hero from "@ulixee/hero/lib/Hero";
 import type Resource from "@ulixee/hero/lib/Resource";
-import { Console, Data, Effect } from "effect";
-import type { HeroParametersType } from "../../../../packages/hero/src/HeroAppService";
-import {
-	HeroClientService,
-	HeroClientServiceLive,
-} from "../../../../packages/hero/src/HeroClient";
+
+// const HeroCore = require("@ulixee/hero-core");
+
+import { Console, Effect } from "effect";
+import { HeroClientService } from "../../../../packages/hero/src/HeroClient";
 
 // Users array should be defined somewhere
 declare const users: Array<{
@@ -25,11 +24,11 @@ const user = await getUserWithCookies(username);
 export const program = Effect.gen(function* ($) {
 	const app = yield* $(HeroClientService);
 
+	// const url = new URL("https://bun.vsokolyk.pp.ua");
 	const url = new URL("https://bun.vsokolyk.pp.ua/test-errors.php");
 
-	url.searchParams.set("error", "403");
+	url.searchParams.set("error", "429");
 
-	// yield* app.goto("https://httpbin.org/status/403");
 	yield* app.goto(url.toString());
 	// yield* app.handleTurnstileChallenge();
 }).pipe(Effect.catchAll(Console.error));
@@ -51,41 +50,52 @@ Effect.runFork(
 // 	showDevtools: true,
 // });
 
-// const url = "https://bun.vsokolyk.pp.ua/test-errors.php?error=403";
+const url = "https://bun.vsokolyk.pp.ua/test-errors.php?error=403";
+
+// await hero.activeTab.on("resource", async (resource) => {
+// 	console.log(resource);
+// });
 
 // const res = await hero.goto(url.toString());
 
-// let pageResponseHeaders: Headers | Map<string, string> | undefined;
+// HeroCore.use(ExecuteJsPlugin);
 
-// try {
-// 	pageResponseHeaders = new Headers(res.response.headers);
-// } catch (e) {
-// 	pageResponseHeaders = new Map(
-// 		Object.entries(res.response.headers as Record<string, string>),
-// 	);
-// }
+// (async () => {
+// 	const hero = new Hero({
+// 		connectionToCore: {
+// 			host: "ws://localhost:1818",
+// 		},
+// 		showChrome: true,
+// 		showDevtools: true,
+// 		disableMitm: false,
+// 	});
 
-// console.log(pageResponseHeaders);
+// 	hero.use(ExecuteJsPlugin);
 
-// await hero.close();
+// 	const resources: Resource[] = [];
+// 	hero.activeTab.on("resource", (event) => resources.push(event as any));
 
-// declare const userDetails: Effect.Effect<
-// 	never,
-// 	NegativeAgeError | UnderageError | NameError,
-// 	{ age: number; name: string }
-// >;
+// 	const url = new URL("https://bun.vsokolyk.pp.ua/test-errors.php");
 
-// const handled = userDetails.pipe(
-// 	Effect.match({
-// 		onFailure: () => ({ age: 0, name: "Anonymous" }),
-// 		onSuccess: (x) => x,
-// 	}),
-// ); // :: Effect<never, never, { age: number, name: string }>
+// 	url.searchParams.set("error", "403");
 
-// // equivalent to:
-// const handled2 = userDetails.pipe(
-// 	Effect.matchEffect({
-// 		onFailure: () => Effect.succeed({ age: 0, name: "Anonymous" }),
-// 		onSuccess: Effect.succeed,
-// 	}),
-// );
+// 	await hero.goto(url.toString());
+
+// 	// const lastCommandId = await hero.activeTab.lastCommandId;
+
+// 	// const res = await hero.waitForResource(
+// 	// 	{
+// 	// 		type: "Document",
+// 	// 	},
+// 	// 	{
+// 	// 		timeoutMs: 30,
+// 	// 		throwIfTimeout: true,
+// 	// 	},
+// 	// );
+// 	// console.log(res);
+
+// 	// console.log(hero, hero.tabs, hero.activeTab);
+// 	// await hero.waitForPaintingStable();
+// 	// await hero.waitForLoad("AllContentLoaded");
+// 	// await hero.reload();
+// })();

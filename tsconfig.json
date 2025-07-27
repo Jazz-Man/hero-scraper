@@ -7,6 +7,7 @@
 
 		"downlevelIteration": true,
 		"forceConsistentCasingInFileNames": true,
+		"allowJs": true,
 
 		"esModuleInterop": true,
 		"resolveJsonModule": true,
@@ -16,10 +17,10 @@
 		"plugins": [
 			{
 				"name": "@effect/language-service",
-				"diagnostics": true, // controls Effect diagnostics (default: true)
-				"quickinfo": true, // controls quickinfo over Effect (default: true)
-				"completions": true, // controls Effect completions (default: true)
-				"multipleEffectCheck": true // controls if multiple versions of Effect are referenced (default: true)
+				"diagnostics": true,
+				"quickinfo": true,
+				"completions": true,
+				"multipleEffectCheck": true
 			}
 		]
 	},

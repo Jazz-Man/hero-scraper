@@ -1,14 +1,17 @@
 import { IpInfoService } from "@scraper/ip-info";
 import type { TUserCookies } from "@scraper/prisma";
+import TimeoutError from "@ulixee/commons/interfaces/TimeoutError";
 import { OpenDnsAlternate } from "@ulixee/default-browser-emulator/lib/utils/DnsOverTlsProviders";
 import ExecuteJsPlugin from "@ulixee/execute-js-plugin";
 import type { IHeroCreateOptions } from "@ulixee/hero";
 import Hero from "@ulixee/hero/lib/Hero";
+import HeroCore from "@ulixee/hero-core";
 import type IViewport from "@ulixee/unblocked-specification/agent/browser/IViewport";
 import type { ICookie } from "@ulixee/unblocked-specification/agent/net/ICookie";
 import { Data, DateTime, Effect, Layer, Ref } from "effect";
+import type { LazyArg } from "effect/Function";
 import { FingerprintGenerator } from "fingerprint-generator";
-import { HeroError } from "./HeroError";
+import { HeroError, HeroHttpNetworcFailure } from "./HeroError";
 
 type UnwrapPromise<T> = T extends Promise<infer U>
 	? U
@@ -57,8 +60,6 @@ export type HeroParametersType<T extends AllHeroPropsList> = Pick<
 	T
 >[T];
 
-type Test = HeroProps["isAllContentLoaded"];
-
 /**
  * @deprecated
  */
@@ -72,6 +73,66 @@ export type THeroAppOptions = {
 	waitExistsTimeoutMs?: number; // default: this.timeoutMs
 	waitForContentLoadedMs?: number; // default: this.timeoutMs
 };
+
+export const _prepareError = (
+	fn: Function,
+	cause: unknown,
+	method?: AllHeroPropsList | string,
+) => {
+	if (cause instanceof TimeoutError) {
+		return cause;
+	}
+
+	const _method = method ? method : fn.toString();
+
+	if (cause instanceof Error) {
+		if (cause.message.includes("net::")) {
+			return new HeroHttpNetworcFailure({
+				name: cause.name,
+				message: cause.message,
+				cause,
+			});
+		}
+
+		return new HeroError({
+			module: "HeroAppService",
+			method: _method,
+			name: cause.name,
+			message: cause.message,
+			cause,
+		});
+	}
+
+	return new HeroError({
+		module: "HeroAppService",
+		method: _method,
+		cause,
+	});
+};
+
+export const _tryMapPromise = <A, B, E1>(
+	fn: (a: A, signal: AbortSignal) => PromiseLike<B>,
+	method?: AllHeroPropsList | string,
+) =>
+	Effect.tryMapPromise({
+		try: (a: A, signal) => fn(a, signal),
+		catch: (cause) => _prepareError(fn, cause, method),
+	});
+
+export const _promise = <A>(
+	fn: (signal: AbortSignal) => PromiseLike<A>,
+	method?: AllHeroPropsList | string,
+) =>
+	Effect.tryPromise({
+		try: (signal) => fn(signal),
+		catch: (cause: unknown) => _prepareError(fn, cause, method),
+	});
+
+export const _try = <A>(fn: LazyArg<A>, method?: AllHeroPropsList | string) =>
+	Effect.try({
+		try: () => fn(),
+		catch: (cause: unknown) => _prepareError(fn, cause, method),
+	});
 
 const getLocale = (country: string | undefined) =>
 	Effect.try({
@@ -176,17 +237,17 @@ export class HeroAppService extends Effect.Service<HeroAppService>()(
 				profileCookies?: TUserCookies,
 				baseUrl?: URL,
 			) =>
-				Effect.gen(function* (_) {
-					const { country, timezone, ip, proxy } = yield* _(
+				Effect.gen(function* ($) {
+					const { country, timezone, ip, proxy } = yield* $(
 						IpInfoService.getIpData(),
 					);
 
-					yield* _(Ref.set(tZoneRef, DateTime.zoneUnsafeMakeNamed(timezone)));
+					yield* $(Ref.set(tZoneRef, DateTime.zoneUnsafeMakeNamed(timezone)));
 
 					if (baseUrl instanceof URL) {
 						const hostname = baseUrl.hostname;
 
-						yield* _(
+						yield* $(
 							Ref.set(
 								cookiesDomainRef,
 								hostname.startsWith("www.")
@@ -196,69 +257,55 @@ export class HeroAppService extends Effect.Service<HeroAppService>()(
 						);
 					}
 
-					const locale = yield* _(getLocale(country));
+					const locale = yield* $(getLocale(country));
 
-					const { navigator, viewport } = yield* _(getFingerprint());
+					const { navigator, viewport } = yield* $(getFingerprint());
 
-					const cookies = yield* _(prepareProfileCookies(profileCookies));
+					const cookies = yield* $(prepareProfileCookies(profileCookies));
 
-					const hero = yield* Effect.try({
-						try: () => {
-							const hero = new Hero({
-								userAgent: "~ chrome >= 136 && mac",
-								connectionToCore: {
-									host: "ws://localhost:1818",
-								},
-								upstreamProxyUrl: proxy,
-								upstreamProxyIpMask: {
-									publicIp: ip,
-									proxyIp: ip,
-								},
-								userProfile: {
-									cookies,
-									timezoneId: timezone,
-									locale,
-									deviceProfile: {
-										deviceMemory: navigator.deviceMemory,
-										hardwareConcurrency: navigator.hardwareConcurrency,
-										viewport,
+					const hero = yield* $(
+						_try(
+							() =>
+								new Hero({
+									userAgent: "~ chrome >= 136 && mac",
+									connectionToCore: {
+										host: "ws://localhost:1818",
 									},
-								},
-								viewport,
-								dnsOverTlsProvider: OpenDnsAlternate,
-								locale,
-								timezoneId: timezone,
-								sessionKeepAlive: false,
-								sessionPersistence: false,
-								showChromeInteractions: false,
-								mode: "production",
-								...options,
-							} as IHeroCreateOptions);
+									upstreamProxyUrl: proxy,
+									upstreamProxyIpMask: {
+										publicIp: ip,
+										proxyIp: ip,
+									},
+									userProfile: {
+										cookies,
+										timezoneId: timezone,
+										locale,
+										deviceProfile: {
+											deviceMemory: navigator.deviceMemory,
+											hardwareConcurrency: navigator.hardwareConcurrency,
+											viewport,
+										},
+									},
+									viewport,
+									dnsOverTlsProvider: OpenDnsAlternate,
+									locale,
+									timezoneId: timezone,
+									sessionKeepAlive: false,
+									sessionPersistence: false,
+									showChromeInteractions: false,
+									mode: "production",
+									...options,
+								} as IHeroCreateOptions),
+							"init",
+						),
+					);
 
-							hero.use(ExecuteJsPlugin);
-
-							return hero;
-						},
-						catch: (cause) =>
-							new HeroError({
-								module: "HeroAppService",
-								method: "init",
-								cause,
-							}),
-					});
+					yield* $(
+						_try(() => hero.use(ExecuteJsPlugin), "use ExecuteJsPlugin"),
+					);
 
 					// trigger error if hero is not connected
-					yield* _(
-						Effect.tryPromise({
-							try: () => hero.meta,
-							catch: (cause) =>
-								new HeroError({
-									module: "HeroAppService",
-									method: "test meta",
-									cause,
-								}),
-						}),
-					);
+					yield* $(_promise(() => hero.meta));
 
 					return hero;
 				});
