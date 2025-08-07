@@ -174,8 +174,8 @@ export default class HeroApp {
 
 		this.hero = new Hero({
 			connectionToCore: {
-				host: "ws://localhost:1819",
-				// host: "ws://localhost:1818",
+				// host: "ws://localhost:1819",
+				host: "ws://localhost:1818",
 			},
 			upstreamProxyUrl: proxy,
 			upstreamProxyIpMask: {

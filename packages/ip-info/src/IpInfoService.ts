@@ -104,6 +104,8 @@ export class IpInfoService extends Effect.Service<IpInfoService>()(
 						"https://eth0.me",
 						"https://icanhazip.com",
 						"https://ip.liquidweb.com",
+						"https://2ip.io",
+						"https://ip.me",
 						//  "https://ipaddy.net",
 					]);
 
@@ -115,6 +117,7 @@ export class IpInfoService extends Effect.Service<IpInfoService>()(
 						Effect.catchAll(() =>
 							Effect.fail(new IpServicesNotAvailableError()),
 						),
+						Effect.tap(console.log),
 					);
 				});
 

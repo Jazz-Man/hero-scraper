@@ -24,11 +24,20 @@ export const program = Effect.gen(function* ($) {
 	const app = yield* $(HeroClientService);
 
 	// const url = new URL("https://bun.vsokolyk.pp.ua");
-	const url = new URL("https://freebitco.in/");
+	// const url = new URL("https://freebitco.in");
+	const url = new URL("https://cointiply.com");
 
 	// url.searchParams.set("op", "home");
 
 	yield* app.goto(url.toString());
+
+	const cookies = yield* app.getAllCookies();
+
+	const _token = yield* app.xpathSelector("//li[@class='active']", true);
+
+	console.log(yield* Effect.tryPromise(() => _token.textContent));
+
+	// yield* app.close();
 	// yield* app.handleTurnstileChallenge();
 }).pipe(Effect.catchAll(Console.error));
 
@@ -49,13 +58,13 @@ Effect.runFork(
 // 	showDevtools: true,
 // });
 
-const url = "https://bun.vsokolyk.pp.ua/test-errors.php?error=403";
+// // const url = "https://cointiply.com";
 
-// await hero.activeTab.on("resource", async (resource) => {
-// 	console.log(resource);
-// });
+// // await hero.activeTab.on("resource", async (resource) => {
+// // 	console.log(resource);
+// // });
 
-// const res = await hero.goto(url.toString());
+// const res = await hero.goto("https://cointiply.com");
 
 // HeroCore.use(ExecuteJsPlugin);
 
@@ -69,16 +78,25 @@ const url = "https://bun.vsokolyk.pp.ua/test-errors.php?error=403";
 // 		disableMitm: false,
 // 	});
 
-// 	hero.use(ExecuteJsPlugin);
+// 	// hero.use(ExecuteJsPlugin);
 
-// 	const resources: Resource[] = [];
-// 	hero.activeTab.on("resource", (event) => resources.push(event as any));
+// 	// const resources: Resource[] = [];
+// 	// hero.activeTab.on("resource", (event) => resources.push(event as any));
 
-// 	const url = new URL("https://bun.vsokolyk.pp.ua/test-errors.php");
+// 	const url = new URL("https://cointiply.com");
 
-// 	url.searchParams.set("error", "403");
+// 	// url.searchParams.set("error", "403");
 
 // 	await hero.goto(url.toString());
+// 	await hero.waitForPaintingStable();
+// 	// console.log("Page loaded");
+
+// 	const elements = await hero.activeTab.xpathSelectorAll(
+// 		"//input[@name='_token']",
+// 		true,
+// 	);
+// 	console.log(await elements.length);
+// 	// console.log("Done");
 
 // 	// const lastCommandId = await hero.activeTab.lastCommandId;
 

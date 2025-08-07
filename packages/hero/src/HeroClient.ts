@@ -3,9 +3,12 @@ import type {
 	IRequestInfo,
 	IRequestInit,
 } from "@ulixee/awaited-dom/base/interfaces/official";
+import type { ISuperNode } from "@ulixee/hero";
+// import { XPathResult } from "@ulixee/hero";
+import { XPathResult } from "@ulixee/hero-interfaces/AwaitedDom";
 import type IWaitForElementOptions from "@ulixee/hero-interfaces/IWaitForElementOptions";
 import type { ILocationTrigger } from "@ulixee/unblocked-specification/agent/browser/Location";
-import { Effect, Layer, Schedule } from "effect";
+import { Console, Effect, Layer, Schedule } from "effect";
 import {
 	_promise,
 	_try,
@@ -40,7 +43,6 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 			const app = yield* $(HeroAppService);
 
 			const waitExistsTimeoutMs = 6000;
-			const timeoutMs = 3000;
 
 			const hero = yield* $(
 				app.getHero({
@@ -48,179 +50,12 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 					showDevtools: true,
 					showChromeInteractions: true,
 					sessionPersistence: true,
+					sessionKeepAlive: true,
 				}),
 			);
 
-			const getFrameEnvironment = (
-				...params: Parameters<HeroParametersType<"getFrameEnvironment">>
-			) =>
-				_promise(async () => {
-					const iframeEnv = await hero.getFrameEnvironment(...params);
-					if (!iframeEnv) {
-						throw new Error(
-							`Frame environment not found with params: ${JSON.stringify(params)}`,
-						);
-					}
-
-					await iframeEnv.waitForLoad("AllContentLoaded");
-
-					await iframeEnv.waitForPaintingStable();
-
-					return iframeEnv;
-				});
-
-			const handleTurnstileChallenge = () =>
-				Effect.gen(function* () {
-					yield* $(waitForStableState());
-
-					const handle = Effect.gen(function* () {
-						const frames = yield* _promise(
-							() => hero.activeTab.frameEnvironments,
-						);
-
-						for (const frame of frames) {
-							const isMainFrame = yield* _promise(() => frame.isMainFrame);
-							const frameUrl = yield* _promise(() => frame.url).pipe(
-								Effect.map(useValidURL),
-							);
-
-							if (isMainFrame) {
-								continue;
-							}
-
-							if (!(frameUrl instanceof URL)) {
-								continue;
-							}
-
-							if (frameUrl.protocol !== "https:") {
-								continue;
-							}
-
-							if (frameUrl.hostname !== "challenges.cloudflare.com") {
-								continue;
-							}
-
-							yield* _promise(() => frame.waitForLoad("AllContentLoaded"));
-							yield* _promise(() => frame.waitForPaintingStable());
-
-							const body = frame.document.body;
-
-							if (!body) {
-								continue;
-							}
-
-							const isVisible = yield* _promise(() => body.$isVisible);
-
-							if (!isVisible) {
-								continue;
-							}
-
-							yield* _promise(() => body.shadowRoot.normalize());
-
-							yield* _promise(() =>
-								frame.document.scrollingElement?.scrollIntoView({
-									block: "center",
-									inline: "center",
-								}),
-							);
-
-							yield* _promise(() =>
-								body.shadowRoot
-									?.querySelector("div.main-wrapper .cb-c label.cb-lb")
-									?.$waitForVisible(),
-							).pipe(
-								_tryMapPromise((checkbox) => checkbox.$waitForClickable()),
-								_tryMapPromise((checkbox) => checkbox.click()),
-							);
-						}
-					});
-
-					// yield* _promise(() =>
-					// 	hero.flowCommand(
-					// 		async () => {
-					// 			await Effect.runPromise(handle);
-					// 		},
-					// 		(assert) =>
-					// 			assert(
-					// 				hero.activeTab.querySelector('[name="cf-turnstile-response"]')
-					// 					.$exists,
-					// 			),
-					// 	),
-					// );
-
-					// yield* _(waitForNavigation("change", false));
-
-					const isCookieSet = yield* getCookie("cf_chl_rc_m").pipe(
-						Effect.map((cookie) => cookie.value === "1"),
-					);
-
-					// if (isCookieSet) {
-					// 	yield* _(waitForContentLoaded(false));
-
-					// 	const spinner = yield* _(
-					// 		waitForExists(".main-wrapper .main-content .loading-spinner"),
-					// 	);
-
-					// 	const prevDiv = yield* _(
-					// 		_promise(() => spinner.previousSibling?.id),
-					// 	);
-
-					// 	yield* _promise(() =>
-					// 		spinner.$waitForHidden({ timeoutMs: waitExistsTimeoutMs }),
-					// 	);
-
-					// 	const iframe = yield* queryElement(`#${prevDiv} > div > div`, {
-					// 		waitForVisible: true,
-					// 	}).pipe(
-					// 		_tryMapPromise((shadowRoot) =>
-					// 			shadowRoot.shadowRoot?.querySelector("iframe").$waitForExists(),
-					// 		),
-					// 	);
-
-					// 	const iframeEnv = yield* getFrameEnvironment(iframe);
-
-					// 	const iframeBody = yield* _promise(() =>
-					// 		iframeEnv?.document?.querySelector("body")?.$waitForVisible(),
-					// 	).pipe(
-					// 		Effect.tap((body) => _promise(() => body.shadowRoot.normalize())),
-					// 	);
-
-					// 	if (iframe) {
-					// 		yield* _promise(() =>
-					// 			hero.interact({
-					// 				move: iframe,
-					// 			}),
-					// 		);
-					// 	}
-
-					// 	yield* _promise(() =>
-					// 		iframeEnv.document.scrollingElement?.scrollIntoView({
-					// 			block: "center",
-					// 			inline: "center",
-					// 		}),
-					// 	);
-
-					// 	const checkbox = yield* _promise(() =>
-					// 		iframeBody.shadowRoot
-					// 			.querySelector("div.main-wrapper .cb-c label.cb-lb")
-					// 			?.$waitForVisible(),
-					// 	).pipe(_tryMapPromise((checkbox) => checkbox.$waitForClickable()));
-
-					// 	yield* waitForMillis(1000);
-					// 	yield* _promise(() => checkbox.click());
-
-					// 	yield* _(waitForContentLoaded(false));
-					// }
-				});
-
-			const url = () => _promise(() => hero.url, "url");
-
-			const waitForLoad = (
-				...params: Parameters<HeroParametersType<"waitForLoad">>
-			) => _promise(() => hero.waitForLoad(...params), "waitForLoad");
-
 			const goto = (...params: Parameters<HeroParametersType<"goto">>) =>
-				_promise(() => hero.goto(...params)).pipe(
+				_promise(() => hero.goto(...params), "goto").pipe(
 					Effect.flatMap((result) =>
 						Effect.gen(function* () {
 							const httpResponse = result.response;
@@ -260,7 +95,7 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 							return result;
 						}),
 					),
-					Effect.tap(console.log),
+					// Effect.tap(console.log),
 					Effect.retry({
 						times: 3,
 						schedule: policy,
@@ -268,18 +103,67 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 					}),
 				);
 
+			const getFrameEnvironment = (
+				...params: Parameters<HeroParametersType<"getFrameEnvironment">>
+			) =>
+				_promise(async () => {
+					const iframeEnv = await hero.getFrameEnvironment(...params);
+					if (!iframeEnv) {
+						throw new Error(
+							`Frame environment not found with params: ${JSON.stringify(params)}`,
+						);
+					}
+
+					await iframeEnv.waitForLoad("AllContentLoaded");
+
+					await iframeEnv.waitForPaintingStable();
+
+					return iframeEnv;
+				});
+
 			const waitForMillis = (
 				...params: Parameters<HeroParametersType<"waitForMillis">>
 			) => _promise(() => hero.waitForMillis(...params), "waitForMillis");
 
 			const querySelector = (
 				...params: Parameters<HeroParametersType<"querySelector">>
-			) => _try(() => hero.querySelector(...params));
+			) => _try(() => hero.querySelector(...params), "querySelector");
+
+			const querySelectorAll = (
+				...params: Parameters<HeroParametersType<"querySelectorAll">>
+			) => _try(() => hero.querySelectorAll(...params), "querySelectorAll");
+
+			const xpathSelector = (
+				...params: Parameters<HeroParametersType<"xpathSelector">>
+			) => _try(() => hero.xpathSelector(...params), "xpathSelector");
+
+			const xpathSelectorAll = (
+				...params: Parameters<HeroParametersType<"xpathSelectorAll">>
+			) => _promise(() => hero.xpathSelectorAll(...params), "xpathSelectorAll");
 
 			const getAllCookies = () =>
 				_promise(
 					() => hero.activeTab.cookieStorage.getItems(),
 					"getAllCookies",
+				).pipe(
+					Effect.map((cookies) => {
+						const _cookies = cookies.filter(
+							(cookie) =>
+								cookie.name?.length > 0 && cookie.name !== "undefined",
+						);
+
+						return _cookies?.map((cookie) => ({
+							name: cookie.name,
+							value: cookie.value,
+							domain: cookie.domain as string,
+							path: cookie.path as string,
+							expires: cookie.expires ? new Date(cookie.expires) : null,
+							secure: cookie.secure as boolean,
+							httpOnly: cookie.httpOnly as boolean,
+							sameSite: cookie.sameSite as TSameSiteCookie,
+							sameParty: cookie.sameParty as boolean,
+						}));
+					}),
 				);
 
 			const getCookie = (key: string) =>
@@ -289,30 +173,6 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 				_promise(
 					() => hero.activeTab.cookieStorage.removeItem(key),
 					"deleteCookie",
-				);
-
-			const exportCookies = () =>
-				_promise(() => hero.exportUserProfile(), "exportCookies").pipe(
-					Effect.flatMap((profile) =>
-						Effect.gen(function* () {
-							const cookies = profile.cookies?.filter(
-								(cookie) =>
-									cookie.name?.length > 0 && cookie.name !== "undefined",
-							);
-
-							return cookies?.map((cookie) => ({
-								name: cookie.name,
-								value: cookie.value,
-								domain: cookie.domain as string,
-								path: cookie.path as string,
-								expires: cookie.expires ? new Date(cookie.expires) : null,
-								secure: cookie.secure as boolean,
-								httpOnly: cookie.httpOnly as boolean,
-								sameSite: cookie.sameSite as TSameSiteCookie,
-								sameParty: cookie.sameParty as boolean,
-							}));
-						}),
-					),
 				);
 
 			const queryElement = (
@@ -351,25 +211,11 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 					hero.waitForState({
 						all(assert) {
 							assert(hero.url, (url) => useValidURL(url) instanceof URL);
-							assert(hero.isDomContentLoaded);
 							assert(hero.isAllContentLoaded);
 							assert(hero.isPaintingStable);
 						},
 					}),
 				);
-
-			const waitForNavigation = (trigger: ILocationTrigger = "change") =>
-				Effect.gen(function* () {
-					yield* $(
-						_promise(() =>
-							hero.waitForLocation(trigger, {
-								timeoutMs: timeoutMs,
-							}),
-						),
-					);
-
-					yield* $(waitForStableState());
-				});
 
 			const reload = () =>
 				Effect.gen(function* (_) {
@@ -445,7 +291,10 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 				reload,
 				close,
 				fetch,
-				exportCookies,
+				getFrameEnvironment,
+				querySelectorAll,
+				xpathSelector,
+				xpathSelectorAll,
 			} as const;
 		}),
 		dependencies: [HeroAppService.Default],
