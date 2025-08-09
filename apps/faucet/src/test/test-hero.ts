@@ -1,9 +1,6 @@
 import { HeroAppService, HeroClientService } from "@scraper/hero";
 import { IpInfoService } from "@scraper/ip-info";
 import { getUserWithCookies } from "@scraper/prisma";
-import ExecuteJsPlugin from "@ulixee/execute-js-plugin";
-import Hero from "@ulixee/hero/lib/Hero";
-import type Resource from "@ulixee/hero/lib/Resource";
 
 // const HeroCore = require("@ulixee/hero-core");
 

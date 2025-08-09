@@ -3,28 +3,13 @@ import type {
 	IRequestInfo,
 	IRequestInit,
 } from "@ulixee/awaited-dom/base/interfaces/official";
-import type { ISuperNode } from "@ulixee/hero";
-import { XPathResult } from "@ulixee/hero-interfaces/AwaitedDom";
 import type ISetCookieOptions from "@ulixee/hero-interfaces/ISetCookieOptions";
 import type IWaitForElementOptions from "@ulixee/hero-interfaces/IWaitForElementOptions";
-import type { ILocationTrigger } from "@ulixee/unblocked-specification/agent/browser/Location";
-import { Console, Effect, Layer, Schedule } from "effect";
-import {
-	_promise,
-	_try,
-	_tryMapPromise,
-	HeroAppService,
-	HeroAppServiceLive,
-	type HeroParametersType,
-} from "./HeroAppService";
+import { Effect, Layer, Schedule } from "effect";
+import { HeroAppService, HeroAppServiceLive } from "./HeroAppService";
 import { HeroHttpError, HeroHttpNetworcFailure } from "./HeroError";
-
-type QueryElementParams = [
-	selector: string,
-	isXpath: boolean,
-	orderedNodeResults?: boolean,
-	options?: IWaitForElementOptions,
-];
+import type { HeroParametersType } from "./type";
+import { _promise, _try, _tryMapPromise } from "./utils";
 
 const useValidURL = (url: string): boolean | URL => {
 	try {

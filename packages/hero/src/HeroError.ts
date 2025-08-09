@@ -1,5 +1,5 @@
 import { STATUS_CODES } from "node:http";
-import { Schema } from "effect";
+import { Data, Schema } from "effect";
 
 const httpStatusCodes = new Map(Object.entries(STATUS_CODES));
 
@@ -42,3 +42,9 @@ export class HeroHttpNetworcFailure extends Schema.TaggedError<HeroHttpNetworcFa
 	message: Schema.String,
 	cause: Schema.Defect,
 }) {}
+
+export class FingerprintGeneratorError extends Data.TaggedError(
+	"FingerprintGeneratorError",
+)<{
+	cause: unknown;
+}> {}

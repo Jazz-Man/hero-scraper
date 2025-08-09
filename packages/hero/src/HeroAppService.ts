@@ -1,146 +1,15 @@
 import { IpInfoService } from "@scraper/ip-info";
 import type { TUserCookies } from "@scraper/prisma";
-import TimeoutError from "@ulixee/commons/interfaces/TimeoutError";
+
 import { OpenDnsAlternate } from "@ulixee/default-browser-emulator/lib/utils/DnsOverTlsProviders";
 import ExecuteJsPlugin from "@ulixee/execute-js-plugin";
 import type { IHeroCreateOptions } from "@ulixee/hero";
 import Hero from "@ulixee/hero/lib/Hero";
 import type IViewport from "@ulixee/unblocked-specification/agent/browser/IViewport";
-import type { ICookie } from "@ulixee/unblocked-specification/agent/net/ICookie";
-import { Data, DateTime, Effect, Layer, Ref } from "effect";
-import type { LazyArg } from "effect/Function";
+import { DateTime, Effect, Layer, Ref } from "effect";
 import { FingerprintGenerator } from "fingerprint-generator";
-import { HeroError, HeroHttpNetworcFailure } from "./HeroError";
-
-type UnwrapPromise<T> = T extends Promise<infer U>
-	? U
-	: T extends (...args: any) => Promise<infer U>
-		? U
-		: T extends (...args: any) => infer U
-			? U
-			: T;
-
-export type TInputValue = string | number;
-
-export type THeroOptions = IHeroCreateOptions;
-
-export interface IInitProfileCookies extends Omit<ICookie, "expires"> {
-	expires?: Date | null;
-}
-
-export type TProfileCookiesSet = Omit<IInitProfileCookies, "name" | "value">;
-
-export class FingerprintGeneratorError extends Data.TaggedError(
-	"FingerprintGeneratorError",
-)<{
-	cause: unknown;
-}> {}
-
-export type HeroClassProperties<Class> = {
-	[Prop in keyof Class as Prop extends symbol
-		? never
-		: Prop]: Class[Prop] extends (...args: any[]) => any
-		? (
-				...args: Parameters<Class[Prop]>
-			) => Effect.Effect<UnwrapPromise<ReturnType<Class[Prop]>>, HeroError>
-		: Effect.Effect<UnwrapPromise<Class[Prop]>, HeroError>;
-};
-
-export type HeroProps = HeroClassProperties<Hero>;
-
-export type CookieStorageProps = HeroClassProperties<
-	typeof Hero.prototype.activeTab.cookieStorage
->;
-
-export type AllHeroPropsList = keyof HeroProps;
-
-export type HeroParametersType<T extends AllHeroPropsList> = Pick<
-	HeroProps,
-	T
->[T];
-
-/**
- * @deprecated
- */
-export type THeroAppOptions = {
-	baseUrl: string;
-	createOptions?: THeroOptions;
-	profileCookies?: TUserCookies;
-	reinitWaitMs?: number; // default: 3?
-	reinitMaxCount?: number; // default: 3?
-	timeoutMs?: number; // default: 30000
-	waitExistsTimeoutMs?: number; // default: this.timeoutMs
-	waitForContentLoadedMs?: number; // default: this.timeoutMs
-};
-
-export const _prepareError = (
-	fn: Function,
-	cause: unknown,
-	method?: AllHeroPropsList | string,
-) => {
-	if (cause instanceof TimeoutError) {
-		return cause;
-	}
-
-	const _method = method ? method : fn.toString();
-
-	if (cause instanceof Error) {
-		if (cause.message.includes("net::")) {
-			return new HeroHttpNetworcFailure({
-				name: cause.name,
-				message: cause.message,
-				cause,
-			});
-		}
-
-		return new HeroError({
-			module: "HeroAppService",
-			method: _method,
-			name: cause.name,
-			message: cause.message,
-			cause,
-		});
-	}
-
-	return new HeroError({
-		module: "HeroAppService",
-		method: _method,
-		cause,
-	});
-};
-
-export const _tryMapPromise = <A, B, E1>(
-	fn: (a: A, signal: AbortSignal) => PromiseLike<B>,
-	method?: AllHeroPropsList | string,
-) =>
-	Effect.tryMapPromise({
-		try: (a: A, signal) => fn(a, signal),
-		catch: (cause) => _prepareError(fn, cause, method),
-	});
-
-export const _promise = <A>(
-	fn: (signal: AbortSignal) => PromiseLike<A>,
-	method?: AllHeroPropsList | string,
-) =>
-	Effect.tryPromise({
-		try: (signal) => fn(signal),
-		catch: (cause: unknown) => _prepareError(fn, cause, method),
-	});
-
-export const _try = <A>(fn: LazyArg<A>, method?: AllHeroPropsList | string) =>
-	Effect.try({
-		try: () => fn(),
-		catch: (cause: unknown) => _prepareError(fn, cause, method),
-	});
-
-const getLocale = (country: string | undefined) =>
-	Effect.try({
-		try: () =>
-			new Intl.Locale(country as unknown as string, {
-				region: country as unknown as string,
-			}).toString(),
-		catch: () => undefined,
-	});
+import { FingerprintGeneratorError } from "./HeroError";
+import { _promise, _try } from "./utils";
 
 const getFingerprint = () =>
 	Effect.gen(function* () {
@@ -175,6 +44,15 @@ const getFingerprint = () =>
 		};
 
 		return { navigator, screen, viewport };
+	});
+
+const getLocale = (country: string | undefined) =>
+	Effect.try({
+		try: () =>
+			new Intl.Locale(country as unknown as string, {
+				region: country as unknown as string,
+			}).toString(),
+		catch: () => undefined,
 	});
 
 export class HeroAppService extends Effect.Service<HeroAppService>()(
