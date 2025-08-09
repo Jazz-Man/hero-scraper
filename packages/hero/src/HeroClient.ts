@@ -4,8 +4,8 @@ import type {
 	IRequestInit,
 } from "@ulixee/awaited-dom/base/interfaces/official";
 import type { ISuperNode } from "@ulixee/hero";
-// import { XPathResult } from "@ulixee/hero";
 import { XPathResult } from "@ulixee/hero-interfaces/AwaitedDom";
+import type ISetCookieOptions from "@ulixee/hero-interfaces/ISetCookieOptions";
 import type IWaitForElementOptions from "@ulixee/hero-interfaces/IWaitForElementOptions";
 import type { ILocationTrigger } from "@ulixee/unblocked-specification/agent/browser/Location";
 import { Console, Effect, Layer, Schedule } from "effect";
@@ -18,6 +18,13 @@ import {
 	type HeroParametersType,
 } from "./HeroAppService";
 import { HeroHttpError, HeroHttpNetworcFailure } from "./HeroError";
+
+type QueryElementParams = [
+	selector: string,
+	isXpath: boolean,
+	orderedNodeResults?: boolean,
+	options?: IWaitForElementOptions,
+];
 
 const useValidURL = (url: string): boolean | URL => {
 	try {
@@ -49,8 +56,8 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 					showChrome: true,
 					showDevtools: true,
 					showChromeInteractions: true,
-					sessionPersistence: true,
-					sessionKeepAlive: true,
+					sessionPersistence: false,
+					sessionKeepAlive: false,
 				}),
 			);
 
@@ -95,7 +102,6 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 							return result;
 						}),
 					),
-					// Effect.tap(console.log),
 					Effect.retry({
 						times: 3,
 						schedule: policy,
@@ -126,20 +132,29 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 			) => _promise(() => hero.waitForMillis(...params), "waitForMillis");
 
 			const querySelector = (
-				...params: Parameters<HeroParametersType<"querySelector">>
-			) => _try(() => hero.querySelector(...params), "querySelector");
+				selector: string,
+				isXpath = false,
+				orderedNodeResults?: boolean,
+			) =>
+				_try(
+					() =>
+						isXpath
+							? hero.xpathSelector(selector, orderedNodeResults)
+							: hero.querySelector(selector),
+					"querySelector",
+				);
 
 			const querySelectorAll = (
-				...params: Parameters<HeroParametersType<"querySelectorAll">>
-			) => _try(() => hero.querySelectorAll(...params), "querySelectorAll");
-
-			const xpathSelector = (
-				...params: Parameters<HeroParametersType<"xpathSelector">>
-			) => _try(() => hero.xpathSelector(...params), "xpathSelector");
-
-			const xpathSelectorAll = (
-				...params: Parameters<HeroParametersType<"xpathSelectorAll">>
-			) => _promise(() => hero.xpathSelectorAll(...params), "xpathSelectorAll");
+				selector: string,
+				isXpath = false,
+				orderedNodeResults?: boolean,
+			) =>
+				isXpath
+					? _promise(
+							() => hero.xpathSelectorAll(selector, orderedNodeResults),
+							"xpathSelectorAll",
+						)
+					: _try(() => hero.querySelectorAll(selector), "querySelectorAll");
 
 			const getAllCookies = () =>
 				_promise(
@@ -169,6 +184,16 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 			const getCookie = (key: string) =>
 				_promise(() => hero.activeTab.cookieStorage.getItem(key), "getCookie");
 
+			const setCookie = (
+				name: string,
+				value: string,
+				options?: ISetCookieOptions,
+			) =>
+				_promise(
+					() => hero.activeTab.cookieStorage.setItem(name, value, options),
+					"setCookie",
+				);
+
 			const deleteCookie = (key: string) =>
 				_promise(
 					() => hero.activeTab.cookieStorage.removeItem(key),
@@ -177,9 +202,11 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 
 			const queryElement = (
 				selector: string,
+				isXpath = false,
+				orderedNodeResults?: boolean,
 				options?: IWaitForElementOptions,
 			) =>
-				querySelector(selector).pipe(
+				querySelector(selector, isXpath, orderedNodeResults).pipe(
 					_tryMapPromise((element) =>
 						hero.activeTab.waitForElement(element, {
 							timeoutMs: waitExistsTimeoutMs,
@@ -232,9 +259,11 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 
 			const clickElement = (
 				selector: string,
-				queryOptions?: IWaitForElementOptions,
+				isXpath = false,
+				orderedNodeResults?: boolean,
+				options?: IWaitForElementOptions,
 			) =>
-				queryElement(selector, queryOptions).pipe(
+				queryElement(selector, isXpath, orderedNodeResults, options).pipe(
 					_tryMapPromise((element) =>
 						hero.interact({
 							click: { element, verification: "exactElement" },
@@ -245,9 +274,11 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 			const typeInput = (
 				selector: string,
 				content: string,
-				queryOptions?: IWaitForElementOptions,
+				isXpath = false,
+				orderedNodeResults?: boolean,
+				options?: IWaitForElementOptions,
 			) =>
-				queryElement(selector, queryOptions).pipe(
+				queryElement(selector, isXpath, orderedNodeResults, options).pipe(
 					_tryMapPromise((element) =>
 						hero.interact({
 							click: { element, verification: "exactElement" },
@@ -264,10 +295,10 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 						_try(
 							() =>
 								new hero.Request(_input, {
-									credentials: "include",
-									mode: "cors",
-									referrerPolicy: "strict-origin-when-cross-origin",
-									redirect: "follow",
+									// credentials: "include",
+									// mode: "cors",
+									// referrerPolicy: "strict-origin-when-cross-origin",
+									// redirect: "follow",
 									..._init,
 								}),
 						),
@@ -280,9 +311,11 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 				goto,
 				waitForMillis,
 				querySelector,
+				querySelectorAll,
 				getAllCookies,
 				deleteCookie,
 				getCookie,
+				setCookie,
 				queryElement,
 				waitForExists,
 				isVisible,
@@ -292,9 +325,6 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 				close,
 				fetch,
 				getFrameEnvironment,
-				querySelectorAll,
-				xpathSelector,
-				xpathSelectorAll,
 			} as const;
 		}),
 		dependencies: [HeroAppService.Default],

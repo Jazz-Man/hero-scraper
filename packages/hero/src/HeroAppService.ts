@@ -273,7 +273,8 @@ export class HeroAppService extends Effect.Service<HeroAppService>()(
 									upstreamProxyUrl: proxy,
 									upstreamProxyIpMask: {
 										publicIp: ip,
-										proxyIp: ip,
+										// proxyIp: ip,
+										proxyIp: "1.1.1.1",
 									},
 									userProfile: {
 										cookies,
@@ -299,9 +300,7 @@ export class HeroAppService extends Effect.Service<HeroAppService>()(
 						),
 					);
 
-					yield* $(
-						_try(() => hero.use(ExecuteJsPlugin), "use ExecuteJsPlugin"),
-					);
+					yield* $(_try(() => hero.use(ExecuteJsPlugin), "ExecuteJsPlugin"));
 
 					// trigger error if hero is not connected
 					yield* $(_promise(() => hero.meta));
