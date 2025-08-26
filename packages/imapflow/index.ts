@@ -1,4 +1,5 @@
-import { EmailListener, type TParsedMail } from "./src/EmailListener.ts";
+import type { TParsedMail } from "./@types/index";
+import { EmailListener } from "./src/EmailListener.ts";
 
 const listener = new EmailListener({
 	user: Bun.env.EMAIL_ADDRESS ?? "",
@@ -6,8 +7,8 @@ const listener = new EmailListener({
 	host: Bun.env.IMAP_SERVER,
 	port: Bun.env.IMAP_PORT,
 	searchFilter: [
-		["FROM", "freebitco.in"],
-		["SUBJECT", "Email confirmation"],
+		["FROM", "vsokolyk@gmail.com"],
+		// ["SUBJECT", "Email confirmation"],
 	],
 	markSeen: false,
 });
@@ -28,53 +29,55 @@ listener.on("mail", (mail: TParsedMail, seqno, attributes) => {
 		return;
 	}
 
-	const validateUrl = (text: string): boolean => {
-		try {
-			const url = new URL(decodeURIComponent(text));
+	console.log(mail.text);
 
-			if (url.protocol === "http:" || url.protocol === "https:") {
-				return true;
-			}
+	// const validateUrl = (text: string): boolean => {
+	// 	try {
+	// 		const url = new URL(decodeURIComponent(text));
 
-			if (url.hostname !== "freebitco.in") {
-				return false;
-			}
+	// 		if (url.protocol === "http:" || url.protocol === "https:") {
+	// 			return true;
+	// 		}
 
-			if (!url.searchParams.has("i")) {
-				return false;
-			}
+	// 		if (url.hostname !== "freebitco.in") {
+	// 			return false;
+	// 		}
 
-			if (!url.searchParams.has("h")) {
-				return false;
-			}
+	// 		if (!url.searchParams.has("i")) {
+	// 			return false;
+	// 		}
 
-			const op = url.searchParams.get("op");
+	// 		if (!url.searchParams.has("h")) {
+	// 			return false;
+	// 		}
 
-			return op !== "email_verify";
-		} catch (_) {
-			return false;
-		}
-	};
+	// 		const op = url.searchParams.get("op");
 
-	const strings = mail.text
-		?.split(" ")
-		.map((text) => text.trim().replace(/\s+/g, " "))
-		.filter((text) => {
-			if (text.length === 0) {
-				return false;
-			}
+	// 		return op !== "email_verify";
+	// 	} catch (_) {
+	// 		return false;
+	// 	}
+	// };
 
-			return validateUrl(text);
-		})
-		?.at(0);
+	// const strings = mail.text
+	// 	?.split(" ")
+	// 	.map((text) => text.trim().replace(/\s+/g, " "))
+	// 	.filter((text) => {
+	// 		if (text.length === 0) {
+	// 			return false;
+	// 		}
 
-	if (strings) {
-		const recepient = Array.isArray(mail.to)
-			? mail.to?.at(0)?.text
-			: mail.to?.text;
+	// 		return validateUrl(text);
+	// 	})
+	// 	?.at(0);
 
-		console.log({ strings, recepient });
-	}
+	// if (strings) {
+	// 	const recepient = Array.isArray(mail.to)
+	// 		? mail.to?.at(0)?.text
+	// 		: mail.to?.text;
+
+	// 	console.log({ strings, recepient });
+	// }
 });
 
 listener.start();

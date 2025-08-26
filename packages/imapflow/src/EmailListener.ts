@@ -1,58 +1,12 @@
 import { EventEmitter } from "node:events";
 
 import Imap, {
-	type Config,
-	type ImapMessage,
-	type ImapMessageAttributes,
+    type ImapMessage,
+    type ImapMessageAttributes
 } from "imap";
-import { type ParsedMail, simpleParser } from "mailparser";
+import { simpleParser } from "mailparser";
+import type { MailOptions, TParsedMail, TSearchCriteria } from "../@types";
 
-export type TParsedMail = ParsedMail;
-
-type TSearchCriteria =
-	| "ALL"
-	| "ANSWERED"
-	| "DELETED"
-	| "DRAFT"
-	| "FLAGGED"
-	| "NEW"
-	| "SEEN"
-	| "RECENT"
-	| "OLD"
-	| "UNANSWERED"
-	| "UNDELETED"
-	| "UNDRAFT"
-	| "UNFLAGGED"
-	| "UNSEEN"
-	| ["FROM", string]
-	| ["TO", string]
-	| ["CC", string]
-	| ["BCC", string]
-	| ["SUBJECT", string]
-	| ["BODY", string]
-	| ["TEXT", string]
-	| ["BEFORE", string | Date]
-	| ["ON", string | Date]
-	| ["SINCE", string | Date]
-	| ["SENTBEFORE", string | Date]
-	| ["SENTON", string | Date]
-	| ["SENTSINCE", string | Date]
-	| ["HEADER", string, string]
-	| ["LARGER", number]
-	| ["SMALLER", number]
-	| ["UID", string | number]
-	| ["X-GM-RAW", string]
-	| ["X-GM-THRID", string | number]
-	| ["X-GM-MSGID", string | number]
-	| ["X-GM-LABELS", string]
-	| TSearchCriteria[];
-
-type MailOptions = {
-	markSeen?: boolean;
-	mailbox?: string;
-	searchFilter?: TSearchCriteria[];
-	fetchUnreadOnStart?: boolean;
-} & Config;
 
 export class EmailListener extends EventEmitter<{
 	error: [Error];
@@ -139,7 +93,6 @@ export class EmailListener extends EventEmitter<{
 			if (err) {
 				this.emit("error", err);
 			} else if (results.length > 0) {
-				// eslint-disable-next-line no-restricted-syntax
 				for (const result of results) {
 					const f = this.#imap.fetch(result, {
 						bodies: "",

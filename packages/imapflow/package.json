@@ -17,7 +17,6 @@
 	"peerDependencies": {
 		"typescript": "^5"
 	},
-
 	"dependencies": {
 		"imap": "0.8.19",
 		"mailparser": "3.7.2"
