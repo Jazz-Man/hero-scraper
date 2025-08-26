@@ -94,23 +94,28 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 					}),
 				);
 
-			const getFrameEnvironment = (
-				...params: Parameters<HeroParametersType<"getFrameEnvironment">>
+			const getIFrameEnvironment = (
+				selector: string,
+				isXpath = false,
+				orderedNodeResults?: boolean,
 			) =>
-				_promise(async () => {
-					const iframeEnv = await hero.getFrameEnvironment(...params);
-					if (!iframeEnv) {
-						throw new Error(
-							`Frame environment not found with params: ${JSON.stringify(params)}`,
-						);
-					}
+				querySelector(selector, isXpath, orderedNodeResults).pipe(
+					_tryMapPromise(async (element) => {
+						const iframeEnv = await hero.getFrameEnvironment(element);
 
-					await iframeEnv.waitForLoad("AllContentLoaded");
+						if (!iframeEnv) {
+							throw new Error(
+								`Frame environment not found with params: ${JSON.stringify(arguments)}`,
+							);
+						}
 
-					await iframeEnv.waitForPaintingStable();
+						await iframeEnv.waitForLoad("AllContentLoaded");
 
-					return iframeEnv;
-				});
+						await iframeEnv.waitForPaintingStable();
+
+						return iframeEnv;
+					}, "getIFrameEnvironment"),
+				);
 
 			const waitForMillis = (
 				...params: Parameters<HeroParametersType<"waitForMillis">>
@@ -202,13 +207,17 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 
 			const waitForExists = (
 				selector: string,
+				isXpath = false,
+				orderedNodeResults?: boolean,
 				options?: IWaitForElementOptions,
 			) =>
-				_promise(() =>
-					hero.document.querySelector(selector).$waitForExists({
-						timeoutMs: waitExistsTimeoutMs,
-						...options,
-					}),
+				querySelector(selector, isXpath, orderedNodeResults).pipe(
+					_tryMapPromise((element) =>
+						element.$waitForExists({
+							timeoutMs: waitExistsTimeoutMs,
+							...options,
+						}),
+					),
 				);
 
 			const isVisible = (
@@ -280,10 +289,6 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 						_try(
 							() =>
 								new hero.Request(_input, {
-									// credentials: "include",
-									// mode: "cors",
-									// referrerPolicy: "strict-origin-when-cross-origin",
-									// redirect: "follow",
 									..._init,
 								}),
 						),
@@ -309,7 +314,7 @@ export class HeroClientService extends Effect.Service<HeroClientService>()(
 				reload,
 				close,
 				fetch,
-				getFrameEnvironment,
+				getIFrameEnvironment,
 			} as const;
 		}),
 		dependencies: [HeroAppService.Default],
