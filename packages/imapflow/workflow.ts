@@ -6,38 +6,48 @@ const program = Effect.gen(function* () {
 
 	yield* listener.messages.pipe(
 		Stream.tap((message) => {
-			// Console.log(message.mail.html);
 			const html = message.mail.html;
 
 			const textHandler: HTMLRewriterTypes.HTMLRewriterElementContentHandlers =
 				{
 					text(textNode) {
-						const raw = textNode.text.replaceAll("&lt;", "<");
-						// .replace(/\s+/, " ")
+						const raw = textNode.text
+							.replace(/\s{2,}/isu, " ")
+							.replaceAll("&lt;", "<")
+							.replace("&nbsp;", " ")
+							.replace(/[\t\n]+/g, "\n")
+							.trim();
 
 						const hasN = raw.includes("\n");
 
 						const trim = raw.trim();
 
-						const isEmpty = trim.length === 0;
-						if (textNode.lastInTextNode && isEmpty) {
-							textNode.remove();
-							return;
-						}
+						// const isEmpty = trim.length === 0;
+
+						// if (isEmpty) {
+						// 	if (textNode.lastInTextNode) {
+						// 		textNode.remove();
+						// 		return;
+						// 	}
+
+						// 	if (!hasN) {
+						// 		textNode.remove();
+						// 		return;
+						// 	}
+						// }
 
 						// console.log({ trim, raw, hasN, isEmpty });
 
-						if (isEmpty && hasN) {
-							// textNode.remove();
-							// textNode.replace("");
-							// return;
-						}
+						// if (isEmpty && hasN) {
+						// 	console.log({ trim, raw });
+						// 	// textNode.remove();
+						// 	// textNode.replace("\n", { html: true });
+						// 	return;
+						// }
 
-						if (trim !== raw) {
-							textNode.replace(`${trim}${hasN ? "\n" : ""}`, { html: true });
-
-							// return;
-						}
+						// if (trim !== raw) {
+						// textNode.replace(`${trim}${hasN ? "\n" : ""}`, { html: true });
+						// }
 					},
 				};
 
@@ -48,21 +58,53 @@ const program = Effect.gen(function* () {
 							return;
 						}
 
-						// if (element.hasAttribute("style")) {
-						// 	element.removeAttribute("style");
-						// }
+						if (element.tagName === "style") {
+							element.remove();
+							return;
+						}
+
+						if (element.hasAttribute("style")) {
+							element.removeAttribute("style");
+						}
+
+						const attributes = new Map<string, string>(element.attributes);
+
+						if (attributes.size) {
+							attributes.forEach((value, key) => {
+								const val = value.trim();
+
+								if (val.length === 0) {
+									element.removeAttribute(key);
+								} else {
+									element.setAttribute(key, val);
+								}
+							});
+						}
 					},
-					// comments(comment) {
-					// 	console.log(comment);
-					// },
+					comments(comment) {
+						if (comment.removed) {
+							return;
+						}
+
+						comment.remove();
+					},
 					...textHandler,
 				})
-				// .on("p", {
-				// 	element(paragraph) {
-				// 		// console.log(paragraph);
-				// 	},
-				// 	...textHandler,
-				// })
+				.on("table,tbody,tr,td", {
+					element(element) {
+						if (element.removed) {
+							return;
+						}
+
+						element.removeAndKeepContent();
+					},
+				})
+				.on("img", {
+					element(img) {
+						// console.log(img);
+						// console.log(Object.fromEntries(img.attributes));
+					},
+				})
 				.on("br", {
 					element(node) {
 						node.replace("<br/>", { html: true });
@@ -78,7 +120,7 @@ const program = Effect.gen(function* () {
 		Stream.runDrain,
 	);
 
-	// yield* listener.stop;
+	yield* listener.stop;
 }).pipe(Effect.catchAll(Console.error));
 
 Effect.runFork(
@@ -92,7 +134,12 @@ Effect.runFork(
 				port: Bun.env.IMAP_PORT,
 				fetchUnreadOnStart: true,
 				markSeen: false,
-				searchFilter: [["FROM", "vsokolyk@gmail.com"]],
+				searchFilter: [
+					// ["FROM", "vsokolyk@gmail.com"],
+					// ["FROM", "googledevelopers-noreply@google.com"],
+					["FROM", "tanzu@broadcom.com"],
+					// ["FROM", "status@hcaptcha.com"],
+				],
 			}),
 		),
 	),
