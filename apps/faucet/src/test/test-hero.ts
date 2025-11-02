@@ -39,30 +39,30 @@ export const program = Effect.gen(function* ($) {
 
 	yield* app.reload();
 
-	yield* app.typeInput(
-		'.auth-form input[id="email_field"]',
-		"lark.presets_00@icloud.com",
-	);
-	yield* app.typeInput(
-		'.auth-form input[id="password_field"]',
-		"tensIg-zuwjo1-jyjciq",
-	);
+	// yield* app.typeInput(
+	// 	'.auth-form input[id="email_field"]',
+	// 	"lark.presets_00@icloud.com",
+	// );
+	// yield* app.typeInput(
+	// 	'.auth-form input[id="password_field"]',
+	// 	"tensIg-zuwjo1-jyjciq",
+	// );
 
-	yield* app.clickElement(
-		'//form[@class="auth-form"]//a[contains(@class,"captcha-option") and contains(text(), "hCaptcha")]',
-		true,
-	);
+	// yield* app.clickElement(
+	// 	'//form[@class="auth-form"]//a[contains(@class,"captcha-option") and contains(text(), "hCaptcha")]',
+	// 	true,
+	// );
 
-	const iframe = yield* app.getIFrameEnvironment(
-		'//form[@class="auth-form"]//div[contains(@id,"h-captcha")]/iframe',
-		true,
-	);
+	// const iframe = yield* app.getIFrameEnvironment(
+	// 	'//form[@class="auth-form"]//div[contains(@id,"h-captcha")]/iframe',
+	// 	true,
+	// );
 
-	const checkbox = iframe.querySelector("#anchor");
+	// const checkbox = iframe.querySelector("#anchor");
 
-	checkbox.$isClickable.then((isClickable) => {
-		checkbox.$click();
-	});
+	// checkbox.$isClickable.then((isClickable) => {
+	// 	checkbox.$click();
+	// });
 }).pipe(Effect.catchAll(Console.error));
 
 Effect.runFork(
