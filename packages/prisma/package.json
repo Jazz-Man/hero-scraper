@@ -27,7 +27,6 @@
 	},
 	"dependencies": {
 		"@prisma/client": "6.2.1",
-		"@scraper/faker": "workspace:*",
 		"prisma": "^6.2.1"
 	},
 	"prisma": {

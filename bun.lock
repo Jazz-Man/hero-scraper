@@ -6,6 +6,7 @@
       "name": "scraper",
       "dependencies": {
         "@effect/platform-bun": "4.0.0-beta.33",
+        "@faker-js/faker": "10.3.0",
         "cloudflare": "5.2.0",
         "effect": "4.0.0-beta.33",
         "fingerprint-generator": "2.1.81",
@@ -62,9 +63,6 @@
     },
     "packages/faker": {
       "name": "@scraper/faker",
-      "dependencies": {
-        "@faker-js/faker": "9.8.0",
-      },
       "devDependencies": {
         "@types/bun": "latest",
       },
@@ -115,7 +113,6 @@
       "version": "0.0.0",
       "dependencies": {
         "@prisma/client": "6.2.1",
-        "@scraper/faker": "workspace:*",
         "prisma": "^6.2.1",
       },
       "devDependencies": {
@@ -160,7 +157,7 @@
 
     "@effect/platform-node-shared": ["@effect/platform-node-shared@4.0.0-beta.33", "", { "dependencies": { "@types/ws": "^8.18.1", "ws": "^8.19.0" }, "peerDependencies": { "effect": "^4.0.0-beta.33" } }, "sha512-jaJnvYz1IiPZyN//fCJsvwnmujJS5KD8noCVVLhb4ZGCWKhQpt0x2iuax6HFzMlPEQSfl04GLU+PVKh0nkzPyA=="],
 
-    "@faker-js/faker": ["@faker-js/faker@9.8.0", "", {}, "sha512-U9wpuSrJC93jZBxx/Qq2wPjCuYISBueyVUGK7qqdmj7r/nxaxwW8AQDCLeRO7wZnjj94sh3p246cAYjUKuqgfg=="],
+    "@faker-js/faker": ["@faker-js/faker@10.3.0", "", {}, "sha512-It0Sne6P3szg7JIi6CgKbvTZoMjxBZhcv91ZrqrNuaZQfB5WoqYYbzCUOq89YR+VY8juY9M1vDWmDDa2TzfXCw=="],
 
     "@isaacs/fs-minipass": ["@isaacs/fs-minipass@4.0.1", "", { "dependencies": { "minipass": "^7.0.4" } }, "sha512-wgm9Ehl2jpeqP3zw/7mo3kRHFp5MEDhqAdwy1fTGkHAwnkGOVsgpvQhL8B5n1qlb01jV3n/bI0ZfZp5lWA1k4w=="],
 

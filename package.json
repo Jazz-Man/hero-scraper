@@ -29,6 +29,7 @@
 	],
 	"dependencies": {
 		"@effect/platform-bun": "4.0.0-beta.33",
+		"@faker-js/faker": "10.3.0",
 		"cloudflare": "5.2.0",
 		"effect": "4.0.0-beta.33",
 		"fingerprint-generator": "2.1.81",
