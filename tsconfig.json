@@ -14,6 +14,7 @@
 		"isolatedModules": true,
 		"strictNullChecks": true,
 		"exactOptionalPropertyTypes": true,
+		"experimentalDecorators": true,
 		"plugins": [
 			{
 				"name": "@effect/language-service",
