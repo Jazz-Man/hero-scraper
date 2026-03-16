@@ -8,7 +8,6 @@
 		"@scraper/ip-info": "workspace:*",
 		"@scraper/otp": "workspace:*",
 		"@scraper/prisma": "workspace:*",
-		"@scraper/safe": "workspace:*",
 		"@ulixee/chrome-137-0": "7151.120.11",
 		"@ulixee/hero-playground": "2.0.0-alpha.33",
 		"@ulixee/unblocked-specification": "2.0.0-alpha.33",
