@@ -10,10 +10,13 @@
 		}
 	},
 	"dependencies": {
+		"@effect/platform-bun": "4.0.0-beta.33",
 		"@scraper/fetch": "workspace:*",
+		"effect": "4.0.0-beta.33",
 		"geoip-lite": "1.4.10"
 	},
 	"devDependencies": {
+		"@types/bun": "1.3.10",
 		"@types/geoip-lite": "1.4.4"
 	}
 }

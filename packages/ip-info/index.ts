@@ -8,13 +8,15 @@ import {
 } from "./src/IpInfoService";
 import { IpInfoResponseUnion } from "./src/Schema";
 
-export { fetchIPInfo, type GeoIPInfo, getPublicIP, type IPInfo };
-
 export {
+	fetchIPInfo,
+	type GeoIPInfo,
+	GeoIpNotFoundError,
+	getPublicIP,
+	type IPInfo,
+	IpInfoResponseUnion,
 	IpInfoService,
 	IpIsUndefinedError,
 	IpServicesFailedError,
 	IpServicesNotAvailableError,
-	GeoIpNotFoundError,
-	IpInfoResponseUnion,
 };

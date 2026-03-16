@@ -1,6 +1,6 @@
 import { Headers, HttpClientError, HttpClientResponse } from "@effect/platform";
 
-import { type BodyInit, fetch as bunFetch } from "bun";
+import { fetch as bunFetch } from "bun";
 import { Effect, FiberRef, Stream } from "effect";
 import type { BunHttpClient } from "../BunHttpClient.ts";
 
