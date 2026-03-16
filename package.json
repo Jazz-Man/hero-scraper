@@ -19,7 +19,7 @@
 		"utf7": "npm:utf7@workspace:*"
 	},
 	"scripts": {
-		"cloud:start": "bun --filter '@scraper/cloud' start",
+		"hero:cloud": "cloud start --env=${PWD}/.env",
 		"cf:delete": "bun run src/cloudflare/delete.ts",
 		"cf:create": "bun run src/cloudflare/create.ts",
 		"imap:test": "bun --filter '@scraper/imapflow' test:imap"
@@ -32,6 +32,13 @@
 	"dependencies": {
 		"@effect/platform-bun": "4.0.0-beta.33",
 		"@faker-js/faker": "10.3.0",
+		"@ulixee/chrome-134-0": "6998.178.11",
+		"@ulixee/chrome-135-0": "7049.115.11",
+		"@ulixee/chrome-136-0": "7103.114.11",
+		"@ulixee/chrome-137-0": "7151.120.11",
+		"@ulixee/chrome-138-0": "7204.184.11",
+		"@ulixee/cloud": "2.0.0-alpha.34",
+		"@ulixee/hero-core": "2.0.0-alpha.34",
 		"cloudflare": "5.2.0",
 		"effect": "4.0.0-beta.33",
 		"fingerprint-generator": "2.1.81",
