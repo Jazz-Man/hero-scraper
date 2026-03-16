@@ -16,7 +16,6 @@
 	"dependencies": {
 		"@scraper/faker": "workspace:*",
 		"@scraper/fetch": "workspace:^",
-		"@scraper/safe": "workspace:^",
 		"cloudflare": "^4.0.0"
 	}
 }

@@ -12,9 +12,7 @@
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},
 	"dependencies": {
-		"@scraper/decorators": "workspace:*",
 		"@scraper/ip-info": "workspace:*",
-		"@scraper/safe": "workspace:*",
 		"@ulixee/awaited-dom": "1.4.2",
 		"@ulixee/commons": "2.0.0-alpha.33",
 		"@ulixee/default-browser-emulator": "2.0.0-alpha.33",
