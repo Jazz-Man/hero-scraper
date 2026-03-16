@@ -138,6 +138,8 @@ export class HeroAppService extends Effect.Service<HeroAppService>()(
 
 					const { navigator, viewport } = yield* $(getFingerprint());
 
+					console.log({ navigator, viewport });
+
 					const cookies = yield* $(prepareProfileCookies(profileCookies));
 
 					const hero = yield* $(
@@ -181,7 +183,7 @@ export class HeroAppService extends Effect.Service<HeroAppService>()(
 					yield* $(_try(() => hero.use(ExecuteJsPlugin), "ExecuteJsPlugin"));
 
 					// trigger error if hero is not connected
-					yield* $(_promise(() => hero.meta));
+					// yield* $(_promise(() => hero.meta));
 
 					return hero;
 				});
