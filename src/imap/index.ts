@@ -1,13 +1,12 @@
-import type { TParsedMail } from "./@types/index";
-import { EmailListener } from "./src/EmailListener.ts";
+import { EmailListener, type TParsedMail } from "./EmailListener.ts";
 
 const listener = new EmailListener({
-	user: Bun.env.EMAIL_ADDRESS ?? "",
-	password: Bun.env.EMAIL_PASSWORD ?? "",
+	user: Bun.env.IMAP_EMAIL_ADDRESS ?? "",
+	password: Bun.env.IMAP_EMAIL_PASSWORD ?? "",
 	host: Bun.env.IMAP_SERVER,
 	port: Bun.env.IMAP_PORT,
 	searchFilter: [
-		["FROM", "vsokolyk@gmail.com"],
+		["FROM", Bun.env.IMAP_EMAIL_FROM_TEST],
 		// ["SUBJECT", "Email confirmation"],
 	],
 	markSeen: false,
