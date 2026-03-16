@@ -1,5 +1,5 @@
-import { emailRoutingList, zoneList } from "@scraper/cloudflare";
 import faker from "@scraper/faker";
+import { emailRoutingList, zoneList } from "../../../src/cloudflare/index.ts";
 import type { PrismaClient } from "../client/index.js";
 
 export default async function seedFunction(prisma: PrismaClient) {

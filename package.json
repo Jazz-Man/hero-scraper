@@ -18,8 +18,8 @@
 	},
 	"scripts": {
 		"cloud:start": "bun --filter '@scraper/cloud' start",
-		"cf:delete": "bun --filter '@scraper/cloudflare' delete",
-		"cf:create": "bun --filter '@scraper/cloudflare' create",
+		"cf:delete": "bun run src/cloudflare/delete.ts",
+		"cf:create": "bun run src/cloudflare/create.ts",
 		"imap:test": "bun --filter '@scraper/imapflow' test:imap"
 	},
 	"workspaces": [
@@ -28,6 +28,10 @@
 		"resolutions/*"
 	],
 	"dependencies": {
+		"@effect/platform-bun": "4.0.0-beta.33",
+		"cloudflare": "5.2.0",
+		"effect": "4.0.0-beta.33",
+		"fingerprint-generator": "2.1.81",
 		"geoip-lite": "1.4.10",
 		"otpauth": "9.5.0"
 	},

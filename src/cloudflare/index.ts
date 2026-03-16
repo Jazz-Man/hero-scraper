@@ -1,11 +1,8 @@
-import fetch from "@scraper/fetch";
 import Cloudflare from "cloudflare";
-import type { Fetch } from "cloudflare/core";
 import type { Zone } from "cloudflare/resources/zones/zones";
 
 export const cfClient = new Cloudflare({
 	apiToken: Bun.env.CF_API_TOKEN,
-	fetch: fetch as unknown as Fetch,
 });
 
 export const zoneList = (): Promise<Zone[]> => {
@@ -47,7 +44,7 @@ export const emailRoutingList = async (
 
 	rules.push(...response.getPaginatedItems());
 
-	// @ts-ignore
+	// @ts-expect-error
 	const totalCount = response.result_info?.total_count || 0;
 	const totalPages = Math.ceil(totalCount / per_page);
 
@@ -72,7 +69,7 @@ export const emailRoutingList = async (
 
 			const matchers = rule.matchers?.at(0);
 
-			// @ts-ignore
+			// @ts-expect-error
 			if (matchers?.type === "all") {
 				return false;
 			}
