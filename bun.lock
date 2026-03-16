@@ -61,15 +61,6 @@
         "typescript": "^5",
       },
     },
-    "packages/faker": {
-      "name": "@scraper/faker",
-      "devDependencies": {
-        "@types/bun": "latest",
-      },
-      "peerDependencies": {
-        "typescript": "^5",
-      },
-    },
     "packages/hero": {
       "name": "@scraper/hero",
       "version": "0.0.0",
@@ -282,8 +273,6 @@
     "@scraper/cloud": ["@scraper/cloud@workspace:packages/cloud"],
 
     "@scraper/decorators": ["@scraper/decorators@workspace:packages/decorators"],
-
-    "@scraper/faker": ["@scraper/faker@workspace:packages/faker"],
 
     "@scraper/faucet": ["@scraper/faucet@workspace:apps/faucet"],
 
