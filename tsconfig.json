@@ -4,6 +4,7 @@
 	"extends": "@tsconfig/bun",
 	"compilerOptions": {
 		"preserveSymlinks": true,
+		"lib": ["esnext", "DOM"],
 
 		"downlevelIteration": true,
 		"forceConsistentCasingInFileNames": true,
