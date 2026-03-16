@@ -51,10 +51,6 @@
         "@ulixee/hero-core": "2.0.0-alpha.33",
       },
     },
-    "packages/cloudflare": {
-      "name": "@scraper/cloudflare",
-      "version": "0.0.0",
-    },
     "packages/decorators": {
       "name": "@scraper/decorators",
       "devDependencies": {
@@ -287,8 +283,6 @@
     "@prisma/schema-files-loader": ["@prisma/schema-files-loader@6.19.0", "", { "dependencies": { "@prisma/prisma-schema-wasm": "6.19.0-26.2ba551f319ab1df4bc874a89965d8b3641056773", "fs-extra": "11.3.0" } }, "sha512-5+TWqBFfEXwdinmNIjiZu5XyH5NlLWbZWmUaytSX3t7krHJStgl/F6T+rGzewMlXq0ievDoOoGgF7BQhUJh++Q=="],
 
     "@scraper/cloud": ["@scraper/cloud@workspace:packages/cloud"],
-
-    "@scraper/cloudflare": ["@scraper/cloudflare@workspace:packages/cloudflare"],
 
     "@scraper/decorators": ["@scraper/decorators@workspace:packages/decorators"],
 
