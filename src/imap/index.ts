@@ -1,4 +1,4 @@
-import { EmailListener, type TParsedMail } from "./EmailListener.ts";
+import { EmailListener, type TParsedMail } from "./EmailListener";
 
 const listener = new EmailListener({
 	user: Bun.env.IMAP_EMAIL_ADDRESS ?? "",
