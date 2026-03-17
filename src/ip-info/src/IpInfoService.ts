@@ -2,7 +2,7 @@ import { BunFetchHttpClient, BunHttpClient } from "@scraper/fetch";
 import { Array as A, Data, Effect, Random, Schema } from "effect";
 import geoIp from "geoip-lite";
 import { getProxyUrl } from "./proxy";
-import { IpInfoResponseUnion } from "./Schema";
+import { ipDecoder } from "./Schema";
 
 export class GeoIpNotFoundError extends Data.TaggedError(
 	"GeoIpNotFoundError",
@@ -52,8 +52,7 @@ export class IpInfoService extends Effect.Service<IpInfoService>()(
 									? yield* response.json
 									: { raw: (yield* response.text).trim() };
 
-								const data =
-									yield* Schema.decodeUnknown(IpInfoResponseUnion)(result);
+								const data = yield* ipDecoder(result);
 
 								const ip = Object.values(data).at(0);
 
