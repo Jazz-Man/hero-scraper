@@ -178,7 +178,7 @@ _PENDING: Generated in next step_
 
 ### Testing Rules
 
-_PENDING: Assessing if tests exist in project_
+**NOT APPLICABLE** — Tests not currently part of the project workflow. Focus on implementation and refactoring first.
 
 ### 🎯 Key Architectural Decisions
 
