@@ -2,7 +2,7 @@
 project_name: 'hero-scraper'
 user_name: 'Vasyl'
 date: '2026-03-17T15:33:50Z'
-sections_completed: ['discovery', 'technology_stack']
+sections_completed: ['discovery', 'technology_stack', 'language_specific_rules']
 existing_patterns_found: 12
 refactoring_direction: 'simplify'
 ---
@@ -59,6 +59,26 @@ _This file contains critical rules and patterns that AI agents must follow when 
 - Use `LSP.hover` to get type information
 - **This dramatically improves code quality, speed, and reduces errors.**
 
+### 📚 Available Skills for AI Agents
+
+#### TypeScript Advanced Types
+**Location:** `.claude/skills/typescript-advanced-types/SKILL.md`
+
+**When to invoke:**
+- Implementing complex type logic (generics, conditional types, mapped types)
+- Creating reusable type utilities
+- Building type-safe API clients
+- Schema migration types (Prisma → Effect SQL)
+- Type-safe form validation or state machines
+
+**Usage:** Agents should use this skill when advanced type patterns are needed.
+**ALWAYS use Claude Code's built-in LSP tool for code exploration and work.**
+- Use `LSP.goToDefinition` to find symbol definitions
+- Use `LSP.findReferences` to see where symbols are used
+- Use `LSP.documentSymbol` to get file structure
+- Use `LSP.hover` to get type information
+- **This dramatically improves code quality, speed, and reduces errors.**
+
 ### Current Structure (Transition State)
 ```
 src/                      # Main source code (flat structure)
@@ -77,6 +97,38 @@ resolutions/              # ✅ KEEPING (temporary external lib fixes)
 ---
 
 ## Critical Implementation Rules
+
+### Language-Specific Rules (TypeScript/Effect)
+
+#### Configuration (CRITICAL)
+- **`preserveSymlinks: false`** — NON-NEGOTIABLE. Bun/pnpm linking requirement. Without this, tsc won't find types in node_modules.
+- **`exactOptionalPropertyTypes`** — Legacy setting from old Effect-ts recommendation. May be removed in future.
+- **`strictNullChecks: true`** — Standard strict mode (always enabled)
+
+#### Import Conventions
+- ✅ **Relative imports with `.ts` extension**: `import { X } from './foo.ts'` (Bun requires this)
+- ❌ **FORBIDDEN**: Workspace imports `@scraper/*` (monorepo legacy, being removed)
+- ✅ Use `../` for parent directory navigation in flat structure
+
+#### Effect Usage (Pragmatic, Not Dogmatic)
+- ✅ **Use `Effect.gen`** for complex async flows and sequencing
+- ✅ **`Schema.TaggedErrorClass`** for domain errors (good pattern, keep)
+- ❌ **NOT everything** needs `Effect.Service()` — this was over-engineering
+- ❌ **DO NOT USE** `_try/_promise/_tryMapPromise` helpers for new code (legacy over-engineering)
+- ✅ **Pragmatic choice**: Use Effect where it adds value (error handling, composition), not as blanket pattern
+
+#### Type Safety
+- **`unknown` over `any`** — Enforce type checking
+- **Type guards** over type assertions where possible
+- **Discriminated unions** for state machines and error handling
+- **LSP tools mandatory** — Always use `LSP.goToDefinition`, `findReferences`, `hover` for code work
+
+#### Available Skills
+- **`typescript-advanced-types`** — Use for complex type logic, generics, conditional types, type-safe patterns
+
+---
+
+### Framework-Specific Rules
 
 _PENDING: Generated in next step_
 
