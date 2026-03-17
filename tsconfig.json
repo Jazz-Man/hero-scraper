@@ -15,6 +15,7 @@
 		"isolatedModules": true,
 		"strictNullChecks": true,
 		"exactOptionalPropertyTypes": true,
+		"allowImportingTsExtensions": false,
 		"plugins": [
 			{
 				"name": "@effect/language-service",
