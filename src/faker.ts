@@ -8,15 +8,24 @@ const faker = new Faker({ locale: [en_US, en, base] });
 
 export default faker;
 
-export class FakerError extends Schema.TaggedErrorClass<FakerError>()("FakerError", {
-	message: Schema.Unknown,
-}) {}
+export class FakerError extends Schema.TaggedErrorClass<FakerError>()(
+	"FakerError",
+	{
+		message: Schema.Unknown,
+	},
+) {}
 
-export class FakerService extends ServiceMap.Service<FakerService, {
-	readonly faker: () => Faker;
-}>()("FakerService") {
-	static readonly layer = Layer.effect(FakerService, Effect.gen(function* () {
-		const faker = () => new Faker({ locale: [en_US, en, base] });
-		return FakerService.of({ faker });
-	}));
+export class FakerService extends ServiceMap.Service<
+	FakerService,
+	{
+		readonly faker: () => Faker;
+	}
+>()("FakerService") {
+	static readonly layer = Layer.effect(
+		FakerService,
+		Effect.gen(function* () {
+			const faker = () => new Faker({ locale: [en_US, en, base] });
+			return FakerService.of({ faker });
+		}),
+	);
 }
