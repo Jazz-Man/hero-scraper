@@ -1,4 +1,3 @@
-import type { TSameSiteCookie } from "@scraper/prisma";
 import type {
 	IRequestInfo,
 	IRequestInit,
@@ -6,6 +5,7 @@ import type {
 import type ISetCookieOptions from "@ulixee/hero-interfaces/ISetCookieOptions";
 import type IWaitForElementOptions from "@ulixee/hero-interfaces/IWaitForElementOptions";
 import { Effect, Layer, Schedule } from "effect";
+import type { TSameSiteCookie } from "../../packages/prisma";
 import { HeroAppService, HeroAppServiceLive } from "./HeroAppService";
 import { HeroHttpError, HeroHttpNetworcFailure } from "./HeroError";
 import type { HeroParametersType } from "./type";
