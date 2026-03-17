@@ -2,6 +2,12 @@ import { Schema } from "effect";
 import { Model } from "effect/unstable/schema";
 
 // ============================================================================
+// Reusable Schema Definitions
+// ============================================================================
+
+const SameSiteSchema = Schema.Literals(["Strict", "Lax", "None"]);
+
+// ============================================================================
 // Database Models using Model.Class
 // This creates schemas with variants: select, insert, update, json
 // ============================================================================
@@ -27,10 +33,10 @@ export class UserCookie extends Model.Class<UserCookie>("UserCookie")({
 	secure: Model.BooleanSqlite,
 	sameParty: Model.BooleanSqlite,
 	sameSite: Model.Field({
-		select: Schema.Literals(["Strict", "Lax", "None"]),
-		insert: Schema.Literals(["Strict", "Lax", "None"]),
-		update: Schema.Literals(["Strict", "Lax", "None"]),
-		json: Schema.Literals(["Strict", "Lax", "None"]),
+		select: SameSiteSchema,
+		insert: SameSiteSchema,
+		update: SameSiteSchema,
+		json: SameSiteSchema,
 	}),
 }) {}
 
