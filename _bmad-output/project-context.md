@@ -2,7 +2,7 @@
 project_name: 'hero-scraper'
 user_name: 'Vasyl'
 date: '2026-03-17T15:33:50Z'
-sections_completed: ['discovery', 'technology_stack', 'language_specific_rules', 'code_quality_rules']
+sections_completed: ['discovery', 'technology_stack', 'language_specific_rules', 'code_quality_rules', 'critical_rules']
 existing_patterns_found: 12
 refactoring_direction: 'simplify'
 ---
@@ -185,6 +185,62 @@ _PENDING: Generated in next step_
 ### Development Workflow Rules
 
 **NOT APPLICABLE** — User handles all git operations (branches, commits, PRs) independently. No automated workflow rules required.
+
+---
+
+### Critical Don't-Miss Rules
+
+#### Anti-Patterns (NEVER Do)
+1. ❌ **Workspace imports `@scraper/***` — DEAD, causes tsc failures
+2. ❌ **`Effect.Service()` blanket pattern** — over-engineering legacy
+3. ❌ **`_try/_promise/_tryMapPromise` helpers** — legacy, don't use for new code
+4. ❌ **New Prisma code** — deprecated, migrating to `@effect/sql-sqlite-bun`
+5. ❌ **Large async/await with single catch** — misses Effect's error handling value
+
+#### Critical Edge Cases (Non-Negotiable)
+1. **`preserveSymlinks: false`** — MANDATORY for Bun/pnpm linking. Without this, tsc won't find types in node_modules.
+2. **`.ts` extensions in imports** — REQUIRED by Bun: `import { X } from './foo.ts'`
+3. **Beta/alpha versions** — Effect-ts 4.0.0-beta.33, Hero 2.0.0-alpha.34 = conscious choices, not tech debt
+4. **LSP tools** — ALWAYS use `goToDefinition`, `findReferences`, `hover` for code navigation
+
+#### Security
+1. **`.env` file** — NEVER commit (contains secrets)
+2. **`credentials.json`** — stored separately, NOT in git
+3. **Environment variables only** — for API tokens, secrets
+
+#### Effect Usage (Pragmatic Balance)
+- ✅ **Use Effect for error handling** — this is the primary value Effect provides
+- ✅ **Use Effect for composition** — `Effect.gen` for sequencing
+- ✅ **Small operations** → bare `Effect.tryPromise` is fine
+- ✅ **Reusable domain logic** → can use services IF genuinely reusable
+- ❌ **NOT blanket `Effect.Service()`** — was over-engineering, use sparingly
+- ❌ **NOT large async/await wrappers** — defeats error handling value
+
+**Pragmatism Threshold:**
+- If operation needs proper error handling → Use Effect
+- If operation is simple AND uncaught throw is acceptable → async/await OK
+- If operation composes multiple async operations → Use Effect
+- If operation is reusable across codebase → Consider service (carefully, not by default)
+
+---
+
+## Summary
+
+**Project Refactoring Direction:**
+- Away from: Monorepo, over-engineered Effect services, workspace imports
+- Toward: Flat structure, pragmatic Effect usage, relative imports
+
+**Key Migration:**
+- Prisma → `@effect/sql-sqlite-bun`
+- Workspace imports → Relative imports
+- Service pattern → Pragmatic Effect usage
+
+**Critical for AI Agents:**
+1. LSP tools are MANDATORY for all code work
+2. `preserveSymlinks: false` is non-negotiable
+3. `.ts` extensions required in imports
+4. Prisma is DEPRECATED — don't write new code with it
+5. Effect is a tool for error handling, not a religion
 
 ### 🎯 Key Architectural Decisions
 
