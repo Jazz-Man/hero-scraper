@@ -3,7 +3,7 @@ import { Data, Schema } from "effect";
 
 const httpStatusCodes = new Map(Object.entries(STATUS_CODES));
 
-export class HeroError extends Schema.TaggedError<HeroError>(
+export class HeroError extends Schema.TaggedErrorClass<HeroError>(
 	"@scraper/app/HeroError",
 )("HeroError", {
 	module: Schema.String,
@@ -14,7 +14,7 @@ export class HeroError extends Schema.TaggedError<HeroError>(
 	cause: Schema.optional(Schema.Defect),
 }) {}
 
-export class HeroHttpError extends Schema.TaggedError<HeroHttpError>(
+export class HeroHttpError extends Schema.TaggedErrorClass<HeroHttpError>(
 	"@scraper/app/HeroHttpError",
 )("HeroHttpError", {
 	status: Schema.Number,
@@ -35,7 +35,7 @@ export class HeroHttpError extends Schema.TaggedError<HeroHttpError>(
 	}
 }
 
-export class HeroHttpNetworcFailure extends Schema.TaggedError<HeroHttpNetworcFailure>(
+export class HeroHttpNetworcFailure extends Schema.TaggedErrorClass<HeroHttpNetworcFailure>(
 	"@scraper/app/HeroHttpNetworcFailure",
 )("HeroHttpNetworcFailure", {
 	name: Schema.String,

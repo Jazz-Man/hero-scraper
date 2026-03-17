@@ -12,16 +12,7 @@
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},
 	"dependencies": {
-		"@scraper/ip-info": "workspace:*",
-		"@ulixee/awaited-dom": "1.4.2",
-		"@ulixee/commons": "2.0.0-alpha.33",
-		"@ulixee/default-browser-emulator": "2.0.0-alpha.33",
-		"@ulixee/execute-js-plugin": "2.0.0-alpha.33",
-		"@ulixee/hero": "2.0.0-alpha.33",
-		"@ulixee/hero-interfaces": "2.0.0-alpha.33",
-		"@ulixee/real-user-agents": "2.0.0-alpha.33",
-		"@ulixee/unblocked-specification": "2.0.0-alpha.33",
-		"fingerprint-generator": "2.1.68"
+		"@scraper/ip-info": "workspace:*"
 	},
 	"devDependencies": {
 		"@scraper/prisma": "workspace:*"
