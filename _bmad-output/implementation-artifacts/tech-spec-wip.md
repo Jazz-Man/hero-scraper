@@ -3,11 +3,11 @@ title: 'Prisma to @effect/sql-sqlite-bun Migration'
 slug: 'prisma-to-effect-sql-migration'
 created: '2026-03-17T18:43:13Z'
 status: 'in-progress'
-stepsCompleted: [1]
-tech_stack: ['@effect/sql-sqlite-bun', 'Effect Config', 'SQLite']
-files_to_modify: []
-code_patterns: []
-test_patterns: []
+stepsCompleted: [1, 2]
+tech_stack: ['@effect/sql-sqlite-bun', 'Effect Config', 'SQLite', 'Effect Schema.Struct', 'SqlModel.makeRepository', 'Migrator.fromFileSystem']
+files_to_modify: ['packages/prisma/ (remove)', 'src/db/ (create new module)', 'src/hero/HeroAppService.ts (user will refactor)']
+code_patterns: ['Effect.gen for async flows', 'Schema.Struct for type definitions', 'layerConfig for client setup', 'Manual SQL joins for relations']
+test_patterns: ['NOT APPLICABLE']
 ---
 
 # Tech-Spec: Prisma to @effect/sql-sqlite-bun Migration
@@ -98,14 +98,18 @@ Create `src/db/` directory with Effect SQL SQLite client using Effect Config for
 
 ### Files to Reference
 
-| File | Purpose |
-| ---- | ------- |
-| `packages/prisma/index.ts` | Current query implementations (for reference) |
-| `packages/prisma/prisma/schema.prisma` | Schema structure (4 tables + 1 enum) |
-| `node_modules/.bun/@effect+sql-sqlite-bun/.../SqliteClient.ts` | Effect SQL client API |
-| `node_modules/.bun/effect/.../unstable/sql/Migrator.ts` | Migration system API |
-| `node_modules/.bun/effect/.../unstable/sql/SqlModel.ts` | Repository generator API |
-| `.claude/skills/typescript-advanced-types/SKILL.md` | For complex type logic if needed |
+| File | Purpose | Action |
+| ---- | ------- | ------ |
+| `packages/prisma/index.ts` | Current query implementations | Reference for `getUserWithCookies`, `getUserListWithCookies`, `updateSignupUserCookies` |
+| `packages/prisma/prisma/schema.prisma` | Schema structure (4 tables + 1 enum) | Replicate table structure in migrations |
+| `packages/prisma/seed-db.ts` | Seed script pattern | NOT migrating (user will handle separately) |
+| `packages/prisma/seed/cf-zone.seed.ts` | Example of Prisma transactions | Reference for transaction patterns |
+| `src/hero/HeroAppService.ts` | Uses `TUserCookies` type | User will refactor after migration |
+| `node_modules/.bun/@effect+sql-sqlite-bun/.../SqliteClient.ts` | Effect SQL client API | Use `layerConfig`, `make` for setup |
+| `node_modules/.bun/effect/.../unstable/sql/Migrator.ts` | Migration system API | Use `fromFileSystem`, `run` |
+| `node_modules/.bun/effect/.../unstable/sql/SqlModel.ts` | Repository generator API | Use `makeRepository` for CRUD |
+| `.claude/skills/typescript-advanced-types/SKILL.md` | For complex type logic | Use if advanced Schema patterns needed |
+| `_bmad-output/project-context.md` | Project rules and patterns | Follow all Effect, TypeScript, and style rules |
 
 ### Technical Decisions
 
@@ -134,6 +138,34 @@ Create `src/db/` directory with Effect SQL SQLite client using Effect Config for
 **Key Differences:**
 - Prisma = Generated code (CLI, codebase files)
 - Effect SQL = Runtime construction (Schema-based, no codegen)
+
+---
+
+### **Files to Create**
+
+**New Module: `src/db/`**
+
+```
+src/db/
+├── migrations/
+│   ├── 001_initial_schema.ts      # CREATE TABLE for all 4 tables
+│   └── 002_add_indexes.ts          # CREATE INDEX if needed
+├── schema.ts                        # Schema.Struct definitions
+├── repos.ts                         # Repository generators + custom queries
+├── client.ts                        # layerConfig setup
+└── index.ts                         # Exports
+```
+
+**File Details:**
+- **`migrations/001_initial_schema.ts`**: Effects creating `zones`, `email_rules`, `users`, `user_cookies` tables
+- **`migrations/002_add_indexes.ts`**: Performance indexes
+- **`schema.ts`**: `UserSchema`, `UserCookieSchema`, `ZoneSchema`, `EmailRuleSchema`, `SameSiteSchema`
+- **`repos.ts`**: `makeUserRepo`, `makeUserCookieRepo`, custom queries like `getUserWithCookies`
+- **`client.ts`**: `SqliteClient.layerConfig(Config.config("DATABASE_PATH"))`
+- **`index.ts`**: Export schemas, repos, client layer
+
+**Files to Remove:**
+- `packages/prisma/` (entire directory)
 
 ## Implementation Plan
 
