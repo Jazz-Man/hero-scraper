@@ -180,6 +180,12 @@ _PENDING: Generated in next step_
 
 **NOT APPLICABLE** — Tests not currently part of the project workflow. Focus on implementation and refactoring first.
 
+---
+
+### Development Workflow Rules
+
+**NOT APPLICABLE** — User handles all git operations (branches, commits, PRs) independently. No automated workflow rules required.
+
 ### 🎯 Key Architectural Decisions
 
 1. **Pragmatic Effect Usage**: NOT everything needs `Effect.Service()`. Use Effect where it adds value (error handling, composition), not as a blanket pattern.
