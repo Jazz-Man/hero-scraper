@@ -314,3 +314,5 @@ apps/faucet/real-src
 
 .zed/*
 cred*
+
+*.db
