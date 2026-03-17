@@ -1,38 +1,50 @@
 import { Effect, Schema } from "effect";
+import { Model } from "effect/unstable/schema";
 import { SqlClient } from "effect/unstable/sql/SqlClient";
+import { makeRepository } from "effect/unstable/sql/SqlModel";
+import * as RequestResolver from "effect/RequestResolver";
+import * as SqlResolver from "effect/unstable/sql/SqlResolver";
+import * as SqlSchema from "effect/unstable/sql/SqlSchema";
 
 // ============================================================================
-// Schemas using Schema.Class
+// Database Models using Model.Class
+// This creates schemas with variants: select, insert, update, json
 // ============================================================================
 
-export class User extends Schema.Class<User>("User")({
+export class User extends Model.Class<User>("User")({
 	username: Schema.String,
 	password: Schema.String,
-	hasAccount: Schema.Boolean,
-	hasConfigured: Schema.Boolean,
-	emailVerified: Schema.Boolean,
+	hasAccount: Model.BooleanSqlite,
+	hasConfigured: Model.BooleanSqlite,
+	emailVerified: Model.BooleanSqlite,
 	tfaSecret: Schema.NullOr(Schema.String),
 	email: Schema.NullOr(Schema.String),
 }) {}
 
-export class UserCookie extends Schema.Class<UserCookie>("UserCookie")({
+export class UserCookie extends Model.Class<UserCookie>("UserCookie")({
+	userUsername: Schema.String,
 	name: Schema.String,
 	value: Schema.String,
 	domain: Schema.String,
 	path: Schema.String,
 	expires: Schema.NullOr(Schema.DateTimeUtcFromString),
-	httpOnly: Schema.Boolean,
-	secure: Schema.Boolean,
-	sameParty: Schema.Boolean,
-	sameSite: Schema.Literals(["Strict", "Lax", "None"]),
+	httpOnly: Model.BooleanSqlite,
+	secure: Model.BooleanSqlite,
+	sameParty: Model.BooleanSqlite,
+	sameSite: Model.Field({
+		select: Schema.Literals(["Strict", "Lax", "None"]),
+		insert: Schema.Literals(["Strict", "Lax", "None"]),
+		update: Schema.Literals(["Strict", "Lax", "None"]),
+		json: Schema.Literals(["Strict", "Lax", "None"]),
+	}),
 }) {}
 
-export class Zone extends Schema.Class<Zone>("Zone")({
+export class Zone extends Model.Class<Zone>("Zone")({
 	zoneId: Schema.String,
 	domain: Schema.String,
 }) {}
 
-export class EmailRule extends Schema.Class<EmailRule>("EmailRule")({
+export class EmailRule extends Model.Class<EmailRule>("EmailRule")({
 	id: Schema.String,
 	email: Schema.String,
 	forwardTo: Schema.String,
@@ -40,104 +52,142 @@ export class EmailRule extends Schema.Class<EmailRule>("EmailRule")({
 }) {}
 
 // ============================================================================
-// Repository Queries
+// Repository Layer - Auto-generated CRUD
+// ============================================================================
+
+export const makeZoneRepo = makeRepository(Zone, {
+	tableName: "zones",
+	spanPrefix: "Zone",
+	idColumn: "zoneId",
+});
+
+export const makeEmailRuleRepo = makeRepository(EmailRule, {
+	tableName: "email_rules",
+	spanPrefix: "EmailRule",
+	idColumn: "id",
+});
+
+export const makeUserRepo = makeRepository(User, {
+	tableName: "users",
+	spanPrefix: "User",
+	idColumn: "username",
+});
+
+// Note: UserCookie has composite key (user_username, name, domain)
+// For simple operations, we use userUsername as primary lookup
+export const makeUserCookieRepo = makeRepository(UserCookie, {
+	tableName: "user_cookies",
+	spanPrefix: "UserCookie",
+	idColumn: "userUsername",
+});
+
+// ============================================================================
+// Resolvers - Batched operations with caching
+// ============================================================================
+
+/**
+ * Resolver for batch-loading cookies by username
+ * Uses SqlResolver.grouped for one-to-many relationship
+ */
+const makeCookiesByUserResolver = Effect.gen(function* () {
+	const sql = yield* SqlClient;
+
+	return SqlResolver.grouped({
+		Request: Schema.String, // username
+		RequestGroupKey: (request) => request,
+		Result: UserCookie,
+		ResultGroupKey: (cookie) => cookie.userUsername,
+		execute: (usernames) =>
+			sql`SELECT * FROM user_cookies WHERE user_username IN ${sql.in(usernames)}`,
+	});
+});
+
+/**
+ * Resolver for batch-deleting cookies by username
+ */
+const makeDeleteCookiesResolver = Effect.gen(function* () {
+	const sql = yield* SqlClient;
+
+	return SqlResolver.void({
+		Request: Schema.String, // username
+		execute: (usernames) =>
+			sql`DELETE FROM user_cookies WHERE user_username IN ${sql.in(usernames)}`,
+	});
+});
+
+/**
+ * Resolver for batch-inserting cookies
+ */
+const makeInsertCookiesResolver = Effect.gen(function* () {
+	const sql = yield* SqlClient;
+
+	return SqlResolver.void({
+		Request: UserCookie.insert,
+		execute: (cookies) => sql`INSERT INTO user_cookies ${sql.insert(cookies)}`,
+	});
+});
+
+// ============================================================================
+// High-level API - Composed operations
 // ============================================================================
 
 /**
  * Get a user with their associated cookies
+ * Uses batch-loading resolver for efficient cookie fetching
  */
 export const getUserWithCookies = (username: string) =>
 	Effect.gen(function* () {
-		const sql = yield* SqlClient;
+		const userRepo = yield* makeUserRepo;
+		const cookiesResolver = yield* makeCookiesByUserResolver;
+		const getCookies = SqlResolver.request(cookiesResolver);
 
-		const result = yield* sql`
-			SELECT
-				json_object(
-					'username', u.username,
-					'password', u.password,
-					'has_account', u.has_account,
-					'has_configured', u.has_configured,
-					'email_verified', u.email_verified,
-					'tfa_secret', u.tfa_secret,
-					'email', u.email,
-					'cookies', (
-						SELECT json_group_array(json_object(
-							'name', uc.name,
-							'value', uc.value,
-							'domain', uc.domain,
-							'path', uc.path,
-							'expires', uc.expires,
-							'http_only', uc.http_only,
-							'secure', uc.secure,
-							'same_party', uc.same_party,
-							'same_site', uc.same_site
-						))
-						FROM user_cookies uc
-						WHERE uc.user_username = u.username
-					)
-				) as data
-			FROM users u
-			WHERE u.username = ${username}
-		`.withoutTransform;
+		// Fetch user
+		const user = yield* userRepo.findById(username);
 
-		if (!result || result.length === 0) {
-			return null;
-		}
+		// Batch-fetch cookies (will automatically batch if called multiple times)
+		const cookies = yield* getCookies(username);
 
-		const userObj = JSON.parse(result[0]!.data as string);
-		const cookies = userObj.cookies ? JSON.parse(userObj.cookies as string) : [];
-
-		return { ...userObj, cookies } as User & { cookies: Array<UserCookie> };
+		return { ...user, cookies };
 	});
 
 /**
  * Get list of users without accounts with their cookies
+ * Uses batch-loading for optimal performance
  */
 export const getUserListWithCookies = (limit = 50) =>
 	Effect.gen(function* () {
 		const sql = yield* SqlClient;
+		const cookiesResolver = yield* makeCookiesByUserResolver;
+		const getCookies = SqlResolver.request(cookiesResolver);
 
-		const result = yield* sql`
-			SELECT
-				json_object(
-					'username', u.username,
-					'password', u.password,
-					'has_account', u.has_account,
-					'has_configured', u.has_configured,
-					'email_verified', u.email_verified,
-					'tfa_secret', u.tfa_secret,
-					'email', u.email,
-					'cookies', (
-						SELECT json_group_array(json_object(
-							'name', uc.name,
-							'value', uc.value,
-							'domain', uc.domain,
-							'path', uc.path,
-							'expires', uc.expires,
-							'http_only', uc.http_only,
-							'secure', uc.secure,
-							'same_party', uc.same_party,
-							'same_site', uc.same_site
-						))
-						FROM user_cookies uc
-						WHERE uc.user_username = u.username
-					)
-				) as data
-			FROM users u
-			WHERE u.has_account = 0
-			LIMIT ${limit}
-		`.withoutTransform;
-
-		return result.map((row) => {
-			const userObj = JSON.parse(row.data as string);
-			const cookies = userObj.cookies ? JSON.parse(userObj.cookies as string) : [];
-
-			return { ...userObj, cookies } as User & { cookies: Array<UserCookie> };
+		// Fetch users using SqlSchema
+		const findUsers = SqlSchema.findAll({
+			Request: Schema.Struct({ limit: Schema.Int }),
+			Result: User,
+			execute: ({ limit }) =>
+				sql`SELECT * FROM users WHERE has_account = 0 LIMIT ${limit}`,
 		});
+
+		const users = yield* findUsers({ limit });
+
+		// Batch-fetch all cookies in a single query
+		const usernames = users.map((u) => u.username);
+		const allCookies = yield* Effect.forEach(
+			usernames,
+			(username) => getCookies(username),
+			{ concurrency: "unbounded" },
+		);
+
+		// Combine results
+		return users.map((user, i) => ({
+			...user,
+			cookies: allCookies[i],
+		}));
 	});
 
 /**
  * Update user after signup with cookies (transactional)
+ * Uses repository + resolvers with transaction wrapping
  */
 export const updateSignupUserCookies = (
 	username: string,
@@ -145,25 +195,29 @@ export const updateSignupUserCookies = (
 ) =>
 	Effect.gen(function* () {
 		const sql = yield* SqlClient;
+		const userRepo = yield* makeUserRepo;
+		const deleteResolver = yield* makeDeleteCookiesResolver;
+		const insertResolver = yield* makeInsertCookiesResolver;
 
-		const transactionEffect = Effect.gen(function* () {
-			yield* sql`UPDATE users SET has_account = 1 WHERE username = ${username}`;
-			yield* sql`DELETE FROM user_cookies WHERE user_username = ${username}`;
+		const deleteCookies = SqlResolver.request(deleteResolver);
+		const insertCookie = SqlResolver.request(insertResolver);
 
-			yield* Effect.forEach(cookies, (cookie) =>
-				sql`
-					INSERT INTO user_cookies (
-						name, value, domain, path, expires,
-						http_only, secure, same_party, same_site, user_username
-					)
-					VALUES (
-						${cookie.name}, ${cookie.value}, ${cookie.domain}, ${cookie.path},
-						${cookie.expires}, ${cookie.httpOnly}, ${cookie.secure},
-						${cookie.sameParty}, ${cookie.sameSite}, ${username}
-					)
-				`,
-			);
-		});
+		// Transactional update using sql.withTransaction
+		yield* sql.withTransaction(
+			Effect.gen(function* () {
+				// Update user has_account flag - use manual SQL to only update needed field
+				yield* sql`UPDATE users SET has_account = 1 WHERE username = ${username}`;
 
-		yield* sql.withTransaction(transactionEffect);
+				// Delete existing cookies
+				yield* deleteCookies(username);
+
+				// Insert new cookies (will batch automatically)
+				yield* Effect.forEach(cookies, (cookie) =>
+					insertCookie({
+						...cookie,
+						userUsername: username,
+					}),
+				);
+			}),
+		);
 	});
