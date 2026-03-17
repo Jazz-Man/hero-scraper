@@ -1,21 +1,7 @@
 import { base, en, en_US, Faker } from "@faker-js/faker";
-import { Effect, Layer, Schema, ServiceMap } from "effect";
+import { Effect, Layer, ServiceMap } from "effect";
 
-/**
- * @deprecated
- */
-const faker = new Faker({ locale: [en_US, en, base] });
-
-export default faker;
-
-export class FakerError extends Schema.TaggedErrorClass<FakerError>()(
-	"FakerError",
-	{
-		message: Schema.Unknown,
-	},
-) {}
-
-export class FakerService extends ServiceMap.Service<
+export default class FakerService extends ServiceMap.Service<
 	FakerService,
 	{
 		readonly faker: () => Faker;
@@ -24,8 +10,9 @@ export class FakerService extends ServiceMap.Service<
 	static readonly layer = Layer.effect(
 		FakerService,
 		Effect.gen(function* () {
-			const faker = () => new Faker({ locale: [en_US, en, base] });
-			return FakerService.of({ faker });
+			return FakerService.of({
+				faker: () => new Faker({ locale: [en_US, en, base] }),
+			});
 		}),
 	);
 }
