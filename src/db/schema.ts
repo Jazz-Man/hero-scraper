@@ -1,50 +1,47 @@
 import { Schema } from "effect";
+import { Model } from "effect/unstable/schema";
 
-// SameSite enum schema
-export const SameSiteSchema = Schema.Literals(["Strict", "Lax", "None"]);
-export type TSameSite = Schema.Schema.Type<typeof SameSiteSchema>;
+// ============================================================================
+// Database Models using Model.Class
+// This creates schemas with variants: select, insert, update, json
+// ============================================================================
 
-// Zone schema
-export const ZoneSchema = Schema.Struct({
-	zoneId: Schema.String,
-	domain: Schema.String,
-});
-export type TZone = Schema.Schema.Type<typeof ZoneSchema>;
-
-// EmailRule schema
-export const EmailRuleSchema = Schema.Struct({
-	id: Schema.String,
-	email: Schema.String,
-	forwardTo: Schema.String,
-	zoneId: Schema.String,
-});
-export type TEmailRule = Schema.Schema.Type<typeof EmailRuleSchema>;
-
-// User schema
-export const UserSchema = Schema.Struct({
+export class User extends Model.Class<User>("User")({
 	username: Schema.String,
 	password: Schema.String,
-	hasAccount: Schema.Boolean,
-	hasConfigured: Schema.Boolean,
-	emailVerified: Schema.Boolean,
+	hasAccount: Model.BooleanSqlite,
+	hasConfigured: Model.BooleanSqlite,
+	emailVerified: Model.BooleanSqlite,
 	tfaSecret: Schema.NullOr(Schema.String),
 	email: Schema.NullOr(Schema.String),
-});
-export type TUser = Schema.Schema.Type<typeof UserSchema>;
+}) {}
 
-// UserCookie schema
-export const UserCookieSchema = Schema.Struct({
+export class UserCookie extends Model.Class<UserCookie>("UserCookie")({
+	userUsername: Schema.String,
 	name: Schema.String,
 	value: Schema.String,
 	domain: Schema.String,
 	path: Schema.String,
 	expires: Schema.NullOr(Schema.DateTimeUtcFromString),
-	httpOnly: Schema.Boolean,
-	secure: Schema.Boolean,
-	sameParty: Schema.Boolean,
-	sameSite: SameSiteSchema,
-});
-export type TUserCookie = Schema.Schema.Type<typeof UserCookieSchema>;
+	httpOnly: Model.BooleanSqlite,
+	secure: Model.BooleanSqlite,
+	sameParty: Model.BooleanSqlite,
+	sameSite: Model.Field({
+		select: Schema.Literals(["Strict", "Lax", "None"]),
+		insert: Schema.Literals(["Strict", "Lax", "None"]),
+		update: Schema.Literals(["Strict", "Lax", "None"]),
+		json: Schema.Literals(["Strict", "Lax", "None"]),
+	}),
+}) {}
 
-// User cookies array type (for backward compatibility)
-export type TUserCookies = ReadonlyArray<TUserCookie>;
+export class Zone extends Model.Class<Zone>("Zone")({
+	zoneId: Schema.String,
+	domain: Schema.String,
+}) {}
+
+export class EmailRule extends Model.Class<EmailRule>("EmailRule")({
+	id: Schema.String,
+	email: Schema.String,
+	forwardTo: Schema.String,
+	zoneId: Schema.String,
+}) {}
