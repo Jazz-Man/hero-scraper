@@ -75,8 +75,12 @@ Create `src/db/` directory with Effect SQL SQLite client using Effect Config for
 
 2. **For source code investigation:**
    - ✅ Use `repomix MCP file_system_read_file` for reading source
-   - ✅ Use `LSP.goToDefinition` for navigating code
-   - ✅ Use `LSP.hover` for type information
+   - ✅ Use `LSP.goToDefinition` for navigating to symbol definitions
+   - ✅ Use `LSP.hover` for type information and documentation
+   - ✅ Use `LSP.findReferences` to see where symbols are used
+   - ✅ Use `LSP.documentSymbol` to get file structure overview
+   - ✅ Use `LSP.workspaceSymbol` to search across entire project
+   - ✅ Use `LSP.incomingCalls` / `LSP.outgoingCalls` for call hierarchy analysis
 
 3. **Source-first approach:**
    - When API is unclear, READ `node_modules/effect/src/` files
