@@ -2,8 +2,8 @@
 title: 'Prisma to @effect/sql-sqlite-bun Migration'
 slug: 'prisma-to-effect-sql-migration'
 created: '2026-03-17T18:43:13Z'
-status: 'review'
-stepsCompleted: [1, 2, 3]
+status: 'ready-for-dev'
+stepsCompleted: [1, 2, 3, 4]
 tech_stack: ['@effect/sql-sqlite-bun', 'Effect Config', 'SQLite', 'Effect Schema.Struct', 'SqlModel.makeRepository', 'Migrator.fromFileSystem']
 files_to_modify: ['packages/prisma/ (remove)', 'src/db/ (create new module)', 'src/hero/HeroAppService.ts (user will refactor)']
 code_patterns: ['Effect.gen for async flows', 'Schema.Struct for type definitions', 'layerConfig for client setup', 'Manual SQL joins for relations']
