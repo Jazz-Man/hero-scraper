@@ -51,13 +51,31 @@ _This file contains critical rules and patterns that AI agents must follow when 
 - `bunfig.toml`: Exact installs, telemetry disabled, test config
 - `bun.lock`: Lockfile (not bun.lockb due to `saveTextLockfile: true`)
 
-### 🔧 CRITICAL: LSP Tools Usage
-**ALWAYS use Claude Code's built-in LSP tool for code exploration and work.**
-- Use `LSP.goToDefinition` to find symbol definitions
-- Use `LSP.findReferences` to see where symbols are used
-- Use `LSP.documentSymbol` to get file structure
-- Use `LSP.hover` to get type information
-- **This dramatically improves code quality, speed, and reduces errors.**
+### 🔧 CRITICAL: Research & Documentation Workflow
+**MANDATORY approach for researching Effect-ts and other libraries:**
+
+1. **For Effect-ts documentation:**
+   - ✅ Use `context7` with library ID `/effect-ts/effect-smol` ONLY
+   - ✅ Use `repomix MCP` to read `node_modules/effect/src/` folder (contains JSDoc + examples)
+   - ❌ NEVER use `grep` for searching Effect code
+   - ❌ NEVER guess API usage — always verify with source or docs
+
+2. **For other libraries:**
+   - ✅ Use `context7` to find relevant documentation
+   - ✅ Use `repomix MCP` to read source code if needed
+   - ✅ Use `LSP` tools for code exploration
+
+3. **LSP Tools (MANDATORY for all code work):**
+   - Use `LSP.goToDefinition` to find symbol definitions
+   - Use `LSP.findReferences` to see where symbols are used
+   - Use `LSP.documentSymbol` to get file structure
+   - Use `LSP.hover` to get type information
+   - **This dramatically improves code quality, speed, and reduces errors.**
+
+4. **When in doubt, READ SOURCE:**
+   - `node_modules/effect/src/` for Effect internals (JSDoc + examples)
+   - `node_modules/@effect/sql-sqlite-bun/src/` for SQLite client
+   - Source code > documentation when API is unclear
 
 ### 📚 Available Skills for AI Agents
 
@@ -202,6 +220,8 @@ _PENDING: Generated in next step_
 2. **`.ts` extensions in imports** — REQUIRED by Bun: `import { X } from './foo.ts'`
 3. **Beta/alpha versions** — Effect-ts 4.0.0-beta.33, Hero 2.0.0-alpha.34 = conscious choices, not tech debt
 4. **LSP tools** — ALWAYS use `goToDefinition`, `findReferences`, `hover` for code navigation
+5. **Documentation workflow** — For Effect-ts: use `context7` (`/effect-ts/effect-smol`) OR read `node_modules/effect/src/`. NEVER use `grep` for code search.
+6. **Source-first approach** — When API is unclear, READ SOURCE FILES in `node_modules/effect/src/` (contains JSDoc + examples)
 
 #### Security
 1. **`.env` file** — NEVER commit (contains secrets)
@@ -237,10 +257,12 @@ _PENDING: Generated in next step_
 
 **Critical for AI Agents:**
 1. LSP tools are MANDATORY for all code work
-2. `preserveSymlinks: false` is non-negotiable
-3. `.ts` extensions required in imports
-4. Prisma is DEPRECATED — don't write new code with it
-5. Effect is a tool for error handling, not a religion
+2. Documentation workflow: For Effect-ts → use `context7` (`/effect-ts/effect-smol`) or read `node_modules/effect/src/`
+3. `preserveSymlinks: false` is non-negotiable
+4. `.ts` extensions required in imports
+5. Prisma is DEPRECATED — don't write new code with it
+6. Effect is a tool for error handling, not a religion
+7. READ SOURCE when API is unclear — `node_modules/effect/src/` contains JSDoc + examples
 
 ### 🎯 Key Architectural Decisions
 
