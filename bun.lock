@@ -53,16 +53,6 @@
         "typescript": "^5",
       },
     },
-    "packages/hero": {
-      "name": "@scraper/hero",
-      "version": "0.0.0",
-      "dependencies": {
-        "@scraper/ip-info": "workspace:*",
-      },
-      "devDependencies": {
-        "@scraper/prisma": "workspace:*",
-      },
-    },
     "packages/ip-info": {
       "name": "@scraper/ip-info",
       "version": "0.0.0",
@@ -235,8 +225,6 @@
     "@prisma/schema-files-loader": ["@prisma/schema-files-loader@6.19.0", "", { "dependencies": { "@prisma/prisma-schema-wasm": "6.19.0-26.2ba551f319ab1df4bc874a89965d8b3641056773", "fs-extra": "11.3.0" } }, "sha512-5+TWqBFfEXwdinmNIjiZu5XyH5NlLWbZWmUaytSX3t7krHJStgl/F6T+rGzewMlXq0ievDoOoGgF7BQhUJh++Q=="],
 
     "@scraper/decorators": ["@scraper/decorators@workspace:packages/decorators"],
-
-    "@scraper/hero": ["@scraper/hero@workspace:packages/hero"],
 
     "@scraper/ip-info": ["@scraper/ip-info@workspace:packages/ip-info"],
 
