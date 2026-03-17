@@ -66,11 +66,30 @@ _This file contains critical rules and patterns that AI agents must follow when 
    - ✅ Use `LSP` tools for code exploration
 
 3. **LSP Tools (MANDATORY for all code work):**
-   - Use `LSP.goToDefinition` to find symbol definitions
-   - Use `LSP.findReferences` to see where symbols are used
-   - Use `LSP.documentSymbol` to get file structure
-   - Use `LSP.hover` to get type information
-   - **This dramatically improves code quality, speed, and reduces errors.**
+
+**All 9 LSP operations with practical examples:**
+
+| Operation | Use Case | Example |
+|-----------|----------|---------|
+| `goToDefinition` | Find where symbol is defined | `LSP.goToDefinition` on `makeRepository` → jumps to `node_modules/effect/src/unstable/sql/SqlModel.ts` |
+| `findReferences` | Find all usages of a symbol | `LSP.findReferences` on `UserCookie` → finds all places where the model is used |
+| `hover` | Get type/docs for symbol at cursor | `LSP.hover` on `Model.BooleanSqlite` → shows JSDoc with explanation |
+| `documentSymbol` | Get all symbols in a file | `LSP.documentSymbol` on `repos.ts` → lists all functions, classes, exports |
+| `workspaceSymbol` | Search symbols across entire project | Search for `SqlResolver` across all files |
+| `goToImplementation` | Find implementations of interface | `LSP.goToImplementation` on abstract method → finds concrete implementations |
+| `prepareCallHierarchy` | Get call hierarchy for function | See what calls a function and what it calls |
+| `incomingCalls` | Find all callers of a function | `LSP.incomingCalls` on `getUserWithCookies` → shows all places that call it |
+| `outgoingCalls` | Find all functions called from here | `LSP.outgoingCalls` on function body → shows what this function calls |
+
+**Common workflows:**
+
+- **Understanding unknown API:** `LSP.hover` → `LSP.goToDefinition` → read source
+- **Refactoring:** `LSP.findReferences` → see all usages before changing
+- **Exploring new codebase:** `LSP.documentSymbol` → get file overview
+- **Debugging:** `LSP.incomingCalls` → trace where function is called from
+- **Impact analysis:** `LSP.findReferences` + `LSP.incomingCalls` → understand ripple effects
+
+**This dramatically improves code quality, speed, and reduces errors.**
 
 4. **When in doubt, READ SOURCE:**
    - `node_modules/effect/src/` for Effect internals (JSDoc + examples)
@@ -90,12 +109,6 @@ _This file contains critical rules and patterns that AI agents must follow when 
 - Type-safe form validation or state machines
 
 **Usage:** Agents should use this skill when advanced type patterns are needed.
-**ALWAYS use Claude Code's built-in LSP tool for code exploration and work.**
-- Use `LSP.goToDefinition` to find symbol definitions
-- Use `LSP.findReferences` to see where symbols are used
-- Use `LSP.documentSymbol` to get file structure
-- Use `LSP.hover` to get type information
-- **This dramatically improves code quality, speed, and reduces errors.**
 
 ### Current Structure (Transition State)
 ```
