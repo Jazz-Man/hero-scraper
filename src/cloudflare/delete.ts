@@ -1,4 +1,4 @@
-import { deleteEmailRoutingRule, emailRoutingList, zoneList } from "./index.ts";
+import { deleteEmailRoutingRule, emailRoutingList, zoneList } from ".";
 
 const zones = await zoneList();
 

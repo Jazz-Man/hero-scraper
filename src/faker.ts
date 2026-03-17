@@ -16,3 +16,9 @@ export default class FakerService extends ServiceMap.Service<
 		}),
 	);
 }
+
+/**
+ * Convenience export for direct usage without Effect layer.
+ * Backward compatible with `import faker from './faker.ts'`
+ */
+export const faker = new Faker({ locale: [en_US, en, base] });

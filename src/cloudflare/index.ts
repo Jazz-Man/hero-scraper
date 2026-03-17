@@ -69,7 +69,6 @@ export const emailRoutingList = async (
 
 			const matchers = rule.matchers?.at(0);
 
-			// @ts-expect-error
 			if (matchers?.type === "all") {
 				return false;
 			}
