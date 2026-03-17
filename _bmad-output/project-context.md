@@ -2,7 +2,7 @@
 project_name: 'hero-scraper'
 user_name: 'Vasyl'
 date: '2026-03-17T15:33:50Z'
-sections_completed: ['discovery']
+sections_completed: ['discovery', 'technology_stack']
 existing_patterns_found: 12
 refactoring_direction: 'simplify'
 ---
@@ -31,9 +31,9 @@ _This file contains critical rules and patterns that AI agents must follow when 
 - **TypeScript**: 5.9.3
 
 ### Framework & Libraries
-- **Effect-ts**: 4.0.0-beta.33 (pragmatic usage, not over-engineering)
-- **@ulixee/hero**: 2.0.0-alpha.34 (browser automation)
-- **Prisma**: 6.2.1 with SQLite (⚠️ TO BE MIGRATED to `@effect/sql-sqlite-bun`)
+- **Effect-ts**: 4.0.0-beta.33 (✅ Conscious choice, not tech debt)
+- **@ulixee/hero**: 2.0.0-alpha.34 (✅ Conscious risk, browser automation is cutting-edge)
+- **Prisma**: 6.2.1 with SQLite (⚠️ BEING REMOVED - migrating to `@effect/sql-sqlite-bun`)
 - **imap**: 0.8.19 (email)
 - **mailparser**: 3.9.4 (email parsing)
 - **otpauth**: 9.5.0 (TOTP)
@@ -46,10 +46,18 @@ _This file contains critical rules and patterns that AI agents must follow when 
 - **@effect/language-service**: 0.23.3 (IDE support)
 
 ### Configuration Files
-- `tsconfig.json`: Extends `@tsconfig/bun`, strict mode, Effect LS plugin
+- `tsconfig.json`: Extends `@tsconfig/bun`, strict mode, Effect LS plugin, `exactOptionalPropertyTypes: true`
 - `biome.jsonc`: Tab indentation, double quotes, specific linter rules
 - `bunfig.toml`: Exact installs, telemetry disabled, test config
 - `bun.lock`: Lockfile (not bun.lockb due to `saveTextLockfile: true`)
+
+### 🔧 CRITICAL: LSP Tools Usage
+**ALWAYS use Claude Code's built-in LSP tool for code exploration and work.**
+- Use `LSP.goToDefinition` to find symbol definitions
+- Use `LSP.findReferences` to see where symbols are used
+- Use `LSP.documentSymbol` to get file structure
+- Use `LSP.hover` to get type information
+- **This dramatically improves code quality, speed, and reduces errors.**
 
 ### Current Structure (Transition State)
 ```
