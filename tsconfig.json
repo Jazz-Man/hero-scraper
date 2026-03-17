@@ -3,7 +3,7 @@
 	"display": "app base tsconfig",
 	"extends": "@tsconfig/bun",
 	"compilerOptions": {
-		"preserveSymlinks": true,
+		"preserveSymlinks": false,
 		"lib": ["esnext", "DOM"],
 
 		"downlevelIteration": true,

@@ -1,5 +1,3 @@
-import fetch from "@scraper/fetch";
-
 import geoIp, { type Lookup } from "geoip-lite";
 import ipServices, {
 	getRandomizedServices,
