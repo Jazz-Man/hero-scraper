@@ -64,6 +64,25 @@ Create `src/db/` directory with Effect SQL SQLite client using Effect Config for
 - `preserveSymlinks: false` is non-negotiable
 - LSP tools mandatory for code navigation
 
+### Research Workflow (CRITICAL)
+
+**When working with Effect-ts or other libraries:**
+
+1. **For Effect-ts documentation:**
+   - ✅ Use `context7` with library ID `/effect-ts/effect-smol`
+   - ✅ Use `repomix MCP` to read `node_modules/effect/src/` (contains JSDoc + examples)
+   - ❌ NEVER use `grep` for searching Effect code
+
+2. **For source code investigation:**
+   - ✅ Use `repomix MCP file_system_read_file` for reading source
+   - ✅ Use `LSP.goToDefinition` for navigating code
+   - ✅ Use `LSP.hover` for type information
+
+3. **Source-first approach:**
+   - When API is unclear, READ `node_modules/effect/src/` files
+   - Source files contain JSDoc annotations with usage examples
+   - Prefer reading source over guessing or external docs
+
 ### Effect SQL Capabilities (Critical Discovery)
 
 **Effect SQL 4.0 provides ORM-like functionality out-of-the-box:**
@@ -105,8 +124,10 @@ Create `src/db/` directory with Effect SQL SQLite client using Effect Config for
 | `packages/prisma/seed-db.ts` | Seed script pattern | NOT migrating (user will handle separately) |
 | `packages/prisma/seed/cf-zone.seed.ts` | Example of Prisma transactions | Reference for transaction patterns |
 | `src/hero/HeroAppService.ts` | Uses `TUserCookies` type | User will refactor after migration |
-| `node_modules/.bun/@effect+sql-sqlite-bun/.../SqliteClient.ts` | Effect SQL client API | Use `layerConfig`, `make` for setup |
-| `node_modules/.bun/effect/.../unstable/sql/Migrator.ts` | Migration system API | Use `fromFileSystem`, `run` |
+| `node_modules/effect/src/unstable/sql/SqlModel.ts` | Repository API | `makeRepository`, `makeDataLoaders` source |
+| `node_modules/effect/src/unstable/sql/SqlResolver.ts` | Resolver API | `grouped`, `findById`, `void` patterns |
+| `node_modules/effect/src/unstable/sql/SqlSchema.ts` | Schema API | `findOne`, `findAll`, `void` helpers |
+| `node_modules/effect/src/unstable/schema/Model.ts` | Model helpers | `BooleanSqlite`, `DateTimeInsertFromDate`, `Field`, etc. |
 | `node_modules/.bun/effect/.../unstable/sql/SqlModel.ts` | Repository generator API | Use `makeRepository` for CRUD |
 | `.claude/skills/typescript-advanced-types/SKILL.md` | For complex type logic | Use if advanced Schema patterns needed |
 | `_bmad-output/project-context.md` | Project rules and patterns | Follow all Effect, TypeScript, and style rules |
