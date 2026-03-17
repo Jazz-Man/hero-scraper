@@ -2,7 +2,7 @@
 project_name: 'hero-scraper'
 user_name: 'Vasyl'
 date: '2026-03-17T15:33:50Z'
-sections_completed: ['discovery', 'technology_stack', 'language_specific_rules']
+sections_completed: ['discovery', 'technology_stack', 'language_specific_rules', 'code_quality_rules']
 existing_patterns_found: 12
 refactoring_direction: 'simplify'
 ---
@@ -131,6 +131,54 @@ resolutions/              # ✅ KEEPING (temporary external lib fixes)
 ### Framework-Specific Rules
 
 _PENDING: Generated in next step_
+
+---
+
+### Code Quality & Style Rules
+
+#### Biome Configuration (Enforced)
+- **Tab indentation** — NOT spaces
+- **Double quotes** — `"string"`, not `'string'`
+- **LF line endings** — not CRLF
+- **Linter rules enforced**:
+  - `noParameterAssign`: error
+  - `useAsConstAssertion`: error
+  - `useDefaultParameterLast`: error
+  - `useSingleVarDeclarator`: error
+  - `noInferrableTypes`: error
+  - `noUselessElse`: error
+  - `useAsConstAssertion`: error
+  - `useNumberNamespace`: error
+  - `noUnusedTemplateLiteral`: error
+
+#### Naming Conventions
+- **Classes**: `PascalCase` → `HeroAppService`, `EmailListener`
+- **Functions/Variables**: `camelCase` → `getHero`, `waitForMillis`
+- **Type Aliases**: `TPrefix` → `TUser`, `TInputValue`, `TCookie`
+- **Constants**: `SCREAMING_SNAKE_CASE` or `camelCase`
+- **Private class fields**: `#prefix`
+
+#### File Organization
+- **Class files**: `PascalCase.ts` → `HeroAppService.ts`
+- **Utility files**: `camelCase.ts` → `utils.ts`, `proxy.ts`
+- **Each domain folder**: `index.ts` for exports
+- ⚠️ **Domain folders TEMPORARY** — `hero/`, `imap/`, `ip-info/`, `cloudflare/` are copy-paste from monorepo migration, will be refactored. Domain approach is good, but current layout is temporary.
+
+#### Import Order
+1. Third-party: `import { Effect } from "effect"`
+2. Local relative: `import { X } from "../foo.ts"`
+3. Type-only: `import type { Y } from "./bar.ts"`
+
+#### Documentation
+- **JSDoc** for complex functions only (`@param`, `@returns`)
+- **`@deprecated`** for legacy code
+- **TODO/FIXME** for temporary workarounds
+
+---
+
+### Testing Rules
+
+_PENDING: Assessing if tests exist in project_
 
 ### 🎯 Key Architectural Decisions
 
