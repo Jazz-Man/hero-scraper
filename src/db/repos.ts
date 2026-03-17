@@ -2,7 +2,6 @@ import { Effect, Schema } from "effect";
 import { Model } from "effect/unstable/schema";
 import { SqlClient } from "effect/unstable/sql/SqlClient";
 import { makeRepository } from "effect/unstable/sql/SqlModel";
-import * as RequestResolver from "effect/RequestResolver";
 import * as SqlResolver from "effect/unstable/sql/SqlResolver";
 import * as SqlSchema from "effect/unstable/sql/SqlSchema";
 
@@ -195,7 +194,6 @@ export const updateSignupUserCookies = (
 ) =>
 	Effect.gen(function* () {
 		const sql = yield* SqlClient;
-		const userRepo = yield* makeUserRepo;
 		const deleteResolver = yield* makeDeleteCookiesResolver;
 		const insertResolver = yield* makeInsertCookiesResolver;
 
