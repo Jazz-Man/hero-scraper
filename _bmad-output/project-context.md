@@ -1,0 +1,81 @@
+---
+project_name: 'hero-scraper'
+user_name: 'Vasyl'
+date: '2026-03-17T15:33:50Z'
+sections_completed: ['discovery']
+existing_patterns_found: 12
+refactoring_direction: 'simplify'
+---
+
+# Project Context for AI Agents
+
+_This file contains critical rules and patterns that AI agents must follow when implementing code in this project. Focus on unobvious details that agents might otherwise miss._
+
+---
+
+## ⚠️ REFACTORING IN PROGRESS
+
+**Direction:** Simplifying architecture, migrating away from:
+- Monorepo structure → Flat structure
+- Over-engineered Effect services → Pragmatic Effect usage
+- Workspace imports (`@scraper/*`) → Relative imports
+
+---
+
+## Technology Stack & Versions
+
+### Core Runtime
+- **Bun**: >=1.2.18 (primary)
+- **Node.js**: >=22.0.0 (alternative)
+- **pnpm**: >=9.0.0 (alternative)
+- **TypeScript**: 5.9.3
+
+### Framework & Libraries
+- **Effect-ts**: 4.0.0-beta.33 (pragmatic usage, not over-engineering)
+- **@ulixee/hero**: 2.0.0-alpha.34 (browser automation)
+- **Prisma**: 6.2.1 with SQLite (⚠️ TO BE MIGRATED to `@effect/sql-sqlite-bun`)
+- **imap**: 0.8.19 (email)
+- **mailparser**: 3.9.4 (email parsing)
+- **otpauth**: 9.5.0 (TOTP)
+- **cloudflare**: 5.2.0 (Workers API)
+- **geoip-lite**: 1.4.10 (IP geolocation)
+- **fingerprint-generator**: 2.1.81
+
+### Development Tools
+- **Biome**: 2.4.7 (linting, formatting)
+- **@effect/language-service**: 0.23.3 (IDE support)
+
+### Configuration Files
+- `tsconfig.json`: Extends `@tsconfig/bun`, strict mode, Effect LS plugin
+- `biome.jsonc`: Tab indentation, double quotes, specific linter rules
+- `bunfig.toml`: Exact installs, telemetry disabled, test config
+- `bun.lock`: Lockfile (not bun.lockb due to `saveTextLockfile: true`)
+
+### Current Structure (Transition State)
+```
+src/                      # Main source code (flat structure)
+  hero/                   # Browser automation
+  imap/                   # Email listener
+  ip-info/                # IP geolocation
+  cloudflare/             # Workers scripts
+
+packages/                 # ⚠️ BEING REMOVED (monorepo legacy)
+  prisma/                 # TO BE MIGRATED to @effect/sql-sqlite-bun
+
+resolutions/              # ✅ KEEPING (temporary external lib fixes)
+  utf7/                   # IMAP dependency override
+```
+
+---
+
+## Critical Implementation Rules
+
+_PENDING: Generated in next step_
+
+### 🎯 Key Architectural Decisions
+
+1. **Pragmatic Effect Usage**: NOT everything needs `Effect.Service()`. Use Effect where it adds value (error handling, composition), not as a blanket pattern.
+
+2. **Flat Imports**: Use relative imports, NOT workspace imports (`@scraper/*`).
+
+3. **Simple Structure**: Prefer flat `src/` organization over nested packages.
