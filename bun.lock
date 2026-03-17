@@ -6,6 +6,7 @@
       "name": "scraper",
       "dependencies": {
         "@effect/platform-bun": "4.0.0-beta.33",
+        "@effect/sql-sqlite-bun": "4.0.0-beta.33",
         "@faker-js/faker": "10.3.0",
         "@ulixee/awaited-dom": "1.4.2",
         "@ulixee/chrome-134-0": "6998.178.11",
@@ -98,6 +99,8 @@
     "@effect/platform-bun": ["@effect/platform-bun@4.0.0-beta.33", "", { "dependencies": { "@effect/platform-node-shared": "^4.0.0-beta.33" }, "peerDependencies": { "effect": "^4.0.0-beta.33" } }, "sha512-CtjRdSC9ZFGREw0PYL5Y1bGVo3pOZ3ZkwtO9aWU699Tq6I+/o4HJLfKKLfo2G17BAkEoq0Gn6hyoQqFxUcplWg=="],
 
     "@effect/platform-node-shared": ["@effect/platform-node-shared@4.0.0-beta.33", "", { "dependencies": { "@types/ws": "^8.18.1", "ws": "^8.19.0" }, "peerDependencies": { "effect": "^4.0.0-beta.33" } }, "sha512-jaJnvYz1IiPZyN//fCJsvwnmujJS5KD8noCVVLhb4ZGCWKhQpt0x2iuax6HFzMlPEQSfl04GLU+PVKh0nkzPyA=="],
+
+    "@effect/sql-sqlite-bun": ["@effect/sql-sqlite-bun@4.0.0-beta.33", "", { "peerDependencies": { "effect": "^4.0.0-beta.33" } }, "sha512-HoQdHwenm8NjsjDMnyXop//kNBDHCRQ3Ft6MAC/nGay+DmHrT7Jluppd/w0kLSSQNbeyuLrhCBoIynGhharldQ=="],
 
     "@faker-js/faker": ["@faker-js/faker@10.3.0", "", {}, "sha512-It0Sne6P3szg7JIi6CgKbvTZoMjxBZhcv91ZrqrNuaZQfB5WoqYYbzCUOq89YR+VY8juY9M1vDWmDDa2TzfXCw=="],
 
