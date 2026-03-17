@@ -64,22 +64,76 @@ Create `src/db/` directory with Effect SQL SQLite client using Effect Config for
 - `preserveSymlinks: false` is non-negotiable
 - LSP tools mandatory for code navigation
 
+### Effect SQL Capabilities (Critical Discovery)
+
+**Effect SQL 4.0 provides ORM-like functionality out-of-the-box:**
+
+1. **SqlModel.makeRepository** — Auto-generated CRUD:
+   - `insert`, `insertVoid`
+   - `update`, `updateVoid`
+   - `findById`
+   - `delete`
+   - Type-safe via Schema.Struct
+
+2. **Migrator System** — Built-in migration support:
+   - `Migrator.fromFileSystem("src/db/migrations")`
+   - `Migrator.fromGlob(...)` for file patterns
+   - `Migrator.fromRecord(...)` for object-based
+   - Automatic migrations table (`effect_sql_migrations`)
+   - Transaction support
+   - Locking mechanism
+
+3. **SqliteClient.layerConfig** — Effect Config integration:
+   - `Config.config("DATABASE_PATH")` support
+   - Automatic WAL mode
+   - Connection pooling
+
+4. **SqlSchema Module** — Schema-to-SQL mapping:
+   - `SqlSchema.findOne` for single-row queries
+   - `SqlSchema.findAll` for multi-row
+   - `SqlSchema.void` for no-return queries
+   - Type-safe result transformation
+
+**Implication:** No manual SQL for basic CRUD. Use Schema.Struct + makeRepository.
+
 ### Files to Reference
 
 | File | Purpose |
 | ---- | ------- |
-| `packages/prisma/index.ts` | Current query implementations to reimplement |
+| `packages/prisma/index.ts` | Current query implementations (for reference) |
 | `packages/prisma/prisma/schema.prisma` | Schema structure (4 tables + 1 enum) |
+| `node_modules/.bun/@effect+sql-sqlite-bun/.../SqliteClient.ts` | Effect SQL client API |
+| `node_modules/.bun/effect/.../unstable/sql/Migrator.ts` | Migration system API |
+| `node_modules/.bun/effect/.../unstable/sql/SqlModel.ts` | Repository generator API |
 | `.claude/skills/typescript-advanced-types/SKILL.md` | For complex type logic if needed |
 
 ### Technical Decisions
 
 1. **Database Client Location**: `src/db/` module (following domain folder pattern)
-2. **Configuration**: Effect Config for `DATABASE_PATH` from ENV
-3. **Client Setup**: Simple `SqliteClient` without Service pattern (pragmatic approach)
-4. **Error Handling**: Effect's built-in error handling with domain errors
+2. **Configuration**: Effect Config for `DATABASE_PATH` from ENV using `layerConfig`
+3. **Client Setup**: Pragmatic `layerConfig` (NOT Service pattern, use Layer)
+4. **Error Handling**: Effect's built-in error handling + domain errors
 5. **Transactions**: Required for `updateSignupUserCookies` (multi-step operations)
-6. **Type System**: Schema-based typing from Effect SQL (similar to Prisma-generated types)
+6. **Type System**: Schema.Struct-based typing (NO Prisma codegen)
+7. **Migrations**: File-based using `Migrator.fromFileSystem("src/db/migrations")`
+8. **CRUD Strategy**: Use `makeRepository` for simple CRUD, manual SQL for complex queries
+9. **Relations**: Manual joins (Effect SQL has no Prisma-like `include` feature yet)
+
+### Revised Architecture
+
+**Comparison with Prisma:**
+| Feature | Prisma | Effect SQL |
+|---------|--------|-----------|
+| CRUD operations | ✅ Auto-generated | ✅ makeRepository |
+| Type safety | ✅ Codegen | ✅ Schema.Struct |
+| Migrations | ✅ CLI-based | ✅ File-based Effects |
+| Relations | ✅ `include` | ❌ Manual joins |
+| Client setup | ✅ Simple | ✅ layerConfig |
+| Transactions | ✅ `$transaction` | ✅ withTransaction |
+
+**Key Differences:**
+- Prisma = Generated code (CLI, codebase files)
+- Effect SQL = Runtime construction (Schema-based, no codegen)
 
 ## Implementation Plan
 
