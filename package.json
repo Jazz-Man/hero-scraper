@@ -8,7 +8,6 @@
 		"@types/imap": "0.8.43",
 		"@types/mailparser": "3.4.6",
 		"@types/node": "25.5.0",
-		"better-sqlite3": "12.8.0",
 		"bun-types": "1.3.11"
 	},
 	"engines": {
@@ -18,7 +17,8 @@
 	},
 	"private": true,
 	"resolutions": {
-		"utf7": "npm:utf7@workspace:*"
+		"utf7": "npm:utf7@workspace:*",
+		"better-sqlite3": "npm:better-sqlite3@workspace:*"
 	},
 	"scripts": {
 		"hero:cloud": "cloud start --env=${PWD}/.env",
@@ -67,7 +67,6 @@
 		"@ulixee/chrome-137-0",
 		"@ulixee/chrome-138-0",
 		"@ulixee/chrome-139-0",
-		"@ulixee/unblocked-agent-mitm-socket",
-		"better-sqlite3"
+		"@ulixee/unblocked-agent-mitm-socket"
 	]
 }
