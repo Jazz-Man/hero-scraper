@@ -1,0 +1,13 @@
+diff --git a/lib/CorePlugins.js b/lib/CorePlugins.js
+index 395ea93c9685cf6fc31f9a2819bc50a947b21448..2903215080a5c7520a1a85d0c162f7278669c072 100644
+--- a/lib/CorePlugins.js
++++ b/lib/CorePlugins.js
+@@ -2,7 +2,7 @@
+ Object.defineProperty(exports, "__esModule", { value: true });
+ const requirePlugins_1 = require("@ulixee/hero-plugin-utils/lib/utils/requirePlugins");
+ const IPluginTypes_1 = require("@ulixee/hero-interfaces/IPluginTypes");
+-const index_1 = require("../index");
++const index_1 = require("../index.js");
+ class CorePlugins {
+     get sessionSummary() {
+         return this.getSessionSummary();

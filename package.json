@@ -1,72 +1,66 @@
 {
-	"name": "scraper",
-	"devDependencies": {
-		"@effect/language-service": "0.23.3",
-		"@tsconfig/bun": "1.0.8",
-		"@types/bun": "1.3.10",
-		"@types/geoip-lite": "1.4.4",
-		"@types/imap": "0.8.43",
-		"@types/mailparser": "3.4.6",
-		"@types/node": "25.5.0",
-		"bun-types": "1.3.11"
-	},
-	"engines": {
-		"node": ">=22.0.0",
-		"pnpm": ">=9.0.0",
-		"bun": ">=1.2.18"
-	},
-	"private": true,
-	"resolutions": {
-		"utf7": "npm:utf7@workspace:*",
-		"better-sqlite3": "npm:better-sqlite3@workspace:*"
-	},
-	"scripts": {
-		"hero:cloud": "cloud start --env=${PWD}/.env",
-		"cf:delete": "bun run src/cloudflare/delete.ts",
-		"cf:create": "bun run src/cloudflare/create.ts",
-		"imap:test": "bun --filter '@scraper/imapflow' test:imap"
-	},
-	"workspaces": [
-		"resolutions/*"
-	],
-	"dependencies": {
-		"@effect/platform-bun": "4.0.0-beta.33",
-		"@effect/sql-sqlite-bun": "4.0.0-beta.33",
-		"@faker-js/faker": "10.3.0",
-		"@ulixee/awaited-dom": "1.4.2",
-		"@ulixee/chrome-134-0": "6998.178.11",
-		"@ulixee/chrome-135-0": "7049.115.11",
-		"@ulixee/chrome-136-0": "7103.114.11",
-		"@ulixee/chrome-137-0": "7151.120.11",
-		"@ulixee/chrome-138-0": "7204.184.11",
-		"@ulixee/cloud": "2.0.0-alpha.34",
-		"@ulixee/commons": "2.0.0-alpha.34",
-		"@ulixee/default-browser-emulator": "2.0.0-alpha.34",
-		"@ulixee/execute-js-plugin": "2.0.0-alpha.34",
-		"@ulixee/hero": "2.0.0-alpha.34",
-		"@ulixee/hero-core": "2.0.0-alpha.34",
-		"@ulixee/hero-interfaces": "2.0.0-alpha.34",
-		"@ulixee/hero-playground": "2.0.0-alpha.34",
-		"@ulixee/real-user-agents": "2.0.0-alpha.34",
-		"@ulixee/unblocked-specification": "2.0.0-alpha.34",
-		"cloudflare": "5.2.0",
-		"effect": "4.0.0-beta.33",
-		"fingerprint-generator": "2.1.81",
-		"geoip-lite": "1.4.10",
-		"imap": "0.8.19",
-		"mailparser": "3.9.4",
-		"otpauth": "9.5.0"
-	},
-	"peerDependencies": {
-		"typescript": "5.9.3"
-	},
-	"trustedDependencies": [
-		"@ulixee/chrome-134-0",
-		"@ulixee/chrome-135-0",
-		"@ulixee/chrome-136-0",
-		"@ulixee/chrome-137-0",
-		"@ulixee/chrome-138-0",
-		"@ulixee/chrome-139-0",
-		"@ulixee/unblocked-agent-mitm-socket"
-	]
+  "name": "scraper",
+  "devDependencies": {
+    "@effect/language-service": "0.23.3",
+    "@tsconfig/bun": "1.0.8",
+    "@types/bun": "1.3.10",
+    "@types/geoip-lite": "1.4.4",
+    "@types/imap": "0.8.43",
+    "@types/mailparser": "3.4.6",
+    "@types/node": "25.5.0",
+    "bun-types": "1.3.11"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=9.0.0",
+    "bun": ">=1.2.18"
+  },
+  "private": true,
+  "resolutions": {
+    "utf7": "npm:utf7@workspace:*",
+    "better-sqlite3": "npm:better-sqlite3@workspace:*"
+  },
+  "scripts": {
+    "hero:cloud": "cloud start --env=${PWD}/.env",
+    "cf:delete": "bun run src/cloudflare/delete.ts",
+    "cf:create": "bun run src/cloudflare/create.ts",
+    "imap:test": "bun --filter '@scraper/imapflow' test:imap"
+  },
+  "workspaces": [
+    "resolutions/*"
+  ],
+  "dependencies": {
+    "@effect/platform-bun": "4.0.0-beta.33",
+    "@effect/sql-sqlite-bun": "4.0.0-beta.33",
+    "@faker-js/faker": "10.3.0",
+    "@ulixee/awaited-dom": "1.4.2",
+    "@ulixee/cloud": "2.0.0-alpha.34",
+    "@ulixee/commons": "2.0.0-alpha.34",
+    "@ulixee/default-browser-emulator": "2.0.0-alpha.34",
+    "@ulixee/execute-js-plugin": "2.0.0-alpha.34",
+    "@ulixee/hero": "2.0.0-alpha.34",
+    "@ulixee/hero-core": "2.0.0-alpha.34",
+    "@ulixee/hero-interfaces": "2.0.0-alpha.34",
+    "@ulixee/hero-playground": "2.0.0-alpha.34",
+    "@ulixee/real-user-agents": "2.0.0-alpha.34",
+    "@ulixee/unblocked-agent-mitm-socket": "^2.0.0-alpha.34",
+    "@ulixee/unblocked-specification": "2.0.0-alpha.34",
+    "cloudflare": "5.2.0",
+    "effect": "4.0.0-beta.33",
+    "fingerprint-generator": "2.1.81",
+    "geoip-lite": "1.4.10",
+    "imap": "0.8.19",
+    "mailparser": "3.9.4",
+    "otpauth": "9.5.0"
+  },
+  "peerDependencies": {
+    "typescript": "5.9.3"
+  },
+  "patchedDependencies": {
+    "@ulixee/hero-core@2.0.0-alpha.34": "patches/@ulixee%2Fhero-core@2.0.0-alpha.34.patch"
+  },
+  "trustedDependencies": [
+    "@ulixee/chrome-139-0",
+    "@ulixee/unblocked-agent-mitm-socket"
+  ]
 }
