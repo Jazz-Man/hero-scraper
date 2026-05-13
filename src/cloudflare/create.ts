@@ -19,7 +19,7 @@ for (const zone of zones) {
 			actions: [
 				{
 					type: "forward",
-					value: ["Bun.env.IMAP_EMAIL_ADDRESS"],
+					value: [Bun.env.IMAP_EMAIL_ADDRESS],
 				},
 			],
 			matchers: [
