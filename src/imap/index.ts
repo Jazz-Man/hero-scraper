@@ -4,9 +4,9 @@ const listener = new EmailListener({
 	user: Bun.env.IMAP_EMAIL_ADDRESS ?? "",
 	password: Bun.env.IMAP_EMAIL_PASSWORD ?? "",
 	host: Bun.env.IMAP_SERVER,
-	port: Bun.env.IMAP_PORT,
+	port: Bun.env.IMAP_PORT as number | undefined,
 	searchFilter: [
-		["FROM", Bun.env.IMAP_EMAIL_FROM_TEST],
+		["FROM", Bun.env.IMAP_EMAIL_FROM_TEST as string],
 		// ["SUBJECT", "Email confirmation"],
 	],
 	markSeen: false,
