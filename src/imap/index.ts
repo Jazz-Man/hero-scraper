@@ -1,4 +1,4 @@
-import { EmailListener, type TParsedMail } from "./EmailListener";
+import EmailListener from "@jazz-man/email-listener";
 
 const listener = new EmailListener({
 	user: Bun.env.IMAP_EMAIL_ADDRESS ?? "",
@@ -22,7 +22,7 @@ listener.on("error", (err) => {
 	listener.stop();
 });
 
-listener.on("mail", (mail: TParsedMail, seqno, attributes) => {
+listener.on("mail", (mail, seqno, attributes) => {
 	if (!mail.text) {
 		listener.stop();
 		return;
