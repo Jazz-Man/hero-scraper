@@ -15,6 +15,9 @@ peer = true
 auto = "auto"
 saveTextLockfile = true
 
+[install.scopes]
+"@jazz-man" = "https://npm.pkg.github.com"
+
 [install.lockfile]
 save = true
 
