@@ -4,7 +4,7 @@
   "type": "module",
   "private": true,
   "devDependencies": {
-    "@types/better-sqlite3": "7.6.12",
+    "@types/better-sqlite3": "9.6.0",
     "@types/bun": "latest"
   },
   "peerDependencies": {
