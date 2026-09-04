@@ -17,7 +17,7 @@
     "@scraper/safe": "workspace:*",
     "@ulixee/awaited-dom": "1.4.2",
     "@ulixee/commons": "2.0.0-alpha.31",
-    "@ulixee/execute-js-plugin": "2.0.0-alpha.31",
+    "@ulixee/execute-js-plugin": "2.0.0-alpha.34",
     "@ulixee/hero": "2.0.0-alpha.31",
     "@ulixee/hero-interfaces": "2.0.0-alpha.31",
     "@ulixee/real-user-agents": "2.0.0-alpha.31",
