@@ -20,7 +20,7 @@
     "@ulixee/execute-js-plugin": "2.0.0-alpha.31",
     "@ulixee/hero": "2.0.0-alpha.31",
     "@ulixee/hero-interfaces": "2.0.0-alpha.31",
-    "@ulixee/real-user-agents": "2.0.0-alpha.31",
+    "@ulixee/real-user-agents": "2.0.0-alpha.34",
     "@ulixee/unblocked-specification": "2.0.0-alpha.31",
     "fingerprint-generator": "^2.1.62"
   },
